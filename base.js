@@ -1,3 +1,5 @@
+const MAXLEN = 100;
+
 export class Op {
   constructor(ins = [], meta = {}) {
     this.ins = ins;
@@ -35,6 +37,35 @@ export class Op {
     const c2 = max !== undefined ? max : 0;
     if(c1 < args[0][0] || c1 > args[0][1] || c2 < args[1][0] || c2 > args[1][1])
       throw `input pattern mismatch`;
+  }
+
+  writeout(env) {
+    let d = '';
+    for(const s of this.writeout_gen(env)) {
+      d += s;
+      if(d.length > MAXLEN) {
+        d = d.substring(0, MAXLEN - 3) + '...';
+        break;
+      }
+    }
+    return d;
+  }
+
+  *writeout_gen(env) {
+    const str = this.eval(env);
+    if(str instanceof Atom)
+      yield str.desc();
+    else {
+      yield '[';
+      let first = true;
+      for(const value of str) {
+        if(!first)
+          yield ',';
+        first = false;
+        yield* value.writeout_gen(env);
+      }
+      yield ']';
+    }
   }
 };
 
