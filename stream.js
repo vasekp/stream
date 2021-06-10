@@ -1,16 +1,6 @@
-import { Op, Atom, Stream, InfStream } from './base.js'
+import * as ops from './ops/basic.js';
 
-class iota extends Op {
-  eval() {
-    const s = new InfStream(this, null);
-    let i = 1n;
-    s.nextv = () => new Atom(i++);
-    s.skip = c => i += c;
-    return s;
-  }
-};
-
-const o1 = new iota();
+const o1 = new ops.iota();
 
 const iter = o1.eval();
 iter.skip(1000000000000000n);
