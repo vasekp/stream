@@ -19,6 +19,23 @@ export class Op {
   desc() {
     throw 'desc undefined';
   }
+
+  check(args) {
+    let last, min, max;
+    for(const ix in this.ins) {
+      if(last === undefined)
+        min = last = +ix;
+      else if(+ix !== last + 1)
+        throw('ins not consecutive');
+      max = +ix;
+    }
+    if(max !== undefined && min > 1)
+      throw('ins not consecutive');
+    const c1 = min === 0 ? 1 : 0;
+    const c2 = max !== undefined ? max : 0;
+    if(c1 < args[0][0] || c1 > args[0][1] || c2 < args[1][0] || c2 > args[1][1])
+      throw `input pattern mismatch`;
+  }
 };
 
 export class Atom extends Op {

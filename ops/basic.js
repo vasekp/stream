@@ -11,6 +11,7 @@ function asnum(s) {
 
 export class iota extends Op {
   eval(env) {
+    this.check([[0,0],[0,0]]);
     const s = new InfStream(this, env);
     let i = 1n;
     s.nextv = () => new Atom(i++);
@@ -21,6 +22,7 @@ export class iota extends Op {
 
 export class range extends Op {
   eval(env) {
+    this.check([[0,0],[1,2]]);
     const s = new Stream(this, env);
     const [min, max] = this.ins[1] && this.ins[2]
       ? [asnum(this.ins[1]), asnum(this.ins[2])]
@@ -38,6 +40,7 @@ export class range extends Op {
 
 export class len extends Op {
   eval(env) {
+    this.check([[1,1],[0,0]]);
     if(!this.ins[0])
       throw 'no arg';
     return new Atom(this.ins[0].eval(env).len());
@@ -46,6 +49,7 @@ export class len extends Op {
 
 export class first extends Op {
   eval(env) {
+    this.check([[1,1],[0,0]]);
     if(!this.ins[0])
       throw 'no arg';
     const {value, done} = this.ins[0].eval(env).next();
@@ -58,6 +62,7 @@ export class first extends Op {
 
 export class last extends Op {
   eval(env) {
+    this.check([[1,1],[0,0]]);
     if(!this.ins[0])
       throw 'no arg';
     const l = this.ins[0].eval(env).last();
