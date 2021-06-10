@@ -10,8 +10,8 @@ function asnum(s) {
 }
 
 export class iota extends Op {
-  eval(sink) {
-    const s = new InfStream(this, sink);
+  eval(env) {
+    const s = new InfStream(this, env);
     let i = 1n;
     s.nextv = () => new Atom(i++);
     s.skip = c => i += c;
@@ -20,8 +20,8 @@ export class iota extends Op {
 };
 
 export class range extends Op {
-  eval(sink) {
-    const s = new Stream(this, sink);
+  eval(env) {
+    const s = new Stream(this, env);
     const [min, max] = this.ins[1] && this.ins[2]
       ? [asnum(this.ins[1]), asnum(this.ins[2])]
       : [1n, asnum(this.ins[1])];
@@ -37,30 +37,30 @@ export class range extends Op {
 };
 
 export class len extends Op {
-  eval(sink) {
+  eval(env) {
     if(!this.ins[0])
       throw 'no arg';
-    return new Atom(this.ins[0].eval(this).len());
+    return new Atom(this.ins[0].eval(env).len());
   }
 };
 
 export class first extends Op {
-  eval(sink) {
+  eval(env) {
     if(!this.ins[0])
       throw 'no arg';
-    const {value, done} = this.ins[0].eval(this).next();
+    const {value, done} = this.ins[0].eval(env).next();
     if(done)
       throw 'first of empty';
     else
-      return value.eval(sink);
+      return value.eval(env);
   }
 };
 
 export class last extends Op {
-  eval(sink) {
+  eval(env) {
     if(!this.ins[0])
       throw 'no arg';
-    const l = this.ins[0].eval(this).last();
+    const l = this.ins[0].eval(env).last();
     if(l === null)
       throw 'last of empty';
     else

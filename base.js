@@ -12,7 +12,7 @@ export class Op {
     return new (Object.getPrototypeOf(this).constructor)(ins, this.meta);
   }
 
-  eval(sink) {
+  eval(env) {
     throw 'eval undefined';
   }
 
@@ -29,7 +29,7 @@ export class Atom extends Op {
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
   }
 
-  eval(sink) {
+  eval(env) {
     return this;
   }
 
