@@ -1,4 +1,4 @@
-import { Op, Atom, Stream, InfStream } from '../base.js';
+import { Filter, Atom, Stream, InfStream } from '../base.js';
 
 function asnum(s) {
   if(!(s instanceof Atom))
@@ -9,7 +9,7 @@ function asnum(s) {
   return v;
 }
 
-export class iota extends Op {
+export class iota extends Filter {
   eval(env) {
     this.check([[0,0],[0,0]]);
     const s = new InfStream(this, env);
@@ -20,7 +20,7 @@ export class iota extends Op {
   }
 };
 
-export class range extends Op {
+export class range extends Filter {
   eval(env) {
     this.check([[0,0],[1,2]]);
     const s = new Stream(this, env);
@@ -38,7 +38,7 @@ export class range extends Op {
   }
 };
 
-export class len extends Op {
+export class len extends Filter {
   eval(env) {
     this.check([[1,1],[0,0]]);
     if(!this.ins[0])
@@ -47,7 +47,7 @@ export class len extends Op {
   }
 };
 
-export class first extends Op {
+export class first extends Filter {
   eval(env) {
     this.check([[1,1],[0,0]]);
     if(!this.ins[0])
@@ -60,7 +60,7 @@ export class first extends Op {
   }
 };
 
-export class last extends Op {
+export class last extends Filter {
   eval(env) {
     this.check([[1,1],[0,0]]);
     if(!this.ins[0])

@@ -1,6 +1,6 @@
 const MAXLEN = 100;
 
-export class Op {
+export class Filter {
   constructor(ins = [], meta = {}) {
     this.ins = ins;
     this.meta = meta;
@@ -69,7 +69,7 @@ export class Op {
   }
 };
 
-export class Atom extends Op {
+export class Atom extends Filter {
   constructor(val, meta = {}) {
     super([], meta);
     if(typeof val === 'number')
