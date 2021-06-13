@@ -11,31 +11,42 @@ function asstr(s) {
 
 const cc = {
   digit: 'digit',
-  alpha: 'alpha',
+  alnum: 'alpha'
+};
+
+const tc = {
+  ident: 'ident',
+  number: 'number',
+  string: 'string',
   space: 'space',
   open: 'open',
   close: 'close',
-  oper: 'oper',
-  string: 'string'
+  oper: 'oper'
 };
 
 function charcls(c) {
   if(c >= '0' && c <= '9')
     return cc.digit;
-  else if(c >= 'a' && c <= 'z')
+  else if(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z')
     return cc.alpha;
-  else switch(c) {
+  else
+    return c;
+}
+
+function tokcls(c) {
+  switch(c) {
     case ' ':
+    case '\t':
     case '\n':
-      return cc.space;
+      return tc.space;
     case '(':
     case '[':
     case '{':
-      return cc.open;
+      return tc.open;
     case ')':
     case ']':
     case '}':
-      return cc.close;
+      return tc.close;
     case '.':
     case ':':
     case '+':
@@ -44,57 +55,89 @@ function charcls(c) {
     case '/':
     case '%':
     case '~':
-      return cc.oper;
+      return tc.oper;
     default:
       return c;
   }
 }
 
-function parsestr(iter) {
+function* tokenize(str) {
+  const ss = {
+    base: 'base',
+    ident: 'ident',
+    number: 'number',
+    string: 'string',
+    stresc: 'escape'
+  };
+  let state = ss.base;
   let accum = '';
-  let esc = false;
-  for(;;) {
-    const {value, done} = iter.next();
-    if(done)
-      throw 'unterminated string';
-    if(esc) {
-      accum += value;
-      esc = false;
+  for(const c of str) {
+    if(state === ss.string) {
+      if(c === '"') {
+        yield {value: accum, cls: tc.string};
+        state = ss.base;
+      }
+      else if(c === '\\')
+        state = ss.stresc;
+      else
+        accum += c;
       continue;
-    }
-    if(value === '\\') {
-      esc = true;
+    } else if(state === ss.stresc) {
+      accum += c;
+      state = ss.string;
       continue;
-    }
-    if(value === '"')
-      return accum;
-    accum += value;
-  }
-}
-
-function* split(str) {
-  const iter = str[Symbol.iterator]();
-  let lcls = null;
-  let accum = '';
-  for(;;) {
-    const {value, done} = iter.next();
-    const cls = charcls(value);
-    if(cls !== lcls) { // TODO nechceme ((
-      if(accum !== '')
-        yield {value: accum, cls: lcls};
+    } else if(c === '"') {
+      state = ss.string;
       accum = '';
-    }
-    if(value === '"') {
-      lcls = 'string';
-      yield {value: parsestr(iter), cls: lcls};
       continue;
     }
-    if(done)
-      break;
-    accum += value;
-    lcls = cls;
+    let cls = charcls(c);
+    switch(cls) {
+      case cc.digit:
+        if(state === ss.number) {
+          accum += c;
+          continue;
+        }
+        // fallthrough
+      case cc.alnum:
+        if(state === ss.ident) {
+          accum += c;
+          continue;
+        }
+    }
+    if(state === ss.ident)
+      yield {value: accum, cls: tc.ident};
+    else if(state === ss.number)
+      yield {value: accum, cls: tc.number};
+    switch(cls) {
+      case cc.digit:
+        state = ss.number;
+        accum = c;
+        break;
+      case cc.alpha:
+        state = ss.ident;
+        accum = c;
+        break;
+      default:
+        yield {value: c, cls: tokcls(c)};
+        state = ss.base;
+    }
   }
-  yield {value: '', cls: 'close'};
+  // end of input
+  switch(state) {
+    case ss.ident:
+      yield {value: accum, cls: tc.ident};
+      break;
+    case ss.number:
+      yield {value: accum, cls: tc.number};
+      break;
+    case ss.string:
+    case ss.stresc:
+      throw 'unterminated string';
+    case ss.base: // default:
+      // nothing to do
+  }
+  yield {value: '', cls: tc.close};
 }
 
 export function parse(str) {
@@ -104,11 +147,12 @@ export function parse(str) {
     oper: 'oper'
   };
   let state = ss.base;
-  for(const s of split(str)) {
-    switch(s.cls) {
+  for(const s of tokenize(str)) {
+    console.log(s);
+    /*switch(s.cls) {
       case cc.space:
         continue;
-      case cc.digit:
+      case cc.number:
       case cc.string:
         if(state === ss.base)
           console.log(`new expr ${s.value}`);
@@ -116,7 +160,7 @@ export function parse(str) {
           console.log(`new term ${s.value}`);
         else
           throw `${s.cls} after ${state}`;
-        //expr = new Atom(s.cls = cc.digit ? BigInt(s.value) : s.value);
+        //expr = new Atom(s.cls = cc.number ? BigInt(s.value) : s.value);
         state = ss.expr;
         break;
       case cc.alpha:
@@ -166,6 +210,6 @@ export function parse(str) {
         break;
       default:
         throw `unknown input ${s.value}`;
-    }
+    }*/
   }
 }
