@@ -127,22 +127,11 @@ export function parse(str) {
   const ss = Enum.fromArray(['base', 'expr', 'oper']);
   let state = ss.base;
   for(const s of tokenize(str)) {
-    console.log(s);
-    /*switch(s.cls) {
-      case cc.space:
+    switch(s.cls) {
+      case tc.space:
         continue;
-      case cc.number:
-      case cc.string:
-        if(state === ss.base)
-          console.log(`new expr ${s.value}`);
-        else if(state === ss.oper)
-          console.log(`new term ${s.value}`);
-        else
-          throw `${s.cls} after ${state}`;
-        //expr = new Atom(s.cls = cc.number ? BigInt(s.value) : s.value);
-        state = ss.expr;
-        break;
-      case cc.alpha:
+      case tc.number:
+      case tc.string:
         if(state === ss.base)
           console.log(`new expr ${s.value}`);
         else if(state === ss.oper)
@@ -151,7 +140,16 @@ export function parse(str) {
           throw `${s.cls} after ${state}`;
         state = ss.expr;
         break;
-      case cc.open:
+      case tc.ident:
+        if(state === ss.base)
+          console.log(`new expr ${s.value}`);
+        else if(state === ss.oper)
+          console.log(`new term ${s.value}`);
+        else
+          throw `${s.cls} after ${state}`;
+        state = ss.expr;
+        break;
+      case tc.open:
         if(state === ss.base)
           console.log('paren expr');
         else if(state === ss.expr)
@@ -162,7 +160,7 @@ export function parse(str) {
           throw `${s.cls} after ${state}`;
         state = ss.base;
         break;
-      case cc.close:
+      case tc.close:
         if(state === ss.base)
           console.log('close imm');
         else if(state === ss.expr)
@@ -171,7 +169,7 @@ export function parse(str) {
           throw `${s.cls} after ${state}`;
         state = ss.expr;
         break;
-      case cc.oper:
+      case tc.oper:
         if(state === ss.expr)
           console.log('oper');
         else if(state === ss.base && s.value === '-')
@@ -189,6 +187,6 @@ export function parse(str) {
         break;
       default:
         throw `unknown input ${s.value}`;
-    }*/
+    }
   }
 }
