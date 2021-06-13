@@ -1,4 +1,5 @@
-import { Filter, Atom, Stream, InfStream } from './base.js';
+import {Filter, Atom, Stream, InfStream} from './base.js';
+import Enum from './enum.js';
 
 function asstr(s) {
   if(!(s instanceof Atom))
@@ -9,20 +10,8 @@ function asstr(s) {
   return v;
 }
 
-const cc = {
-  digit: 'digit',
-  alnum: 'alpha'
-};
-
-const tc = {
-  ident: 'ident',
-  number: 'number',
-  string: 'string',
-  space: 'space',
-  open: 'open',
-  close: 'close',
-  oper: 'oper'
-};
+const cc = Enum.fromArray(['digit', 'alpha']);
+const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper']);
 
 function charcls(c) {
   if(c >= '0' && c <= '9')
@@ -62,13 +51,7 @@ function tokcls(c) {
 }
 
 function* tokenize(str) {
-  const ss = {
-    base: 'base',
-    ident: 'ident',
-    number: 'number',
-    string: 'string',
-    stresc: 'escape'
-  };
+  const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc']);
   let state = ss.base;
   let accum = '';
   for(const c of str) {
@@ -99,7 +82,7 @@ function* tokenize(str) {
           continue;
         }
         // fallthrough
-      case cc.alnum:
+      case cc.alpha:
         if(state === ss.ident) {
           accum += c;
           continue;
@@ -141,11 +124,7 @@ function* tokenize(str) {
 }
 
 export function parse(str) {
-  const ss = {
-    base: 'base',
-    expr: 'expr',
-    oper: 'oper'
-  };
+  const ss = Enum.fromArray(['base', 'expr', 'oper']);
   let state = ss.base;
   for(const s of tokenize(str)) {
     console.log(s);
