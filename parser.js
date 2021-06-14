@@ -123,55 +123,95 @@ function* tokenize(str) {
   yield {value: '', cls: tc.close};
 }
 
-export function parse(str) {
-  const ss = Enum.fromArray(['base', 'expr', 'oper']);
+function parse0(iter, close, array) {
+  const ss = Enum.fromArray(['base', 'sym', 'term', 'oper']);
   let state = ss.base;
-  for(const s of tokenize(str)) {
+  for(;;) {
+    let {value: s, done} = iter.next();
+    if(done)
+      s = {value: '', cls: tc.close};
     switch(s.cls) {
       case tc.space:
         continue;
       case tc.number:
       case tc.string:
-        if(state === ss.base)
-          console.log(`new expr ${s.value}`);
-        else if(state === ss.oper)
-          console.log(`new term ${s.value}`);
+        if(state === ss.base || state === ss.oper)
+          console.log(`atom ${s.value}`);
         else
           throw `${s.cls} after ${state}`;
-        state = ss.expr;
+        state = ss.term;
         break;
       case tc.ident:
-        if(state === ss.base)
-          console.log(`new expr ${s.value}`);
-        else if(state === ss.oper)
-          console.log(`new term ${s.value}`);
+        if(state === ss.base || state === ss.oper)
+          console.log(`sym ${s.value}`);
         else
           throw `${s.cls} after ${state}`;
-        state = ss.expr;
+        state = ss.sym;
         break;
       case tc.open:
-        if(state === ss.base)
-          console.log('paren expr');
-        else if(state === ss.expr)
-          console.log('args');
-        else if(state === ss.oper)
-          console.log('paren term');
-        else
+        if(state === ss.base) {
+          switch(s.value) {
+            case '[':
+              console.log('begin array');
+              parse0(iter, ']', true);
+              console.log('end array');
+              state = ss.term;
+              break;
+            case '(':
+              console.log('begin paren');
+              parse0(iter, ')', false);
+              console.log('end paren');
+              state = ss.term;
+              break;
+            case '{':
+              console.log('begin pnode');
+              parse0(iter, '}', false);
+              console.log('end pnode');
+              state = ss.sym;
+              break;
+            default:
+              throw `unknown open ${s.value}`;
+          }
+        } else if(state === ss.sym && s.value === '(') {
+          console.log('begin args');
+          parse0(iter, ')', true);
+          console.log('end args');
+          state = ss.term;
+        } else if(s.value === '{' && state === ss.oper) {
+          console.log('begin pnode');
+          parse0(iter, '}', false);
+          console.log('end pnode');
+          state = ss.sym;
+        } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
+          console.log('begin parts');
+          parse0(iter, ']', true);
+          console.log('end parts');
+          state = ss.term;
+        } else
           throw `${s.cls} after ${state}`;
-        state = ss.base;
         break;
       case tc.close:
-        if(state === ss.base)
-          console.log('close imm');
-        else if(state === ss.expr)
-          console.log('close');
-        else
-          throw `${s.cls} after ${state}`;
-        state = ss.expr;
-        break;
+        if(s.value !== close)
+          throw s.value ? `unexpected close ${s.value}` : 'unexpected end of input';
+        if(state === ss.base) {
+          if(!array)
+            throw 'empty not allowed';
+          else {
+            console.log('return empty');
+            return [];
+          }
+        } else if(state === ss.oper)
+          throw 'unfinished expression';
+        else {
+          if(array)
+            console.log('return arr');
+          else
+            console.log('return expr');
+          return;
+        }
       case tc.oper:
-        if(state === ss.expr)
-          console.log('oper');
+        if(state === ss.sym || state === ss.term)
+          console.log(`stash term, oper ${s.value}`);
         else if(state === ss.base && s.value === '-')
           console.log('minus');
         else
@@ -179,7 +219,9 @@ export function parse(str) {
         state = ss.oper;
         break;
       case ',':
-        if(state === ss.expr)
+        if(!array)
+          throw 'multi not allowed here';
+        else if(state === ss.sym || state === ss.term)
           console.log('stash expr');
         else
           throw `${s.cls} after ${state}`;
@@ -189,4 +231,8 @@ export function parse(str) {
         throw `unknown input ${s.value}`;
     }
   }
+}
+
+export function parse(str) {
+  parse0(tokenize(str), '', false);
 }
