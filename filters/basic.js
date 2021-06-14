@@ -1,4 +1,4 @@
-import { Filter, Atom, Stream, InfStream } from '../base.js';
+import {Filter, Atom, Stream, InfStream, mainReg} from '../base.js';
 
 function asnum(s) {
   if(!(s instanceof Atom))
@@ -9,7 +9,7 @@ function asnum(s) {
   return v;
 }
 
-export class iota extends Filter {
+mainReg.register('iota', class extends Filter {
   eval(env) {
     this.check([[0,0],[0,0]]);
     const s = new InfStream(this, env);
@@ -18,15 +18,15 @@ export class iota extends Filter {
     s.skip = c => i += c;
     return s;
   }
-};
+});
 
-export class range extends Filter {
+mainReg.register('range', class extends Filter {
   eval(env) {
     this.check([[0,0],[1,2]]);
     const s = new Stream(this, env);
-    const [min, max] = this.ins[1] && this.ins[2]
-      ? [asnum(this.ins[1]), asnum(this.ins[2])]
-      : [1n, asnum(this.ins[1])];
+    const [min, max] = this.args[0] && this.args[1]
+      ? [asnum(this.args[0]), asnum(this.args[1])]
+      : [1n, asnum(this.args[0])];
     let i = min;
     s.next = () => i <= max
         ? { value: new Atom(i++), done: false }
@@ -36,39 +36,33 @@ export class range extends Filter {
     s.skip = c => i += c;
     return s;
   }
-};
+});
 
-export class len extends Filter {
+mainReg.register('len', class extends Filter {
   eval(env) {
     this.check([[1,1],[0,0]]);
-    if(!this.ins[0])
-      throw 'no arg';
-    return new Atom(this.ins[0].eval(env).len());
+    return new Atom(this.src.eval(env).len());
   }
-};
+});
 
-export class first extends Filter {
+mainReg.register('first', class extends Filter {
   eval(env) {
     this.check([[1,1],[0,0]]);
-    if(!this.ins[0])
-      throw 'no arg';
-    const {value, done} = this.ins[0].eval(env).next();
+    const {value, done} = this.src.eval(env).next();
     if(done)
       throw 'first of empty';
     else
       return value.eval(env);
   }
-};
+});
 
-export class last extends Filter {
+mainReg.register('last', class extends Filter {
   eval(env) {
     this.check([[1,1],[0,0]]);
-    if(!this.ins[0])
-      throw 'no arg';
-    const l = this.ins[0].eval(env).last();
+    const l = this.src.eval(env).last();
     if(l === null)
       throw 'last of empty';
     else
       return l;
   }
-};
+});

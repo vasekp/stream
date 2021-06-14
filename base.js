@@ -8,7 +8,9 @@ export class Node {
   }
 
   construct(reg) {
-    const cls = reg.map[this.ident];
+    const cls = reg.map(this.ident);
+    if(!cls)
+      throw `ident ${this.ident} not assigned`;
     return cls.construct(this.src, this.args, reg);
   }
 
@@ -24,14 +26,16 @@ export class Node {
 };
 
 export class Filter {
-  constructor(ins = [], meta = {}) {
-    this.ins = ins;
+  constructor(src = null, args = [], meta = {}) {
+    this.src = src;
+    this.args = args;
     this.meta = meta;
   }
 
   static construct(src, nargs, reg) {
-    const args = [src, ...nargs].map(n => n.construct(reg));
-    return new this(args, {});
+    return new this(src ? src.construct(reg) : null,
+      nargs.map(n => n.construct(reg)),
+      {});
   }
 
   eval(env) {
@@ -42,21 +46,11 @@ export class Filter {
     throw 'desc undefined';
   }
 
-  check(args) {
-    let last, min, max;
-    for(const ix in this.ins) {
-      if(last === undefined)
-        min = last = +ix;
-      else if(+ix !== last + 1)
-        throw('ins not consecutive'); // TODO no longer can happen
-      max = +ix;
-    }
-    if(max !== undefined && min > 1)
-      throw('ins not consecutive'); // TODO no longer can happen
-    const c1 = min === 0 ? 1 : 0;
-    const c2 = max !== undefined ? max : 0;
-    if(c1 < args[0][0] || c1 > args[0][1] || c2 < args[1][0] || c2 > args[1][1])
-      throw `input pattern mismatch`;
+  check(patt) {
+    const c1 = this.src ? 1 : 0;
+    const c2 = this.args.length;
+    if(c1 < patt[0][0] || c1 > patt[0][1] || c2 < patt[1][0] || c2 > patt[1][1])
+      throw `input pattern mismatch: (${c1} ${c2}) not within ${patt}`;
   }
 
   writeout(env) {
@@ -176,3 +170,30 @@ export class InfStream extends Stream {
     throw 'len of infinite';
   }
 };
+
+export class Register {
+  constructor(parent) {
+    this.parent = parent;
+    this.base = parent ? parent.base : this;
+    this._map = {};
+  }
+
+  register(ident, filter) {
+    if(this.base.includes(ident))
+      throw `trying to overwrite base symbol ${ident}`;
+    else if(this.includes(ident))
+      throw `duplicate definition of ${ident}`;
+    else
+      this._map[ident] = filter;
+  }
+
+  map(ident) {
+    return this._map[ident] || (this.parent ? this.parent._map[ident] : null);
+  }
+
+  includes(ident) {
+    return this._map.hasOwnProperty(ident);
+  }
+};
+
+export const mainReg = new Register();
