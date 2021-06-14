@@ -20,7 +20,7 @@ mainReg.register('iota', class extends Filter {
   }
 });
 
-mainReg.register('range', class extends Filter {
+mainReg.register(['range', 'r'], class extends Filter {
   eval(env) {
     this.check([[0,0],[1,2]]);
     const s = new Stream(this, env);
@@ -38,7 +38,7 @@ mainReg.register('range', class extends Filter {
   }
 });
 
-mainReg.register('len', class extends Filter {
+mainReg.register(['length', 'len'], class extends Filter {
   eval(env) {
     this.check([[1,1],[0,0]]);
     return new Atom(this.src.eval(env).len());

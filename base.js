@@ -179,6 +179,10 @@ export class Register {
   }
 
   register(ident, filter) {
+    if(ident instanceof Array) {
+      ident.forEach(e => this.register(e, filter));
+      return;
+    }
     if(this.base.includes(ident))
       throw `trying to overwrite base symbol ${ident}`;
     else if(this.includes(ident))
