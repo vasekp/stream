@@ -111,7 +111,7 @@ export class Atom extends Filter {
       case 'boolean':
         return this.value.toString();
       case 'string':
-        return `"${this.value}"`; // TODO: escape "s
+        return `"${this.value.replace(/"|"|\\/g, '\\$&')}"`; // " included once confuses Vim
       default:
         throw 'desc object';
     }
