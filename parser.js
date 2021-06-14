@@ -1,4 +1,4 @@
-import {Node, Filter, Atom, Stream, InfStream, mainReg} from './base.js';
+import {Node, Atom, mainReg} from './base.js';
 import Enum from './enum.js';
 
 function asstr(s) {
@@ -311,7 +311,5 @@ function parse0(iter, close, array) {
 }
 
 export function parse(str) {
-  const r = parse0(tokenize(str), '', false);
-  console.log(r.toString());
-  return r.construct(mainReg);
+  return parse0(tokenize(str), '', false);
 }

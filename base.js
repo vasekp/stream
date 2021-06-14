@@ -1,56 +1,47 @@
 const MAXLEN = 100;
 
 export class Node {
-  constructor(ident, src = null, args = []) {
+  constructor(ident, src = null, args = [], meta = {}) {
     this.ident = ident;
-    this.src = src;
-    this.args = args;
-  }
-
-  construct(reg) {
-    const cls = reg.map(this.ident);
-    if(!cls)
-      throw `ident ${this.ident} not assigned`;
-    return cls.construct(this.src, this.args, reg);
-  }
-
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    ret += this.ident;
-    if(this.args.length)
-      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
-    return ret;
-  }
-}
-
-export class Filter {
-  constructor(src = null, args = [], meta = {}) {
     this.src = src;
     this.args = args;
     this.meta = meta;
   }
 
-  static construct(src, nargs, reg) {
-    return new this(src ? src.construct(reg) : null,
-      nargs.map(n => n.construct(reg)),
-      {});
+  withSource(src) {
+    if(this.src)
+      throw 'already have source';
+    else
+      return new Node(ident, src, this.args, this.meta);
   }
 
   eval(env) {
-    throw 'eval undefined';
+    const rec = env.register.find(this.ident);
+    if(!rec)
+      throw `undefined symbol ${this.ident}`;
+    if(rec.source === true && !this.src)
+      throw 'needs source';
+    else if(rec.source === false && this.src)
+      throw 'does not allow source';
+    else if(rec.numArg === 0 && this.args.length > 0)
+      throw 'does not allow arguments';
+    else if(rec.numArg !== undefined && this.args.length !== rec.numArg)
+      throw `exactly ${rec.numArg} arguments required`;
+    else if(rec.minArg !== undefined && this.args.length < rec.minArg)
+      throw `at least ${rec.minArg} arguments required`;
+    else if(rec.maxArg !== undefined && this.args.length > rec.maxArg)
+      throw `at most ${rec.maxArg} arguments required`;
+    return rec.eval(this.src, this.args, env);
   }
 
   desc() {
-    throw 'desc undefined';
-  }
-
-  check(patt) {
-    const c1 = this.src ? 1 : 0;
-    const c2 = this.args.length;
-    if(c1 < patt[0][0] || c1 > patt[0][1] || c2 < patt[1][0] || c2 > patt[1][1])
-      throw `input pattern mismatch: (${c1} ${c2}) not within ${patt}`;
+    let ret = '';
+    if(this.src)
+      ret = this.src.desc() + '.';
+    ret += this.ident;
+    if(this.args.length)
+      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+    return ret;
   }
 
   writeout(env) {
@@ -83,16 +74,16 @@ export class Filter {
   }
 }
 
-export class Atom extends Filter {
+export class Atom extends Node {
   constructor(val, meta = {}) {
-    super(null, [], meta);
+    super(null, null, [], meta);
     if(typeof val === 'number')
       val = BigInt(val);
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
   }
 
-  construct() {
-    return this;
+  withSource() {
+    throw 'atom.withSource';
   }
 
   eval(env) {
@@ -110,18 +101,9 @@ export class Atom extends Filter {
         throw 'desc object';
     }
   }
-
-  toString() {
-    return this.desc();
-  }
 }
 
 export class Stream {
-  constructor(src, sink) {
-    Object.defineProperty(this, 'src', { get: () => src });
-    Object.defineProperty(this, 'sink', { get: () => sink });
-  }
-
   next() {
     throw 'next undefined';
   }
@@ -191,7 +173,7 @@ export class Register {
       this._map[ident] = filter;
   }
 
-  map(ident) {
+  find(ident) {
     return this._map[ident] || (this.parent ? this.parent._map[ident] : null);
   }
 
@@ -201,3 +183,5 @@ export class Register {
 }
 
 export const mainReg = new Register();
+
+export const mainEnv = {register: mainReg};

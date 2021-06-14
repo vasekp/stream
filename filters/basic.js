@@ -1,4 +1,4 @@
-import {Filter, Atom, Stream, InfStream, mainReg} from '../base.js';
+import {Node, Atom, Stream, InfStream, mainReg} from '../base.js';
 
 function asnum(s) {
   if(!(s instanceof Atom))
@@ -9,10 +9,11 @@ function asnum(s) {
   return v;
 }
 
-mainReg.register('iota', class extends Filter {
-  eval(env) {
-    this.check([[0,0],[0,0]]);
-    const s = new InfStream(this, env);
+mainReg.register('iota', {
+  source: false,
+  numArg: 0,
+  eval: function() {
+    const s = new InfStream();
     let i = 1n;
     s.nextv = () => new Atom(i++);
     s.skip = c => i += c;
@@ -20,13 +21,15 @@ mainReg.register('iota', class extends Filter {
   }
 });
 
-mainReg.register(['range', 'r'], class extends Filter {
-  eval(env) {
-    this.check([[0,0],[1,2]]);
-    const s = new Stream(this, env);
-    const [min, max] = this.args[0] && this.args[1]
-      ? [asnum(this.args[0]), asnum(this.args[1])]
-      : [1n, asnum(this.args[0])];
+mainReg.register(['range', 'r'], {
+  source: false,
+  minArg: 1,
+  maxArg: 2,
+  eval: function(src, args) {
+    const s = new Stream();
+    const [min, max] = args[0] && args[1]
+      ? [asnum(args[0]), asnum(args[1])]
+      : [1n, asnum(args[0])];
     let i = min;
     s.next = () => i <= max
         ? { value: new Atom(i++), done: false }
@@ -38,17 +41,19 @@ mainReg.register(['range', 'r'], class extends Filter {
   }
 });
 
-mainReg.register(['length', 'len'], class extends Filter {
-  eval(env) {
-    this.check([[1,1],[0,0]]);
-    return new Atom(this.src.eval(env).len());
+mainReg.register(['length', 'len'], {
+  source: true,
+  numArg: 0,
+  eval: function(src, args, env) {
+    return new Atom(src.eval(env).len());
   }
 });
 
-mainReg.register('first', class extends Filter {
-  eval(env) {
-    this.check([[1,1],[0,0]]);
-    const {value, done} = this.src.eval(env).next();
+mainReg.register('first', {
+  source: true,
+  numArg: 0,
+  eval: function(src, args, env) {
+    const {value, done} = src.eval(env).next();
     if(done)
       throw 'first of empty';
     else
@@ -56,10 +61,11 @@ mainReg.register('first', class extends Filter {
   }
 });
 
-mainReg.register('last', class extends Filter {
-  eval(env) {
-    this.check([[1,1],[0,0]]);
-    const l = this.src.eval(env).last();
+mainReg.register('last', {
+  source: true,
+  numArg: 0,
+  eval: function(src, args, env) {
+    const l = src.eval(env).last();
     if(l === null)
       throw 'last of empty';
     else
