@@ -1,17 +1,37 @@
 const MAXLEN = 100;
 
+export class Node {
+  constructor(ident) {
+    this.ident = ident;
+    this.src = null;
+    this.args = [];
+  }
+
+  construct(reg) {
+    const cls = reg.map[this.ident];
+    return cls.construct(this.src, this.args, reg);
+  }
+
+  toString() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.toString() + '.';
+    ret += this.ident;
+    if(this.args.length)
+      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
+    return ret;
+  }
+};
+
 export class Filter {
   constructor(ins = [], meta = {}) {
     this.ins = ins;
     this.meta = meta;
   }
 
-  plug(e, pos = 0) {
-    if(this.ins[pos])
-      throw 'already set';
-    const ins = this.ins.slice();
-    ins[pos] = e;
-    return new (Object.getPrototypeOf(this).constructor)(ins, this.meta);
+  static construct(src, nargs, reg) {
+    const args = [src, ...nargs].map(n => n.construct(reg));
+    return new this(args, {});
   }
 
   eval(env) {
@@ -28,11 +48,11 @@ export class Filter {
       if(last === undefined)
         min = last = +ix;
       else if(+ix !== last + 1)
-        throw('ins not consecutive');
+        throw('ins not consecutive'); // TODO no longer can happen
       max = +ix;
     }
     if(max !== undefined && min > 1)
-      throw('ins not consecutive');
+      throw('ins not consecutive'); // TODO no longer can happen
     const c1 = min === 0 ? 1 : 0;
     const c2 = max !== undefined ? max : 0;
     if(c1 < args[0][0] || c1 > args[0][1] || c2 < args[1][0] || c2 > args[1][1])
@@ -75,6 +95,10 @@ export class Atom extends Filter {
     if(typeof val === 'number')
       val = BigInt(val);
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
+  }
+
+  construct() {
+    return this;
   }
 
   eval(env) {

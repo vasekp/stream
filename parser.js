@@ -1,4 +1,4 @@
-import {Filter, Atom, Stream, InfStream} from './base.js';
+import {Node, Filter, Atom, Stream, InfStream} from './base.js';
 import Enum from './enum.js';
 
 function asstr(s) {
@@ -126,6 +126,8 @@ function* tokenize(str) {
 function parse0(iter, close, array) {
   const ss = Enum.fromArray(['base', 'sym', 'term', 'oper']);
   let state = ss.base;
+  let term = null;
+  let ret = [];
   for(;;) {
     let {value: s, done} = iter.next();
     if(done)
@@ -135,16 +137,21 @@ function parse0(iter, close, array) {
         continue;
       case tc.number:
       case tc.string:
-        if(state === ss.base || state === ss.oper)
-          console.log(`atom ${s.value}`);
-        else
+        if(state === ss.base || state === ss.oper) {
+          const atom = new Atom(s.cls === tc.number ? BigInt(s.value) : s.value);
+          if(term)
+            throw 'atom.src'; // TODO: other opers
+          term = atom;
+        } else
           throw `${s.cls} after ${state}`;
         state = ss.term;
         break;
       case tc.ident:
-        if(state === ss.base || state === ss.oper)
-          console.log(`sym ${s.value}`);
-        else
+        if(state === ss.base || state === ss.oper) {
+          const node = new Node(s.value);
+          node.src = term;
+          term = node;
+        } else
           throw `${s.cls} after ${state}`;
         state = ss.sym;
         break;
@@ -152,40 +159,33 @@ function parse0(iter, close, array) {
         if(state === ss.base) {
           switch(s.value) {
             case '[':
-              console.log('begin array');
-              parse0(iter, ']', true);
-              console.log('end array');
+              term = new Node('array');
+              term.args = parse0(iter, ']', true);
               state = ss.term;
               break;
             case '(':
-              console.log('begin paren');
-              parse0(iter, ')', false);
-              console.log('end paren');
+              term = parse0(iter, ')', false);
               state = ss.term;
               break;
             case '{':
-              console.log('begin pnode');
-              parse0(iter, '}', false);
-              console.log('end pnode');
+              term = parse0(iter, '}', false);
               state = ss.sym;
               break;
             default:
               throw `unknown open ${s.value}`;
           }
         } else if(state === ss.sym && s.value === '(') {
-          console.log('begin args');
-          parse0(iter, ')', true);
-          console.log('end args');
+          term.args = parse0(iter, ')', true);
           state = ss.term;
         } else if(s.value === '{' && state === ss.oper) {
-          console.log('begin pnode');
-          parse0(iter, '}', false);
-          console.log('end pnode');
+          // TODO compound
+          term = parse0(iter, '}', false);
           state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
-          console.log('begin parts');
-          parse0(iter, ']', true);
-          console.log('end parts');
+          const parts = new Node('part');
+          parts.args = parse0(iter, ']', true);
+          parts.src = term;
+          term = parts;
           state = ss.term;
         } else
           throw `${s.cls} after ${state}`;
@@ -196,24 +196,24 @@ function parse0(iter, close, array) {
         if(state === ss.base) {
           if(!array)
             throw 'empty not allowed';
-          else {
-            console.log('return empty');
+          else
             return [];
-          }
         } else if(state === ss.oper)
           throw 'unfinished expression';
         else {
-          if(array)
-            console.log('return arr');
-          else
-            console.log('return expr');
+          if(array) {
+            ret.push(term);
+            return ret;
+          } else
+            return term;
           return;
         }
       case tc.oper:
         if(state === ss.sym || state === ss.term)
-          console.log(`stash term, oper ${s.value}`);
+          ;//console.log(`stash term, oper ${s.value}`);
         else if(state === ss.base && s.value === '-')
-          console.log('minus');
+          // Unary minus
+          term = new Atom(0);
         else
           throw `${s.cls} after ${state}`;
         state = ss.oper;
@@ -222,10 +222,11 @@ function parse0(iter, close, array) {
         if(!array)
           throw 'multi not allowed here';
         else if(state === ss.sym || state === ss.term)
-          console.log('stash expr');
+          ret.push(term);
         else
           throw `${s.cls} after ${state}`;
         state = ss.base;
+        term = null;
         break;
       default:
         throw `unknown input ${s.value}`;
@@ -234,5 +235,5 @@ function parse0(iter, close, array) {
 }
 
 export function parse(str) {
-  parse0(tokenize(str), '', false);
+  return parse0(tokenize(str), '', false);
 }
