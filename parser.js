@@ -13,6 +13,26 @@ function asstr(s) {
 const cc = Enum.fromArray(['digit', 'alpha']);
 const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper']);
 
+const priority = Enum.fromObj({
+  ':': 5,
+  '.': 5,
+  '*': 4,
+  '/': 4,
+  '+': 3,
+  '-': 3,
+  '~': 2,
+  '%': 1
+});
+
+const operMap = Enum.fromObj({
+  '+': 'plus',
+  '-': 'minus',
+  '*': 'times',
+  '/': 'div',
+  '~': 'join',
+  '%': 'zip'
+});
+
 function charcls(c) {
   if(c >= '0' && c <= '9')
     return cc.digit;
@@ -123,11 +143,71 @@ function* tokenize(str) {
   yield {value: '', cls: tc.close};
 }
 
+class Stack {
+  constructor() {
+    this._stack = [];
+  }
+
+  get empty() {
+    return !this._stack.length;
+  }
+
+  get topPrio() {
+    return this._stack[0].prio;
+  }
+
+  get topOper() {
+    return this._stack[0].oper;
+  }
+
+  reduce(oper, prio, term) {
+    while(!this.empty && (this.topPrio > prio || this.topOper === '.' || this.topOper === ':')) {
+      const entry = this._stack.shift();
+      switch(entry.oper) {
+        case '.':
+          if(term instanceof Atom)
+            throw 'atom after .';
+          else if(term.src)
+            throw 'double src';
+          term.src = entry.terms[0];
+          break;
+        case ':':
+          if(term instanceof Atom)
+            throw 'atom after :';
+          term = new Node('foreach', entry.terms[0], [term]);
+          break;
+        default:
+          term = new Node(operMap[entry.oper], null, [...entry.terms, term]);
+          break;
+      }
+    }
+    if(!this.empty && this.topPrio === prio && this.topOper !== oper) {
+      const entry = this._stack.shift();
+      term = new Node(operMap[entry.oper], null, [...entry.terms, term]);
+    }
+    return term;
+  }
+
+  addOper(oper, term) {
+    const prio = priority[oper];
+    term = this.reduce(oper, prio, term);
+    if(!this.empty && this.topPrio === prio && this.topOper === oper)
+      this._stack[0].terms.push(term);
+    else
+      this._stack.unshift({oper, prio, terms: [term]});
+  }
+
+  flatten(term) {
+    return this.reduce('', -1, term);
+  }
+}
+
 function parse0(iter, close, array) {
   const ss = Enum.fromArray(['base', 'sym', 'term', 'oper']);
   let state = ss.base;
   let term = null;
   let ret = [];
+  let stack = new Stack();
   for(;;) {
     let {value: s, done} = iter.next();
     if(done)
@@ -137,40 +217,36 @@ function parse0(iter, close, array) {
         continue;
       case tc.number:
       case tc.string:
-        if(state === ss.base || state === ss.oper) {
-          const atom = new Atom(s.cls === tc.number ? BigInt(s.value) : s.value);
-          if(term)
-            throw 'atom.src'; // TODO: other opers
-          term = atom;
-        } else
+        if(state === ss.base || state === ss.oper)
+          term = new Atom(s.cls === tc.number ? BigInt(s.value) : s.value);
+        else
           throw `${s.cls} after ${state}`;
         state = ss.term;
         break;
       case tc.ident:
-        if(state === ss.base || state === ss.oper) {
-          const node = new Node(s.value);
-          node.src = term;
-          term = node;
-        } else
+        if(state === ss.base || state === ss.oper)
+          term = new Node(s.value);
+        else
           throw `${s.cls} after ${state}`;
         state = ss.sym;
         break;
       case tc.open:
-        if(state === ss.base) {
+        if(state === ss.base || state === ss.oper) {
           switch(s.value) {
-            case '[':
-              term = new Node('array');
-              term.args = parse0(iter, ']', true);
+            case '[': {
+              const args = parse0(iter, ']', true);
+              term = new Node('array', null, args);
               state = ss.term;
-              break;
+              break; }
             case '(':
               term = parse0(iter, ')', false);
               state = ss.term;
               break;
-            case '{':
-              term = parse0(iter, '}', false);
+            case '{': {
+              const arg = parse0(iter, '}', false);
+              term = new Node('block', null, [arg]);
               state = ss.sym;
-              break;
+              break; }
             default:
               throw `unknown open ${s.value}`;
           }
@@ -178,14 +254,12 @@ function parse0(iter, close, array) {
           term.args = parse0(iter, ')', true);
           state = ss.term;
         } else if(s.value === '{' && state === ss.oper) {
-          // TODO compound
-          term = parse0(iter, '}', false);
+          const args = parse0(iter, '}', false);
+          term = new Node('block', null, args);
           state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
-          const parts = new Node('part');
-          parts.args = parse0(iter, ']', true);
-          parts.src = term;
-          term = parts;
+          const args = parse0(iter, ']', true);
+          term = new Node('part', term, args);
           state = ss.term;
         } else
           throw `${s.cls} after ${state}`;
@@ -201,6 +275,7 @@ function parse0(iter, close, array) {
         } else if(state === ss.oper)
           throw 'unfinished expression';
         else {
+          term = stack.flatten(term);
           if(array) {
             ret.push(term);
             return ret;
@@ -210,19 +285,20 @@ function parse0(iter, close, array) {
         }
       case tc.oper:
         if(state === ss.sym || state === ss.term)
-          ;//console.log(`stash term, oper ${s.value}`);
+          stack.addOper(s.value, term);
         else if(state === ss.base && s.value === '-')
           // Unary minus
-          term = new Atom(0);
+          stack.addOper('-', new Atom(0));
         else
           throw `${s.cls} after ${state}`;
+        term = null;
         state = ss.oper;
         break;
       case ',':
         if(!array)
           throw 'multi not allowed here';
         else if(state === ss.sym || state === ss.term)
-          ret.push(term);
+          ret.push(stack.flatten(term));
         else
           throw `${s.cls} after ${state}`;
         state = ss.base;
@@ -235,5 +311,7 @@ function parse0(iter, close, array) {
 }
 
 export function parse(str) {
-  return parse0(tokenize(str), '', false).construct(mainReg);
+  const r = parse0(tokenize(str), '', false);
+  console.log(r.toString());
+  return r.construct(mainReg);
 }

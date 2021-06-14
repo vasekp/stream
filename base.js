@@ -1,10 +1,10 @@
 const MAXLEN = 100;
 
 export class Node {
-  constructor(ident) {
+  constructor(ident, src = null, args = []) {
     this.ident = ident;
-    this.src = null;
-    this.args = [];
+    this.src = src;
+    this.args = args;
   }
 
   construct(reg) {
@@ -23,7 +23,7 @@ export class Node {
       ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     return ret;
   }
-};
+}
 
 export class Filter {
   constructor(src = null, args = [], meta = {}) {
@@ -81,11 +81,11 @@ export class Filter {
       yield ']';
     }
   }
-};
+}
 
 export class Atom extends Filter {
   constructor(val, meta = {}) {
-    super([], meta);
+    super(null, [], meta);
     if(typeof val === 'number')
       val = BigInt(val);
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
@@ -114,7 +114,7 @@ export class Atom extends Filter {
   toString() {
     return this.desc();
   }
-};
+}
 
 export class Stream {
   constructor(src, sink) {
@@ -155,7 +155,7 @@ export class Stream {
     for(const i = 0; i < c; i++)
       this.next();
   }
-};
+}
 
 export class InfStream extends Stream {
   next() {
@@ -169,7 +169,7 @@ export class InfStream extends Stream {
   len() {
     throw 'len of infinite';
   }
-};
+}
 
 export class Register {
   constructor(parent) {
@@ -198,6 +198,6 @@ export class Register {
   includes(ident) {
     return this._map.hasOwnProperty(ident);
   }
-};
+}
 
 export const mainReg = new Register();
