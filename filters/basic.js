@@ -16,7 +16,7 @@ mainReg.register('iota', {
     let i = 1n;
     const iter = (function*() { for(;;) yield new Atom(i++); })();
     iter.skip = c => i += c;
-    iter.inf = true;
+    iter.len = null;
     return iter;
   }
 });
@@ -37,13 +37,10 @@ mainReg.register(['range', 'ra'], {
       }
     })();
     iter.skip = c => i += c * step;
-    if(step > 0n) {
+    if(step !== 0n)
       iter.len = max >= min ? (max - min) / step + 1n : 0n;
-      iter.last = max >= min ? new Atom(max) : null; // TODO
-    } else if(step < 0n) {
-      iter.len = max <= min ? (max - min) / (-step) + 1n : 0n;
-    } else
-      iter.inf = true;
+    else
+      iter.len = null;
     return iter;
   }
 });
@@ -56,12 +53,13 @@ mainReg.register(['length', 'len'], {
     if(st instanceof Atom)
       throw 'length of atom';
     let len = 0n;
-    if(st.len !== undefined)
-      len = st.len;
-    else {
+    if(st.len === undefined) {
       for(const i of st)
         len++;
-    }
+    } else if(st.len !== null)
+      len = st.len;
+    else
+      throw 'length of infinite';
     return new Atom(len);
   }
 });
@@ -89,25 +87,29 @@ mainReg.register('last', {
     if(st instanceof Atom)
       throw 'length of atom';
     let l;
-    if(st.last !== undefined)
-      l = st.last;
-    else
+    if(st.len === undefined) {
       for(const v of st)
         l = v;
+    } else if(st.len !== null && st.len !== 0n) {
+      st.skip(st.len - 1n);
+      ({value: l} = st.next());
+    } else if(st.len === 0)
+      throw 'last of empty';
+    else if(st.len === null)
+      throw 'last of infinite';
     if(!l)
       throw 'last of empty';
     else
-      return l;
+      return l.eval(env);
   }
 });
 
 mainReg.register('array', {
   eval: function(src, args) {
-    const len = args.length;
-    let i = 0;
+    const len = BigInt(args.length);
+    let i = 0n;
     const iter = (function*() { while(i < len) yield args[i++].prepend(src); })();
     iter.len = len;
-    iter.last = len === 0 ? null : args[len - 1].prepend(src);
     iter.skip = c => i += c;
     return iter;
   }
@@ -147,16 +149,16 @@ mainReg.register(['repeat', 're'], {
   maxArg: 1,
   eval: function(src, args, env) {
     if(args[0]) {
-      const iter = (function*() { for(;;) yield src; })();
-      iter.inf = true;
-      iter.skip = () => null;
-      return iter;
-    } else {
       const num = asnum(args[0].prepend(src), env);
       let i = 0n;
       const iter = (function*() { while(i++ < num) yield src; })();
       iter.skip = c => i += c;
       iter.len = num;
+      return iter;
+    } else {
+      const iter = (function*() { for(;;) yield src; })();
+      iter.skip = () => null;
+      iter.len = null;
       return iter;
     }
   }

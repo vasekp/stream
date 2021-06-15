@@ -18,7 +18,7 @@ export class Node {
   }
 
   eval(env) {
-    //console.log(`E ${this.desc()}`);
+    console.log(`E ${this.desc()}`);
     const rec = env.register.find(this.ident);
     if(!rec)
       throw `undefined symbol ${this.ident}`;
