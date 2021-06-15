@@ -103,56 +103,6 @@ export class Atom extends Node {
   }
 }
 
-export class Stream {
-  next() {
-    throw 'next undefined';
-  }
-
-  [Symbol.iterator]() {
-    return this;
-  }
-
-  len() {
-    let l = 0;
-    while(!this.next().done)
-      len++;
-    return len;
-  }
-
-  last() {
-    let l;
-    for(;;) {
-      const {value, done} = this.next();
-      if(done)
-        break;
-      l = value;
-    }
-    if(l === undefined)
-      throw 'last called on empty stream';
-    else
-      return l;
-  }
-
-  skip(c) {
-    for(const i = 0; i < c; i++)
-      this.next();
-  }
-}
-
-export class InfStream extends Stream {
-  next() {
-    return { value: this.nextv(), done: false };
-  }
-
-  last() {
-    throw 'last of infinite';
-  }
-
-  len() {
-    throw 'len of infinite';
-  }
-}
-
 export class Register {
   constructor(parent) {
     this.parent = parent;
