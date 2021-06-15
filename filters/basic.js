@@ -137,7 +137,7 @@ mainReg.register('foreach', {
   }
 });
 
-mainReg.register('in', {
+mainReg.register('id', {
   source: true,
   numArg: 0,
   eval: function(src, args, env) {
@@ -310,5 +310,17 @@ mainReg.register('nest', {
     })();
     iter.len = null;
     return iter;
+  }
+});
+
+mainReg.register('in', {
+  numArg: 1,
+  eval: function(src, args, env) {
+    if(!env.ins)
+      throw '# outside block';
+    const ix = asnum(args[0].prepend(src), env);
+    if(ix < 0n || ix >= env.ins.length)
+      throw `index ${ix} outside [0,${env.ins.length - 1}]`;
+    return env.ins[ix].eval(env.pEnv);
   }
 });

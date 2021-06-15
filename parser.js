@@ -11,7 +11,7 @@ function asstr(s) {
 }
 
 const cc = Enum.fromArray(['digit', 'alpha']);
-const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper']);
+const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'hash']);
 
 const priority = Enum.fromObj({
   ':': 5,
@@ -71,10 +71,11 @@ function tokcls(c) {
 }
 
 function* tokenize(str) {
-  const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc']);
+  const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc', 'hash', 'hashd']);
   let state = ss.base;
   let accum = '';
   for(const c of str) {
+    /*** strings ***/
     if(state === ss.string) {
       if(c === '"') {
         yield {value: accum, cls: tc.string};
@@ -94,24 +95,30 @@ function* tokenize(str) {
       accum = '';
       continue;
     }
+    /*** accumulators ***/
     let cls = charcls(c);
-    switch(cls) {
-      case cc.digit:
-        if(state === ss.number) {
-          accum += c;
-          continue;
-        }
-        // fallthrough
-      case cc.alpha:
-        if(state === ss.ident) {
-          accum += c;
-          continue;
-        }
+    if(state === ss.number && cls === cc.digit) {
+      accum += c;
+      continue;
+    } else if(state === ss.ident && (cls === cc.digit || cls === cc.alpha)) {
+      accum += c;
+      continue;
+    } else if(state === ss.hash && cls === '#') {
+      accum += c;
+      continue;
+    } else if((state === ss.hash || state === ss.hashd) && cls === cc.digit) {
+      accum += c;
+      state = ss.hashd;
+      continue;
     }
+    /*** accumulation did not happen: dispatch the result ***/
     if(state === ss.ident)
       yield {value: accum, cls: tc.ident};
     else if(state === ss.number)
       yield {value: accum, cls: tc.number};
+    else if(state === ss.hash || state === ss.hashd)
+      yield {value: accum, cls: tc.hash};
+    /*** now handle the new character ***/
     switch(cls) {
       case cc.digit:
         state = ss.number;
@@ -121,18 +128,26 @@ function* tokenize(str) {
         state = ss.ident;
         accum = c;
         break;
+      case '#':
+        state = ss.hash;
+        accum = c;
+        break;
       default:
         yield {value: c, cls: tokcls(c)};
         state = ss.base;
     }
   }
-  // end of input
+  /*** end of input ***/
   switch(state) {
     case ss.ident:
       yield {value: accum, cls: tc.ident};
       break;
     case ss.number:
       yield {value: accum, cls: tc.number};
+      break;
+    case ss.hash:
+    case ss.hashd:
+      yield {value: accum, cls: tc.hash};
       break;
     case ss.string:
     case ss.stresc:
@@ -223,6 +238,20 @@ function parse0(iter, close, array) {
         else
           throw `${s.cls} after ${state}`;
         state = ss.sym;
+        break;
+      case tc.hash:
+        if(s.value === '#')
+          term = new Node('id');
+        else if(s.value === '##')
+          term = new Node('in', null, [new Atom(0)]);
+        else {
+          const ix = Number(s.value.substr(1));
+          if(Number.isNaN(ix))
+            throw `bad hash ${s.value}`;
+          else
+            term = new Node('in', null, [new Atom(ix)]);
+        }
+        state = ss.term;
         break;
       case tc.open:
         if(state === ss.base || state === ss.oper) {
