@@ -12,7 +12,7 @@ export class Node {
     if(this.src)
       throw 'already have source';
     else
-      return new Node(ident, src, this.args, this.meta);
+      return new Node(this.ident, src, this.args, this.meta);
   }
 
   eval(env) {

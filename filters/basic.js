@@ -84,9 +84,42 @@ mainReg.register('last', {
     else
       for(const v of st)
         l = v;
-    if(l === undefined)
+    if(!l)
       throw 'last of empty';
     else
       return l;
+  }
+});
+
+mainReg.register('array', {
+  source: false,
+  eval: function(src, args) {
+    const len = args.length;
+    let i = 0;
+    const iter = (function*() { while(i < len) yield args[i++]; })();
+    iter.len = len;
+    iter.last = len === 0 ? null : args[len - 1];
+    iter.skip = c => i += c;
+    return iter;
+  }
+});
+
+mainReg.register('foreach', {
+  source: true,
+  numArg: 1,
+  eval: function(src, args, env) {
+    const sIn = src.eval(env);
+    const sOut = (function*() {
+      for(;;) {
+        const {value, done} = sIn.next();
+        if(done)
+          return;
+        else
+          yield args[0].withSource(value);
+      }
+    })();
+    sOut.len = sIn.len;
+    sOut.skip = sIn.skip;
+    return sOut;
   }
 });
