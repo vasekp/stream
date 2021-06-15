@@ -31,14 +31,14 @@ mainReg.register(['range', 'ra'], {
     const step = args[2] ? asnum(args[2].prepend(src), env) : 1n;
     let i = min;
     const iter = (function*() {
-      while(i <= max) {
+      while(step >= 0n ? i <= max : i >= max) {
         yield new Atom(i);
         i += step;
       }
     })();
     iter.skip = c => i += c * step;
     if(step !== 0n)
-      iter.len = max >= min ? (max - min) / step + 1n : 0n;
+      iter.len = (a => a >= 0n ? a : 0)((max - min) / step + 1n);
     else
       iter.len = null;
     return iter;
