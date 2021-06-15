@@ -113,6 +113,27 @@ export class Atom extends Node {
   }
 }
 
+export class Block extends Node {
+  constructor(body, src = null, args = [], meta = {}) {
+    super(`{${body.desc()}}`, src, args, meta);
+    this.body = body;
+  }
+
+  prepend(src) {
+    if(!src)
+      return this;
+    if(this.src)
+      return new Block(this.body, this.src.prepend(src), this.args, this.meta);
+    else
+      return new Block(this.body, src, this.args, this.meta);
+  }
+
+  eval(env) {
+    const env2 = {...env, ins: [this.src, ...this.args.map(arg => arg.prepend(this.src))], pEnv: env};
+    return this.body.eval(env2);
+  }
+}
+
 export class Register {
   constructor(parent) {
     this.parent = parent;

@@ -1,4 +1,4 @@
-import {Node, Atom, mainReg} from './base.js';
+import {Node, Atom, Block, mainReg} from './base.js';
 import Enum from './enum.js';
 
 function asstr(s) {
@@ -50,11 +50,11 @@ function tokcls(c) {
       return tc.space;
     case '(':
     case '[':
-    //case '{':
+    case '{':
       return tc.open;
     case ')':
     case ']':
-    //case '}':
+    case '}':
       return tc.close;
     case '.':
     case ':':
@@ -236,21 +236,21 @@ function parse0(iter, close, array) {
               term = parse0(iter, ')', false);
               state = ss.term;
               break;
-            /*case '{': {
-              const arg = parse0(iter, '}', false);
-              term = new Node('block', null, [arg]);
+            case '{': {
+              const body = parse0(iter, '}', false);
+              term = new Block(body);
               state = ss.sym;
-              break; }*/
+              break; }
             default:
               throw `unknown open ${s.value}`;
           }
         } else if(state === ss.sym && s.value === '(') {
           term.args = parse0(iter, ')', true);
           state = ss.term;
-        /*} else if(s.value === '{' && state === ss.oper) {
-          const args = parse0(iter, '}', false);
-          term = new Node('block', null, args);
-          state = ss.sym;*/
+        } else if(s.value === '{' && state === ss.oper) {
+          const body = parse0(iter, '}', false);
+          term = new Block(body);
+          state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
           const args = parse0(iter, ']', false);
           term = new Node('part', term, [args]);
