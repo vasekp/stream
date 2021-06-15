@@ -151,6 +151,8 @@ mainReg.register(['repeat', 're'], {
   eval: function(src, args, env) {
     if(args[0]) {
       const num = asnum(args[0].prepend(src), env);
+      if(num < 0n)
+        throw 'repeat neg';
       let i = 0n;
       const iter = (function*() { while(i++ < num) yield src; })();
       iter.skip = c => i += c;
@@ -162,6 +164,26 @@ mainReg.register(['repeat', 're'], {
       iter.len = null;
       return iter;
     }
+  }
+});
+
+mainReg.register(['cycle', 'cc'], {
+  source: true,
+  maxArg: 1,
+  eval: function(src, args, env) {
+    if(args[0]) {
+      const num = asnum(args[0].prepend(src), env);
+      if(num < 0n)
+        throw 'cycle neg';
+      return (function*() {
+        for(let i = 0n; i < num; i++)
+          yield* src.eval(env);
+      })();
+    } else
+      return (function*() {
+        for(;;)
+          yield* src.eval(env);
+      })();
   }
 });
 
@@ -184,6 +206,8 @@ mainReg.register(['group', 'g'], {
       })();
     const iter = (function*() {
       for(const len of lFun) {
+        if(len < 0n)
+          throw 'group neg';
         const r = [];
         for(let i = 0n; i < len; i++) {
           const {value, done} = sIn.next();
@@ -261,6 +285,7 @@ mainReg.register('zip', {
 });
 
 mainReg.register('part', {
+  source: true,
   numArg: 1,
   eval: function(src, args, env) {
     const sIn = src.eval(env);
@@ -281,7 +306,7 @@ mainReg.register('part', {
         const mem = [];
         for(const s of sArg) {
           const ix = Number(asnum(s, env));
-          if(ix <= 0n)
+          if(ix <= 0)
             throw 'requested negative part';
           if(ix > mem.length)
             for(let i = mem.length; i < ix; i++) {
@@ -361,5 +386,89 @@ mainReg.register('reduce', {
         break;
     }
     return iter;
+  }
+});
+
+mainReg.register(['reverse', 'rev'], {
+  source: true,
+  numArg: 0,
+  eval: function(src, args, env) {
+    const sIn = src.eval(env);
+    if(sIn instanceof Atom)
+      throw 'reverse called on atom';
+    if(sIn.len === null)
+      throw 'reverse called on infinite';
+    const cont = [...sIn].reverse();
+    let i = 0;
+    const iter = (function*() {
+      while(i < cont.length)
+        yield cont[i++];
+    })();
+    iter.len = sIn.len;
+    iter.skip = c => i += Number(c);
+    return iter;
+  }
+});
+
+function takedrop(sIn, iter) {
+  return (function*() {
+    let take = true;
+    for(const num of iter) {
+      if(num < 0n)
+        throw `requested negative ${take?'take':'drop'}`;
+      if(take) {
+        for(let i = 0n; i < num; i++) {
+          const {value, done} = sIn.next();
+          if(done)
+            return;
+          yield value;
+        }
+      } else
+        sIn.skip(num);
+      take = !take;
+    }
+    if(take)
+      yield* sIn;
+  })();
+}
+
+mainReg.register(['take', 'takedrop', 'td'], {
+  source: true,
+  numArg: 1,
+  eval: function(src, args, env) {
+    const sIn = src.eval(env);
+    if(sIn instanceof Atom)
+      throw 'take called on atom';
+    const sArg = args[0].prepend(src).eval(env);
+    if(sArg instanceof Atom) {
+      const num = asnum(sArg, env);
+      return takedrop(sIn, [num]);
+    } else {
+      return takedrop(sIn, (function*() {
+        for(const s of sArg)
+          yield asnum(s, env);
+      })());
+    }
+  }
+});
+
+mainReg.register(['drop', 'droptake', 'dt'], {
+  source: true,
+  numArg: 1,
+  eval: function(src, args, env) {
+    const sIn = src.eval(env);
+    if(sIn instanceof Atom)
+      throw 'take called on atom';
+    const sArg = args[0].prepend(src).eval(env);
+    if(sArg instanceof Atom) {
+      const num = asnum(sArg, env);
+      return takedrop(sIn, [0n, num]);
+    } else {
+      return takedrop(sIn, (function*() {
+        yield 0n;
+        for(const s of sArg)
+          yield asnum(s, env);
+      })());
+    }
   }
 });
