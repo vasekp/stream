@@ -50,11 +50,11 @@ function tokcls(c) {
       return tc.space;
     case '(':
     case '[':
-    case '{':
+    //case '{':
       return tc.open;
     case ')':
     case ']':
-    case '}':
+    //case '}':
       return tc.close;
     case '.':
     case ':':
@@ -165,15 +165,9 @@ class Stack {
       const entry = this._stack.shift();
       switch(entry.oper) {
         case '.':
-          if(term instanceof Atom)
-            throw 'atom after .';
-          else if(term.src)
-            throw 'double src';
-          term.src = entry.terms[0];
+          term = term.prepend(entry.terms[0]);
           break;
         case ':':
-          if(term instanceof Atom)
-            throw 'atom after :';
           term = new Node('foreach', entry.terms[0], [term]);
           break;
         default:
@@ -242,21 +236,21 @@ function parse0(iter, close, array) {
               term = parse0(iter, ')', false);
               state = ss.term;
               break;
-            case '{': {
+            /*case '{': {
               const arg = parse0(iter, '}', false);
               term = new Node('block', null, [arg]);
               state = ss.sym;
-              break; }
+              break; }*/
             default:
               throw `unknown open ${s.value}`;
           }
         } else if(state === ss.sym && s.value === '(') {
           term.args = parse0(iter, ')', true);
           state = ss.term;
-        } else if(s.value === '{' && state === ss.oper) {
+        /*} else if(s.value === '{' && state === ss.oper) {
           const args = parse0(iter, '}', false);
           term = new Node('block', null, args);
-          state = ss.sym;
+          state = ss.sym;*/
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
           const args = parse0(iter, ']', true);
           term = new Node('part', term, args);

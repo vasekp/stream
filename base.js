@@ -8,29 +8,30 @@ export class Node {
     this.meta = meta;
   }
 
-  withSource(src) {
+  prepend(src) {
+    if(!src)
+      return this;
     if(this.src)
-      throw 'already have source';
+      return new Node(this.ident, this.src.prepend(src), this.args, this.meta);
     else
       return new Node(this.ident, src, this.args, this.meta);
   }
 
   eval(env) {
+    //console.log(`E ${this.desc()}`);
     const rec = env.register.find(this.ident);
     if(!rec)
       throw `undefined symbol ${this.ident}`;
     if(rec.source === true && !this.src)
-      throw 'needs source';
-    else if(rec.source === false && this.src)
-      throw 'does not allow source';
+      throw `${this.desc()}: needs source`;
     else if(rec.numArg === 0 && this.args.length > 0)
-      throw 'does not allow arguments';
+      throw `${this.desc()}: does not allow arguments`;
     else if(rec.numArg !== undefined && this.args.length !== rec.numArg)
-      throw `exactly ${rec.numArg} arguments required`;
+      throw `${this.desc()}: exactly ${rec.numArg} arguments required`;
     else if(rec.minArg !== undefined && this.args.length < rec.minArg)
-      throw `at least ${rec.minArg} arguments required`;
+      throw `${this.desc()}: at least ${rec.minArg} arguments required`;
     else if(rec.maxArg !== undefined && this.args.length > rec.maxArg)
-      throw `at most ${rec.maxArg} arguments required`;
+      throw `${this.desc()}: at most ${rec.maxArg} arguments required`;
     return rec.eval(this.src, this.args, env);
   }
 
@@ -82,8 +83,8 @@ export class Atom extends Node {
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
   }
 
-  withSource() {
-    throw 'atom.withSource';
+  prepend() {
+    return this;
   }
 
   eval(env) {

@@ -10,7 +10,6 @@ function asnum(s) {
 }
 
 mainReg.register('iota', {
-  source: false,
   numArg: 0,
   eval: function() {
     let i = 1n;
@@ -22,7 +21,6 @@ mainReg.register('iota', {
 });
 
 mainReg.register(['range', 'r'], {
-  source: false,
   minArg: 1,
   maxArg: 2,
   eval: function(src, args) {
@@ -92,13 +90,12 @@ mainReg.register('last', {
 });
 
 mainReg.register('array', {
-  source: false,
   eval: function(src, args) {
     const len = args.length;
     let i = 0;
-    const iter = (function*() { while(i < len) yield args[i++]; })();
+    const iter = (function*() { while(i < len) yield args[i++].prepend(src); })();
     iter.len = len;
-    iter.last = len === 0 ? null : args[len - 1];
+    iter.last = len === 0 ? null : args[len - 1].prepend(src);
     iter.skip = c => i += c;
     return iter;
   }
@@ -115,7 +112,7 @@ mainReg.register('foreach', {
         if(done)
           return;
         else
-          yield args[0].withSource(value);
+          yield args[0].prepend(value);
       }
     })();
     sOut.len = sIn.len;
