@@ -357,16 +357,23 @@ mainReg.register('nest', {
 
 mainReg.register('reduce', {
   source: true,
-  numArg: 1,
+  minArg: 1,
+  maxArg: 2,
   eval: function(src, args, env) {
     const sIn = src.eval(env);
     if(sIn instanceof Atom)
       throw 'reduce called on atom';
     const body = args[0].bare ? args[0] : new Block(args[0]);
     const iter = (function*() {
-      let {value: curr, done} = sIn.next();
-      if(done)
-        return;
+      let curr;
+      if(args[1])
+        curr = args[1].prepend(src);
+      else {
+        let done;
+        ({value: curr, done} = sIn.next());
+        if(done)
+          return;
+      }
       for(const next of sIn) {
         curr = body.apply([curr, next]);
         yield curr;
@@ -382,7 +389,7 @@ mainReg.register('reduce', {
         iter.len = 0n;
         break;
       default:
-        iter.len = sIn.len - 1n;
+        iter.len = args[1] ? sIn.len : sIn.len - 1n;
         break;
     }
     return iter;
