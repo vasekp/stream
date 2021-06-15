@@ -1,9 +1,10 @@
 import {Node, Atom, mainReg} from '../base.js';
 
-function asnum(s) {
-  if(!(s instanceof Atom))
+function asnum(st, env) {
+  const ev = st.eval(env);
+  if(!(ev instanceof Atom))
     throw 'not atom';
-  const v = s.value;
+  const v = ev.value;
   if(typeof v !== 'bigint')
     throw 'not number';
   return v;
@@ -20,18 +21,29 @@ mainReg.register('iota', {
   }
 });
 
-mainReg.register(['range', 'r'], {
+mainReg.register(['range', 'ra'], {
   minArg: 1,
-  maxArg: 2,
-  eval: function(src, args) {
+  maxArg: 3,
+  eval: function(src, args, env) {
     const [min, max] = args[0] && args[1]
-      ? [asnum(args[0]), asnum(args[1])]
-      : [1n, asnum(args[0])];
+      ? [asnum(args[0].prepend(src), env), asnum(args[1].prepend(src), env)]
+      : [1n, asnum(args[0].prepend(src), env)];
+    const step = args[2] ? asnum(args[2].prepend(src), env) : 1n;
     let i = min;
-    const iter = (function*() { while(i <= max) yield new Atom(i++); })();
-    iter.skip = c => i += c;
-    iter.len = max >= min ? max - min + 1n : 0;
-    iter.last = max >= min ? new Atom(max) : null;
+    const iter = (function*() {
+      while(i <= max) {
+        yield new Atom(i);
+        i += step;
+      }
+    })();
+    iter.skip = c => i += c * step;
+    if(step > 0n) {
+      iter.len = max >= min ? (max - min) / step + 1n : 0n;
+      iter.last = max >= min ? new Atom(max) : null; // TODO
+    } else if(step < 0n) {
+      iter.len = max <= min ? (max - min) / (-step) + 1n : 0n;
+    } else
+      iter.inf = true;
     return iter;
   }
 });
@@ -118,5 +130,34 @@ mainReg.register('foreach', {
     sOut.len = sIn.len;
     sOut.skip = sIn.skip;
     return sOut;
+  }
+});
+
+mainReg.register('in', {
+  source: true,
+  numArg: 0,
+  eval: function(src, args, env) {
+    return src.eval(env);
+  }
+});
+
+mainReg.register(['repeat', 're'], {
+  source: true,
+  minArg: 0,
+  maxArg: 1,
+  eval: function(src, args, env) {
+    if(args[0]) {
+      const iter = (function*() { for(;;) yield src; })();
+      iter.inf = true;
+      iter.skip = () => null;
+      return iter;
+    } else {
+      const num = asnum(args[0].prepend(src), env);
+      let i = 0n;
+      const iter = (function*() { while(i++ < num) yield src; })();
+      iter.skip = c => i += c;
+      iter.len = num;
+      return iter;
+    }
   }
 });
