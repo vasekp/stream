@@ -120,6 +120,8 @@ mainReg.register('foreach', {
   numArg: 1,
   eval: function(src, args, env) {
     const sIn = src.eval(env);
+    if(sIn instanceof Atom)
+      throw 'foreach called on atom';
     const sOut = (function*() {
       for(;;) {
         const {value, done} = sIn.next();
@@ -145,7 +147,6 @@ mainReg.register('in', {
 
 mainReg.register(['repeat', 're'], {
   source: true,
-  minArg: 0,
   maxArg: 1,
   eval: function(src, args, env) {
     if(args[0]) {
@@ -159,6 +160,138 @@ mainReg.register(['repeat', 're'], {
       const iter = (function*() { for(;;) yield src; })();
       iter.skip = () => null;
       iter.len = null;
+      return iter;
+    }
+  }
+});
+
+mainReg.register(['group', 'g'], {
+  source: true,
+  numArg: 1,
+  eval: function(src, args, env) {
+    const sIn = src.eval(env);
+    if(sIn instanceof Atom)
+      throw 'group called on atom';
+    const sArg = args[0].prepend(src).eval(env);
+    const lFun = sArg instanceof Atom
+      ? (() => {
+        const len = asnum(sArg);
+        return (function*() { for(;;) yield len; })();
+      })()
+      : (function*() {
+        for(const s of sArg)
+          yield asnum(s, env);
+      })();
+    const iter = (function*() {
+      for(const len of lFun) {
+        const r = [];
+        for(let i = 0n; i < len; i++) {
+          const {value, done} = sIn.next();
+          if(done)
+            break;
+          r.push(value);
+        }
+        // Yield empty group if asked to, but don't output trailing [] on EOI
+        if(r.length > 0n || len === 0n)
+          yield new Node('array', null, r, {});
+        if(r.length < len)
+          break;
+      }
+    })();
+    if(sArg instanceof Atom) {
+      const len = asnum(sArg);
+      iter.skip = c => sIn.skip(c * len);
+    }
+    return iter;
+  }
+});
+
+mainReg.register(['flatten', 'fl'], {
+  source: true,
+  maxArg: 1,
+  eval: function(src, args, env) {
+    const depth = args[0] ? asnum(args[0].prepend(src), env) : null;
+    return (function*() {
+      for(const s of src.eval(env)) {
+        if(s instanceof Atom || depth === 0n)
+          yield s;
+        else {
+          const tmp = depth !== null
+            ? new Node('flatten', s, [new Atom(depth - 1n)])
+            : new Node('flatten', s);
+          yield* tmp.eval(env);
+        }
+      }
+    })();
+  }
+});
+
+mainReg.register('join', {
+  eval: function(src, args, env) {
+    return (function*() {
+      for(const arg of args) {
+        const ev = arg.prepend(src).eval(env);
+        if(ev instanceof Atom)
+          yield ev;
+        else
+          yield* ev;
+      }
+    })();
+  }
+});
+
+mainReg.register('zip', {
+  eval: function(src, args, env) {
+    const is = args.map(arg => arg.prepend(src).eval(env));
+    if(is.map(i => i instanceof Atom).includes(true))
+      throw 'zip called with atom';
+    return (function*() {
+      for(;;) {
+        const rs = is.map(i => i.next());
+        if(rs.map(r => r.done).includes(true))
+          break;
+        const vs = rs.map(r => r.value);
+        yield new Node('array', null, vs);
+      }
+    })();
+  }
+});
+
+mainReg.register('part', {
+  numArg: 1,
+  eval: function(src, args, env) {
+    const sIn = src.eval(env);
+    if(sIn instanceof Atom)
+      throw 'part called on atom';
+    const sArg = args[0].prepend(src).eval(env);
+    if(sArg instanceof Atom) {
+      const ix = asnum(sArg, env);
+      if(ix <= 0n)
+        throw 'requested negative part';
+      sIn.skip(ix - 1n);
+      const {value, done} = sIn.next();
+      if(done)
+        throw 'requested part > length';
+      return value.eval(env);
+    } else {
+      const iter = (function*() {
+        const mem = [];
+        for(const s of sArg) {
+          const ix = Number(asnum(s, env));
+          if(ix <= 0n)
+            throw 'requested negative part';
+          if(ix > mem.length)
+            for(let i = mem.length; i < ix; i++) {
+              const {value, done} = sIn.next();
+              if(done)
+                throw 'requested part > length';
+              mem.push(value);
+            }
+          yield mem[ix - 1];
+        }
+      })();
+      iter.len = sIn.len;
+      iter.skip = sIn.skip;
       return iter;
     }
   }

@@ -252,8 +252,8 @@ function parse0(iter, close, array) {
           term = new Node('block', null, args);
           state = ss.sym;*/
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
-          const args = parse0(iter, ']', true);
-          term = new Node('part', term, args);
+          const args = parse0(iter, ']', false);
+          term = new Node('part', term, [args]);
           state = ss.term;
         } else
           throw `${s.cls} after ${state}`;
