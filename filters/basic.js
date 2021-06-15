@@ -1,4 +1,4 @@
-import {Node, Atom, mainReg} from '../base.js';
+import {Node, Atom, Block, mainReg} from '../base.js';
 
 function asnum(st, env) {
   const ev = st.eval(env);
@@ -10,7 +10,7 @@ function asnum(st, env) {
   return v;
 }
 
-mainReg.register('iota', {
+mainReg.register(['iota', 'seq', 'I'], {
   numArg: 0,
   eval: function() {
     let i = 1n;
@@ -212,7 +212,10 @@ mainReg.register(['flatten', 'fl'], {
   eval: function(src, args, env) {
     const depth = args[0] ? asnum(args[0].prepend(src), env) : null;
     return (function*() {
-      for(const s of src.eval(env)) {
+      const it = src.eval(env);
+      if(it instanceof Atom)
+        yield it;
+      else for(const s of src.eval(env)) {
         if(s instanceof Atom || depth === 0n)
           yield s;
         else {
@@ -297,6 +300,20 @@ mainReg.register('part', {
   }
 });
 
+mainReg.register('in', {
+  numArg: 1,
+  eval: function(src, args, env) {
+    if(!env.ins)
+      throw '# outside block';
+    const ix = asnum(args[0].prepend(src), env);
+    if(ix < 0n || ix >= env.ins.length)
+      throw `index ${ix} outside [0,${env.ins.length - 1}]`;
+    if(ix === 0n && !env.ins[0])
+      throw '#0 with no source';
+    return env.ins[ix].eval(env.pEnv);
+  }
+});
+
 mainReg.register('nest', {
   source: true,
   numArg: 1,
@@ -313,14 +330,36 @@ mainReg.register('nest', {
   }
 });
 
-mainReg.register('in', {
+mainReg.register('reduce', {
+  source: true,
   numArg: 1,
   eval: function(src, args, env) {
-    if(!env.ins)
-      throw '# outside block';
-    const ix = asnum(args[0].prepend(src), env);
-    if(ix < 0n || ix >= env.ins.length)
-      throw `index ${ix} outside [0,${env.ins.length - 1}]`;
-    return env.ins[ix].eval(env.pEnv);
+    const sIn = src.eval(env);
+    if(sIn instanceof Atom)
+      throw 'reduce called on atom';
+    const body = args[0].bare ? args[0] : new Block(args[0]);
+    const iter = (function*() {
+      let {value: curr, done} = sIn.next();
+      if(done)
+        return;
+      for(const next of sIn) {
+        curr = body.apply([curr, next]);
+        yield curr;
+      }
+    })();
+    switch(sIn.len) {
+      case undefined:
+        break;
+      case null:
+        iter.len = null;
+        break;
+      case 0n:
+        iter.len = 0n;
+        break;
+      default:
+        iter.len = sIn.len - 1n;
+        break;
+    }
+    return iter;
   }
 });

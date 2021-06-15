@@ -17,6 +17,13 @@ export class Node {
       return new Node(this.ident, src, this.args, this.meta);
   }
 
+  apply(args) {
+    if(this.args.length)
+      throw 'apply args ≠ []';
+    else
+      return new Node(this.ident, this.src, args, this.meta);
+  }
+
   eval(env) {
     //console.log(`E ${this.desc()}`);
     const rec = env.register.find(this.ident);
@@ -46,6 +53,10 @@ export class Node {
     if(this.args.length)
       ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
     return ret;
+  }
+
+  get bare() {
+    return this.src === null && this.args.length === 0;
   }
 
   writeout(env) {
@@ -128,9 +139,30 @@ export class Block extends Node {
       return new Block(this.body, src, this.args, this.meta);
   }
 
+  apply(args) {
+    if(this.args.length)
+      throw 'apply args ≠ []';
+    else
+      return new Block(this.body, this.src, args, this.meta);
+  }
+
   eval(env) {
+    //console.log(`E ${this.desc()}`);
     const env2 = {...env, ins: [this.src, ...this.args.map(arg => arg.prepend(this.src))], pEnv: env};
-    return this.body.eval(env2);
+    const ret = this.body.eval(env2);
+    if(ret instanceof Atom)
+      return ret;
+    const pnext = ret.next.bind(ret);
+    ret.next = () => {
+      const {value, done} = pnext();
+      if(done)
+        return {value, done};
+      else
+        return value instanceof Atom
+          ? {value, done}
+          : {value: new Block(value, this.src, this.args, this.meta), done};
+    };
+    return ret;
   }
 }
 
