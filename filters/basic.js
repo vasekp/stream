@@ -296,3 +296,19 @@ mainReg.register('part', {
     }
   }
 });
+
+mainReg.register('nest', {
+  source: true,
+  numArg: 1,
+  eval: function(src, args, env) {
+    const iter = (function*() {
+      let curr = src;
+      for(;;) {
+        yield curr;
+        curr = args[0].prepend(curr);
+      }
+    })();
+    iter.len = null;
+    return iter;
+  }
+});
