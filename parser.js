@@ -1,15 +1,6 @@
 import {Node, Atom, Block, mainReg} from './base.js';
 import Enum from './enum.js';
 
-function asstr(s) {
-  if(!(s instanceof Atom))
-    throw 'not atom';
-  const v = s.value;
-  if(typeof v !== 'string')
-    throw 'not string';
-  return v;
-}
-
 const cc = Enum.fromArray(['digit', 'alpha']);
 const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'hash']);
 
@@ -70,15 +61,27 @@ function tokcls(c) {
   }
 }
 
+export class ParseError extends Error {
+  constructor(msg, pos) {
+    super();
+    this.name = 'ParseError';
+    this.msg = msg;
+    this.pos = pos;
+  }
+}
+
 function* tokenize(str) {
   const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc', 'hash', 'hashd']);
   let state = ss.base;
   let accum = '';
+  let read = 0;
+  let accumStart;
   for(const c of str) {
+    read++;
     /*** strings ***/
     if(state === ss.string) {
       if(c === '"') {
-        yield {value: accum, cls: tc.string};
+        yield {value: accum, cls: tc.string, pos: accumStart};
         state = ss.base;
       }
       else if(c === '\\')
@@ -90,12 +93,8 @@ function* tokenize(str) {
       accum += c;
       state = ss.string;
       continue;
-    } else if(c === '"') {
-      state = ss.string;
-      accum = '';
-      continue;
     }
-    /*** accumulators ***/
+    /*** other accumulators ***/
     let cls = charcls(c);
     if(state === ss.number && cls === cc.digit) {
       accum += c;
@@ -113,49 +112,57 @@ function* tokenize(str) {
     }
     /*** accumulation did not happen: dispatch the result ***/
     if(state === ss.ident)
-      yield {value: accum, cls: tc.ident};
+      yield {value: accum, cls: tc.ident, pos: accumStart};
     else if(state === ss.number)
-      yield {value: accum, cls: tc.number};
+      yield {value: accum, cls: tc.number, pos: accumStart};
     else if(state === ss.hash || state === ss.hashd)
-      yield {value: accum, cls: tc.hash};
+      yield {value: accum, cls: tc.hash, pos: accumStart};
     /*** now handle the new character ***/
     switch(cls) {
       case cc.digit:
         state = ss.number;
         accum = c;
+        accumStart = read - 1;
         break;
       case cc.alpha:
         state = ss.ident;
         accum = c;
+        accumStart = read - 1;
         break;
       case '#':
         state = ss.hash;
         accum = c;
+        accumStart = read - 1;
+        break;
+      case '"':
+        state = ss.string;
+        accum = '';
+        accumStart = read - 1;
         break;
       default:
-        yield {value: c, cls: tokcls(c)};
+        yield {value: c, cls: tokcls(c), pos: read - 1};
         state = ss.base;
     }
   }
   /*** end of input ***/
   switch(state) {
     case ss.ident:
-      yield {value: accum, cls: tc.ident};
+      yield {value: accum, cls: tc.ident, pos: accumStart};
       break;
     case ss.number:
-      yield {value: accum, cls: tc.number};
+      yield {value: accum, cls: tc.number, pos: accumStart};
       break;
     case ss.hash:
     case ss.hashd:
-      yield {value: accum, cls: tc.hash};
+      yield {value: accum, cls: tc.hash, pos: accumStart};
       break;
     case ss.string:
     case ss.stresc:
-      throw 'unterminated string';
+      throw new ParseError('unterminated string', accumStart);
     case ss.base: // default:
       // nothing to do
   }
-  yield {value: '', cls: tc.close};
+  yield {value: '', cls: tc.close, pos: read - 1};
 }
 
 class Stack {
@@ -229,14 +236,14 @@ function parse0(iter, close, array) {
         if(state === ss.base || state === ss.oper)
           term = new Atom(s.cls === tc.number ? BigInt(s.value) : s.value);
         else
-          throw `${s.cls} after ${state}`;
+          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
         state = ss.term;
         break;
       case tc.ident:
         if(state === ss.base || state === ss.oper)
           term = new Node(s.value);
         else
-          throw `${s.cls} after ${state}`;
+          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
         state = ss.sym;
         break;
       case tc.hash:
@@ -247,7 +254,7 @@ function parse0(iter, close, array) {
         else {
           const ix = Number(s.value.substr(1));
           if(Number.isNaN(ix))
-            throw `bad hash ${s.value}`;
+            throw new ParseError(`malformed identifier "${s.value}"`, s.pos);
           else
             term = new Node('in', null, [new Atom(ix)]);
         }
@@ -271,7 +278,7 @@ function parse0(iter, close, array) {
               state = ss.sym;
               break; }
             default:
-              throw `unknown open ${s.value}`;
+              throw new ParseError(`internal parse error`, s.pos);
           }
         } else if(state === ss.sym && s.value === '(') {
           term.args = parse0(iter, ')', true);
@@ -285,18 +292,18 @@ function parse0(iter, close, array) {
           term = new Node('part', term, [args]);
           state = ss.term;
         } else
-          throw `${s.cls} after ${state}`;
+          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
         break;
       case tc.close:
         if(s.value !== close)
-          throw s.value ? `unexpected close ${s.value}` : 'unexpected end of input';
+          throw new ParseError(`unexpected ${s.value ? s.value : 'end of input'}`, s.pos);
         if(state === ss.base) {
           if(!array)
-            throw 'empty not allowed';
+            throw new ParseError(`empty input not allowed here`, s.pos);
           else
             return [];
         } else if(state === ss.oper)
-          throw 'unfinished expression';
+          throw new ParseError(`unfinished expression`, s.pos);
         else {
           term = stack.flatten(term);
           if(array) {
@@ -313,26 +320,33 @@ function parse0(iter, close, array) {
           // Unary minus
           stack.addOper('-', new Atom(0));
         else
-          throw `${s.cls} after ${state}`;
+          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
         term = null;
         state = ss.oper;
         break;
       case ',':
         if(!array)
-          throw 'multi not allowed here';
+          throw new ParseError(`multi-part expression not allowed here`, s.pos);
         else if(state === ss.sym || state === ss.term)
           ret.push(stack.flatten(term));
         else
-          throw `${s.cls} after ${state}`;
+          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
         state = ss.base;
         term = null;
         break;
       default:
-        throw `unknown input ${s.value}`;
+        throw new ParseError(`unknown input ${s.value}`, s.pos);
     }
   }
 }
 
 export function parse(str) {
-  return parse0(tokenize(str), '', false);
+  try {
+    str = str.replace(/[\n\r]+$/, '');
+    return parse0(tokenize(str), '', false);
+  } catch(e) {
+    if(e instanceof ParseError)
+      e.str = str;
+    throw e;
+  }
 }
