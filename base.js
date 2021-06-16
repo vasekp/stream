@@ -101,6 +101,8 @@ export class Atom extends Node {
     if(typeof val === 'number')
       val = BigInt(val);
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
+    const type = typeof val === 'bigint' ? 'number' : 'string'; // displayed to user
+    Object.defineProperty(this, 'type', { value: type, enumerable: true });
   }
 
   prepend() {
@@ -121,6 +123,21 @@ export class Atom extends Node {
       default:
         throw 'desc object';
     }
+  }
+
+  getTyped(type) {
+    if(this.type === type)
+      return this.value;
+    else
+      throw `expected ${type}, got ${this.type}`;
+  }
+
+  get numValue() {
+    return this.getTyped('number');
+  }
+
+  get strValue() {
+    return this.getTyped('string');
   }
 }
 
