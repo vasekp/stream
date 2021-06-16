@@ -1,14 +1,4 @@
-import {Node, Atom, mainReg} from '../base.js';
-
-function asnum(st, env) {
-  const ev = st.eval(env);
-  if(!(ev instanceof Atom))
-    throw 'not atom';
-  const v = ev.value;
-  if(typeof v !== 'bigint')
-    throw 'not number';
-  return v;
-}
+import {Node, Atom, mainReg, StreamError} from '../base.js';
 
 function regReducer(name, fun) {
   mainReg.register(name, {
@@ -30,7 +20,7 @@ function regReducer(name, fun) {
                 const {value: r, done} = i.next();
                 if(done)
                   return;
-                vs.push(asnum(r, env));
+                vs.push(r.evalNum(env));
               }
             yield new Atom(vs.reduce(fun));
           }

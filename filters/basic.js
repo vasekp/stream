@@ -1,15 +1,5 @@
 import {Node, Atom, Block, mainReg} from '../base.js';
 
-function asnum(st, env) {
-  const ev = st.eval(env);
-  if(!(ev instanceof Atom))
-    throw 'not atom';
-  const v = ev.value;
-  if(typeof v !== 'bigint')
-    throw 'not number';
-  return v;
-}
-
 mainReg.register(['iota', 'seq', 'I'], {
   numArg: 0,
   eval: function() {
@@ -26,9 +16,9 @@ mainReg.register(['range', 'ra'], {
   maxArg: 3,
   eval: function(node, env) {
     const [min, max] = node.args[0] && node.args[1]
-      ? [asnum(node.args[0].prepend(node.src), env), asnum(node.args[1].prepend(node.src), env)]
-      : [1n, asnum(node.args[0].prepend(node.src), env)];
-    const step = node.args[2] ? asnum(node.args[2].prepend(node.src), env) : 1n;
+      ? [node.args[0].prepend(node.src).evalNum(env), node.args[1].prepend(node.src).evalNum(env)]
+      : [1n, node.args[0].prepend(node.src).evalNum(env)];
+    const step = node.args[2] ? node.args[2].prepend(node.src).evalNum(env) : 1n;
     let i = min;
     const iter = (function*() {
       while(step >= 0n ? i <= max : i >= max) {
@@ -150,7 +140,7 @@ mainReg.register(['repeat', 're'], {
   maxArg: 1,
   eval: function(node, env) {
     if(node.args[0]) {
-      const num = asnum(node.args[0].prepend(node.src), env);
+      const num = node.args[0].prepend(node.src).evalNum(env);
       if(num < 0n)
         throw 'repeat neg';
       let i = 0n;
@@ -172,7 +162,7 @@ mainReg.register(['cycle', 'cc'], {
   maxArg: 1,
   eval: function(node, env) {
     if(node.args[0]) {
-      const num = asnum(node.args[0].prepend(node.src), env);
+      const num = node.args[0].prepend(node.src).evalNum(env);
       if(num < 0n)
         throw 'cycle neg';
       return (function*() {
@@ -202,7 +192,7 @@ mainReg.register(['group', 'g'], {
       })()
       : (function*() {
         for(const s of sArg)
-          yield asnum(s, env);
+          yield s.evalNum(env);
       })();
     const iter = (function*() {
       for(const len of lFun) {
@@ -234,7 +224,7 @@ mainReg.register(['flatten', 'fl'], {
   source: true,
   maxArg: 1,
   eval: function(node, env) {
-    const depth = node.args[0] ? asnum(node.args[0].prepend(node.src), env) : null;
+    const depth = node.args[0] ? node.args[0].prepend(node.src).evalNum(env) : null;
     return (function*() {
       const it = node.src.eval(env);
       if(it instanceof Atom)
@@ -293,7 +283,7 @@ mainReg.register('part', {
       throw 'part called on atom';
     const sArg = node.args[0].prepend(node.src).eval(env);
     if(sArg instanceof Atom) {
-      const ix = asnum(sArg, env);
+      const ix = sArg.evalNum(env);
       if(ix <= 0n)
         throw 'requested negative part';
       sIn.skip(ix - 1n);
@@ -305,7 +295,7 @@ mainReg.register('part', {
       const iter = (function*() {
         const mem = [];
         for(const s of sArg) {
-          const ix = Number(asnum(s, env));
+          const ix = Number(s.evalNum(env));
           if(ix <= 0)
             throw 'requested negative part';
           if(ix > mem.length)
@@ -330,7 +320,7 @@ mainReg.register('in', {
   eval: function(node, env) {
     if(!env.ins)
       throw '# outside block';
-    const ix = asnum(node.args[0].prepend(node.src), env);
+    const ix = node.args[0].prepend(node.src).evalNum(env);
     if(ix < 0n || ix >= env.ins.length)
       throw `index ${ix} outside [0,${env.ins.length - 1}]`;
     if(ix === 0n && !env.ins[0])
@@ -448,12 +438,12 @@ mainReg.register(['take', 'takedrop', 'td'], {
       throw 'take called on atom';
     const sArg = node.args[0].prepend(node.src).eval(env);
     if(sArg instanceof Atom) {
-      const num = asnum(sArg, env);
+      const num = sArg.evalNum(env);
       return takedrop(sIn, [num]);
     } else {
       return takedrop(sIn, (function*() {
         for(const s of sArg)
-          yield asnum(s, env);
+          yield s.evalNum(env);
       })());
     }
   }
@@ -468,13 +458,13 @@ mainReg.register(['drop', 'droptake', 'dt'], {
       throw 'take called on atom';
     const sArg = node.args[0].prepend(node.src).eval(env);
     if(sArg instanceof Atom) {
-      const num = asnum(sArg, env);
+      const num = sArg.evalNum(env);
       return takedrop(sIn, [0n, num]);
     } else {
       return takedrop(sIn, (function*() {
         yield 0n;
         for(const s of sArg)
-          yield asnum(s, env);
+          yield s.evalNum(env);
       })());
     }
   }

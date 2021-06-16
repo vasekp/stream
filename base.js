@@ -74,6 +74,13 @@ export class Node {
     }
   }
 
+  evalNum(env) {
+    const ev = this.eval(env);
+    if(!(ev instanceof Atom))
+      throw new StreamError(null, `expected number, got stream ${this.desc()}`);
+    return ev.numValue;
+  }
+
   desc() {
     let ret = '';
     if(this.src)
