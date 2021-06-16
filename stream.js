@@ -12,8 +12,10 @@ repl.start({eval: e => {
     console.log(st.writeout(mainEnv));
   } catch(e) {
     if(e instanceof ParseError) {
-      console.error(e.str);
-      console.error(' '.repeat(e.pos) + '^');
+      if(e.str !== '')
+        console.error(e.str);
+      if(e.pos >= 0)
+        console.error(' '.repeat(e.pos) + '^');
       console.error(`${e.name}: ${e.msg}`);
     } else if(e instanceof StreamError) {
       if(e.node)
