@@ -179,12 +179,12 @@ mainReg.register(['cycle', 'cc'], {
       const num = node.args[0].prepend(node.src).evalNum(env, {min: 0n});
       return (function*() {
         for(let i = 0n; i < num; i++)
-          yield* node.src.eval(env);
+          yield* node.src.evalStream(env);
       })();
     } else
       return (function*() {
         for(;;)
-          yield* node.src.eval(env);
+          yield* node.src.evalStream(env);
       })();
   }
 });
