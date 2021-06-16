@@ -288,8 +288,8 @@ function parse0(iter, close, array) {
           term = new Block(body, s);
           state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
-          const args = parse0(iter, ']', false);
-          term = new Node('part', s, term, [args]);
+          const args = parse0(iter, ']', true);
+          term = new Node('part', s, term, args);
           state = ss.term;
         } else
           throw new ParseError(`"${s.value}" can't appear here`, s.pos);

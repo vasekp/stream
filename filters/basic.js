@@ -191,19 +191,27 @@ mainReg.register(['cycle', 'cc'], {
 
 mainReg.register(['group', 'g'], {
   source: true,
-  numArg: 1,
+  minArg: 1,
   eval: function(node, env) {
     const sIn = node.src.evalStream(env);
-    const sArg = node.args[0].prepend(node.src).eval(env);
-    const lFun = sArg instanceof Atom
-      ? (() => {
-        const len = sArg.numValue;
-        return (function*() { for(;;) yield len; })();
-      })()
-      : (function*() {
-        for(const s of sArg)
-          yield s.evalNum(env);
-      })();
+    let lFun;
+    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+    if(!ins.map(i => i instanceof Atom).includes(false)) {
+      if(node.args.length === 1) {
+        const len = checks.num(ins[0].numValue, {min: 0n});
+        lFun = (function*() { for(;;) yield len; })();
+      } else {
+        lFun = ins.map(i => checks.num(i.numValue, {min: 0n}));
+      }
+    } else {
+      if(node.args.length > 1)
+        throw new StreamError(null, 'required list of values or a single stream');
+      else
+        lFun = (function*() {
+          for(const s of ins[0])
+            yield s.evalNum(env, {min: 0n});
+        })();
+    }
     const iter = (function*() {
       for(const len of lFun) {
         checks.num(len, {min: 0n});
@@ -221,10 +229,6 @@ mainReg.register(['group', 'g'], {
           break;
       }
     })();
-    if(sArg instanceof Atom) {
-      const len = sArg.numValue;
-      iter.skip = c => sIn.skip(c * len);
-    }
     return iter;
   }
 });
@@ -299,38 +303,47 @@ mainReg.register('zip', {
   }
 });
 
+function part(sIn, iter) {
+  return (function*() {
+    const mem = [];
+    for(const ix of iter) {
+      if(ix > mem.length)
+        for(let i = mem.length; i < ix; i++) {
+          const {value, done} = sIn.next();
+          if(done)
+            throw new StreamError(null, `requested part ${ix} beyond end`);
+          mem.push(value);
+        }
+      yield mem[Number(ix) - 1];
+    }
+  })();
+}
+
 mainReg.register('part', {
   source: true,
-  numArg: 1,
+  minArg: 1,
   eval: function(node, env) {
     const sIn = node.src.evalStream(env);
-    const sArg = node.args[0].prepend(node.src).eval(env);
-    if(sArg instanceof Atom) {
-      const ix = sArg.evalNum(env, {min: 1n});
-      sIn.skip(ix - 1n);
-      const {value, done} = sIn.next();
-      if(done)
-        throw new StreamError(null, `requested part ${ix} beyond end`);
-      return value.eval(env);
-    } else {
-      const iter = (function*() {
-        const mem = [];
-        for(const s of sArg) {
-          const ix = Number(s.evalNum(env, {min: 1n}));
-          if(ix > mem.length)
-            for(let i = mem.length; i < ix; i++) {
-              const {value, done} = sIn.next();
-              if(done)
-                throw new StreamError(null, `requested part ${ix} beyond end`);
-              mem.push(value);
-            }
-          yield mem[ix - 1];
-        }
-      })();
-      iter.len = sIn.len;
-      iter.skip = sIn.skip;
-      return iter;
-    }
+    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+    if(!ins.map(i => i instanceof Atom).includes(false)) {
+      if(node.args.length === 1) {
+        const ix = checks.num(ins[0].numValue, {min: 1n});
+        sIn.skip(ix - 1n);
+        const {value, done} = sIn.next();
+        if(done)
+          throw new StreamError(null, `requested part ${ix} beyond end`);
+        return value.eval(env);
+      } else
+        return part(sIn, ins.map(i => checks.num(i.numValue, {min: 1n})));
+    } else if(node.args.length > 1)
+      throw new StreamError(null, 'required list of values or a single stream');
+    const iter = part(sIn, (function*() {
+      for(const s of ins[0])
+        yield s.evalNum(env, {min: 1n});
+    })());
+    iter.len = sIn.len;
+    iter.skip = sIn.skip;
+    return iter;
   },
   desc: function(node) {
     let ret = '';
@@ -474,9 +487,8 @@ mainReg.register(['take', 'takedrop', 'td'], {
       return takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n})));
     else if(node.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
-    const sArg = node.args[0].prepend(node.src).eval(env);
     return takedrop(sIn, (function*() {
-      for(const s of sArg)
+      for(const s of ins[0])
         yield s.evalNum(env, {min: 0n});
     })());
   }
@@ -492,10 +504,9 @@ mainReg.register(['drop', 'droptake', 'dt'], {
       return takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]);
     else if(node.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
-    const sArg = node.args[0].prepend(node.src).eval(env);
     return takedrop(sIn, (function*() {
       yield 0n;
-      for(const s of sArg)
+      for(const s of ins[0])
         yield s.evalNum(env, {min: 0n});
     })());
   }
