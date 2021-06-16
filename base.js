@@ -74,11 +74,20 @@ export class Node {
     }
   }
 
-  evalNum(env) {
+  evalNum(env, opts = {}) {
     const ev = this.eval(env);
     if(!(ev instanceof Atom))
       throw new StreamError(null, `expected number, got stream ${this.desc()}`);
-    return ev.numValue;
+    return checks.num(ev.numValue, opts);
+  }
+
+  evalStream(env, opts = {}) {
+    const ev = this.eval(env);
+    if(ev instanceof Atom)
+      throw new StreamError(null, `expected stream, got ${ev.type} ${ev.desc()}`);
+    if(opts.finite && ev.len === null)
+      throw new StreamError(null, 'infinite stream');
+    return ev;
   }
 
   desc() {
@@ -251,3 +260,16 @@ export class Register {
 export const mainReg = new Register();
 
 export const mainEnv = {register: mainReg};
+
+export const checks = {
+  num(value, opts = {}) {
+    if(opts.min !== undefined && value < opts.min)
+      throw new StreamError(null, `expected ${
+        opts.min === 0n ? 'nonnegative'
+        : opts.min === 1n ? 'positive'
+        : `≥ ${opts.min}`}, got ${value}`);
+    if(opts.max !== undefined && value > opts.max)
+      throw new StreamError(null, `value ${value} exceeds maximum ${opts.max}`);
+    return value;
+  }
+};
