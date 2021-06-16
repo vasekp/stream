@@ -5,9 +5,10 @@ import {mainEnv, StreamError} from './base.js';
 
 import repl from 'repl';
 
-repl.start({eval: e => {
+repl.start({eval: str => {
   try {
-    const st = parse(e);
+    str = str.replace(/[\n\r]+$/, '');
+    const st = parse(str);
     //console.log(st.desc());
     console.log(st.writeout(mainEnv));
   } catch(e) {
@@ -18,9 +19,11 @@ repl.start({eval: e => {
         console.error(' '.repeat(e.pos) + '^');
       console.error(`${e.name}: ${e.msg}`);
     } else if(e instanceof StreamError) {
-      if(e.node)
+      if(e.node) {
+        console.error(str);
+        console.error(' '.repeat(e.node.token.pos) + '^');
         console.error(`${e.node.desc()}: ${e.msg}`);
-      else
+      } else
         console.error(e.msg);
     } else if(typeof e === 'string')
       console.error(`Error: ${e}`);

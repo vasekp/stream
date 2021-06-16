@@ -9,8 +9,9 @@ export class StreamError extends Error {
 }
 
 export class Node {
-  constructor(ident, src = null, args = [], meta = {}) {
+  constructor(ident, token, src = null, args = [], meta = {}) {
     this.ident = ident;
+    this.token = token;
     this.src = src;
     this.args = args;
     this.meta = meta;
@@ -20,16 +21,16 @@ export class Node {
     if(!src)
       return this;
     if(this.src)
-      return new Node(this.ident, this.src.prepend(src), this.args, this.meta);
+      return new Node(this.ident, this.token, this.src.prepend(src), this.args, this.meta);
     else
-      return new Node(this.ident, src, this.args, this.meta);
+      return new Node(this.ident, this.token, src, this.args, this.meta);
   }
 
   apply(args) {
     if(this.args.length)
       throw new Error('Node.apply this.args ≠ []');
     else
-      return new Node(this.ident, this.src, args, this.meta);
+      return new Node(this.ident, this.token, this.src, args, this.meta);
   }
 
   eval(env) {
@@ -145,7 +146,7 @@ function defaultSkip(c) {
 
 export class Atom extends Node {
   constructor(val, meta = {}) {
-    super(null, null, [], meta);
+    super(null, null, null, [], meta);
     if(typeof val === 'number')
       val = BigInt(val);
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
@@ -190,8 +191,8 @@ export class Atom extends Node {
 }
 
 export class Block extends Node {
-  constructor(body, src = null, args = [], meta = {}) {
-    super(`{${body.desc()}}`, src, args, meta);
+  constructor(body, token, src = null, args = [], meta = {}) {
+    super(`{${body.desc()}}`, token, src, args, meta);
     this.body = body;
   }
 
@@ -199,16 +200,16 @@ export class Block extends Node {
     if(!src)
       return this;
     if(this.src)
-      return new Block(this.body, this.src.prepend(src), this.args, this.meta);
+      return new Block(this.body, this.token, this.src.prepend(src), this.args, this.meta);
     else
-      return new Block(this.body, src, this.args, this.meta);
+      return new Block(this.body, this.token, src, this.args, this.meta);
   }
 
   apply(args) {
     if(this.args.length)
       throw new Error('Block.apply this.args ≠ []');
     else
-      return new Block(this.body, this.src, args, this.meta);
+      return new Block(this.body, this.token, this.src, args, this.meta);
   }
 
   eval(env) {
@@ -225,7 +226,7 @@ export class Block extends Node {
       else
         return value instanceof Atom
           ? {value, done}
-          : {value: new Block(value, this.src, this.args, this.meta), done};
+          : {value: new Block(value, this.token, this.src, this.args, this.meta), done};
     };
     return ret;
   }

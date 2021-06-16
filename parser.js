@@ -179,38 +179,38 @@ class Stack {
   }
 
   get topOper() {
-    return this._stack[0].oper;
+    return this._stack[0].token.value;
   }
 
   reduce(oper, prio, term) {
     while(!this.empty && (this.topPrio > prio || this.topOper === '.' || this.topOper === ':')) {
       const entry = this._stack.shift();
-      switch(entry.oper) {
+      switch(entry.token.value) {
         case '.':
           term = term.prepend(entry.terms[0]);
           break;
         case ':':
-          term = new Node('foreach', entry.terms[0], [term]);
+          term = new Node('foreach', entry.token, entry.terms[0], [term]);
           break;
         default:
-          term = new Node(operMap[entry.oper], null, [...entry.terms, term]);
+          term = new Node(operMap[entry.token.value], entry.token, null, [...entry.terms, term]);
           break;
       }
     }
     if(!this.empty && this.topPrio === prio && this.topOper !== oper) {
       const entry = this._stack.shift();
-      term = new Node(operMap[entry.oper], null, [...entry.terms, term]);
+      term = new Node(operMap[entry.token.value], entry.token, null, [...entry.terms, term]);
     }
     return term;
   }
 
-  addOper(oper, term) {
-    const prio = priority[oper];
-    term = this.reduce(oper, prio, term);
-    if(!this.empty && this.topPrio === prio && this.topOper === oper)
+  addOper(token, term) {
+    const prio = priority[token.value];
+    term = this.reduce(token.value, prio, term);
+    if(!this.empty && this.topPrio === prio && this.topOper === token.value)
       this._stack[0].terms.push(term);
     else
-      this._stack.unshift({oper, prio, terms: [term]});
+      this._stack.unshift({token, prio, terms: [term]});
   }
 
   flatten(term) {
@@ -241,22 +241,22 @@ function parse0(iter, close, array) {
         break;
       case tc.ident:
         if(state === ss.base || state === ss.oper)
-          term = new Node(s.value);
+          term = new Node(s.value, s);
         else
           throw new ParseError(`"${s.value}" can't appear here`, s.pos);
         state = ss.sym;
         break;
       case tc.hash:
         if(s.value === '#')
-          term = new Node('id');
+          term = new Node('id', s);
         else if(s.value === '##')
-          term = new Node('in', null, [new Atom(0)]);
+          term = new Node('in', s, null, [new Atom(0)]);
         else {
           const ix = Number(s.value.substr(1));
           if(Number.isNaN(ix))
             throw new ParseError(`malformed identifier "${s.value}"`, s.pos);
           else
-            term = new Node('in', null, [new Atom(ix)]);
+            term = new Node('in', s, null, [new Atom(ix)]);
         }
         state = ss.term;
         break;
@@ -265,7 +265,7 @@ function parse0(iter, close, array) {
           switch(s.value) {
             case '[': {
               const args = parse0(iter, ']', true);
-              term = new Node('array', null, args);
+              term = new Node('array', s, null, args);
               state = ss.term;
               break; }
             case '(':
@@ -274,7 +274,7 @@ function parse0(iter, close, array) {
               break;
             case '{': {
               const body = parse0(iter, '}', false);
-              term = new Block(body);
+              term = new Block(body, s);
               state = ss.sym;
               break; }
             default:
@@ -285,11 +285,11 @@ function parse0(iter, close, array) {
           state = ss.term;
         } else if(s.value === '{' && state === ss.oper) {
           const body = parse0(iter, '}', false);
-          term = new Block(body);
+          term = new Block(body, s);
           state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
           const args = parse0(iter, ']', false);
-          term = new Node('part', term, [args]);
+          term = new Node('part', s, term, [args]);
           state = ss.term;
         } else
           throw new ParseError(`"${s.value}" can't appear here`, s.pos);
@@ -315,10 +315,10 @@ function parse0(iter, close, array) {
         }
       case tc.oper:
         if(state === ss.sym || state === ss.term)
-          stack.addOper(s.value, term);
+          stack.addOper(s, term);
         else if(state === ss.base && s.value === '-')
           // Unary minus
-          stack.addOper('-', new Atom(0));
+          stack.addOper(s, new Atom(0));
         else
           throw new ParseError(`"${s.value}" can't appear here`, s.pos);
         term = null;
@@ -342,7 +342,6 @@ function parse0(iter, close, array) {
 
 export function parse(str) {
   try {
-    str = str.replace(/[\n\r]+$/, '');
     return parse0(tokenize(str), '', false);
   } catch(e) {
     if(e instanceof ParseError)

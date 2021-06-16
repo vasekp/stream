@@ -216,7 +216,7 @@ mainReg.register(['group', 'g'], {
         }
         // Yield empty group if asked to, but don't output trailing [] on EOI
         if(r.length > 0n || len === 0n)
-          yield new Node('array', null, r, {});
+          yield new Node('array', node.token, null, r, {});
         if(r.length < len)
           break;
       }
@@ -243,8 +243,8 @@ mainReg.register(['flatten', 'fl'], {
           yield s;
         else {
           const tmp = depth !== null
-            ? new Node('flatten', s, [new Atom(depth - 1n)])
-            : new Node('flatten', s);
+            ? new Node('flatten', node.token, s, [new Atom(depth - 1n)])
+            : new Node('flatten', node.token, s);
           yield* tmp.eval(env);
         }
       }
@@ -284,7 +284,7 @@ mainReg.register('zip', {
         if(rs.map(r => r.done).includes(true))
           break;
         const vs = rs.map(r => r.value);
-        yield new Node('array', null, vs);
+        yield new Node('array', node.token, null, vs);
       }
     })();
   },
@@ -394,7 +394,7 @@ mainReg.register('reduce', {
   maxArg: 2,
   eval: function(node, env) {
     const sIn = node.src.evalStream(env);
-    const body = node.args[0].bare ? node.args[0] : new Block(node.args[0]);
+    const body = node.args[0].bare ? node.args[0] : new Block(node.args[0], node.token);
     const iter = (function*() {
       let curr;
       if(node.args[1])
