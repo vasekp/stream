@@ -11,7 +11,7 @@ mainReg.register(['iota', 'seq', 'I'], {
   }
 });
 
-mainReg.register(['range', 'ra'], {
+mainReg.register(['range', 'ran', 'r'], {
   minArg: 1,
   maxArg: 3,
   eval: function(node, env) {
@@ -151,7 +151,7 @@ mainReg.register('id', {
   }
 });
 
-mainReg.register(['repeat', 're'], {
+mainReg.register(['repeat', 'rep'], {
   source: true,
   maxArg: 1,
   eval: function(node, env) {
