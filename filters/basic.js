@@ -466,37 +466,37 @@ function takedrop(sIn, iter) {
 
 mainReg.register(['take', 'takedrop', 'td'], {
   source: true,
-  numArg: 1,
+  minArg: 1,
   eval: function(node, env) {
     const sIn = node.src.evalStream(env);
+    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+    if(!ins.map(i => i instanceof Atom).includes(false))
+      return takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n})));
+    else if(node.args.length > 1)
+      throw new StreamError(null, 'required list of values or a single stream');
     const sArg = node.args[0].prepend(node.src).eval(env);
-    if(sArg instanceof Atom) {
-      const num = sArg.evalNum(env, {min: 0n});
-      return takedrop(sIn, [num]);
-    } else {
-      return takedrop(sIn, (function*() {
-        for(const s of sArg)
-          yield s.evalNum(env, {min: 0n});
-      })());
-    }
+    return takedrop(sIn, (function*() {
+      for(const s of sArg)
+        yield s.evalNum(env, {min: 0n});
+    })());
   }
 });
 
 mainReg.register(['drop', 'droptake', 'dt'], {
   source: true,
-  numArg: 1,
+  minArg: 1,
   eval: function(node, env) {
     const sIn = node.src.evalStream(env);
+    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+    if(!ins.map(i => i instanceof Atom).includes(false))
+      return takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]);
+    else if(node.args.length > 1)
+      throw new StreamError(null, 'required list of values or a single stream');
     const sArg = node.args[0].prepend(node.src).eval(env);
-    if(sArg instanceof Atom) {
-      const num = sArg.evalNum(env, {min: 0n});
-      return takedrop(sIn, [0n, num]);
-    } else {
-      return takedrop(sIn, (function*() {
-        yield 0n;
-        for(const s of sArg)
-          yield s.evalNum(env, {min: 0n});
-      })());
-    }
+    return takedrop(sIn, (function*() {
+      yield 0n;
+      for(const s of sArg)
+        yield s.evalNum(env, {min: 0n});
+    })());
   }
 });
