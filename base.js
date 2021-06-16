@@ -1,5 +1,13 @@
 const MAXLEN = 100;
 
+export class StreamError extends Error {
+  constructor(node, msg) {
+    super();
+    this.node = node;
+    this.msg = msg;
+  }
+}
+
 export class Node {
   constructor(ident, src = null, args = [], meta = {}) {
     this.ident = ident;
@@ -19,7 +27,7 @@ export class Node {
 
   apply(args) {
     if(this.args.length)
-      throw 'apply args ≠ []';
+      throw new Error('Node.apply this.args ≠ []');
     else
       return new Node(this.ident, this.src, args, this.meta);
   }
@@ -28,17 +36,17 @@ export class Node {
     //console.log(`E ${this.desc()}`);
     const rec = env.register.find(this.ident);
     if(!rec)
-      throw `undefined symbol ${this.ident}`;
+      throw new StreamError(this, `undefined symbol ${this.ident}`);
     if(rec.source === true && !this.src)
-      throw `${this.desc()}: needs source`;
+      throw new StreamError(this, `needs source`);
     else if(rec.numArg === 0 && this.args.length > 0)
-      throw `${this.desc()}: does not allow arguments`;
+      throw new StreamError(this, `does not allow arguments`);
     else if(rec.numArg !== undefined && this.args.length !== rec.numArg)
-      throw `${this.desc()}: exactly ${rec.numArg} arguments required`;
+      throw new StreamError(this, `exactly ${rec.numArg} arguments required`);
     else if(rec.minArg !== undefined && this.args.length < rec.minArg)
-      throw `${this.desc()}: at least ${rec.minArg} arguments required`;
+      throw new StreamError(this, `at least ${rec.minArg} arguments required`);
     else if(rec.maxArg !== undefined && this.args.length > rec.maxArg)
-      throw `${this.desc()}: at most ${rec.maxArg} arguments required`;
+      throw new StreamError(this, `at most ${rec.maxArg} arguments required`);
     const iter = rec.eval(this.src, this.args, env);
     if(!iter.skip)
       iter.skip = defaultSkip;
@@ -121,7 +129,7 @@ export class Atom extends Node {
       case 'string':
         return `"${this.value.replace(/"|"|\\/g, '\\$&')}"`; // " included once confuses Vim
       default:
-        throw 'desc object';
+        throw new Error(`unknown atom type ${typeof this.value}`);
     }
   }
 
@@ -129,7 +137,7 @@ export class Atom extends Node {
     if(this.type === type)
       return this.value;
     else
-      throw `expected ${type}, got ${this.type}`;
+      throw new StreamError(null, `expected ${type}, got ${this.type} ${this.desc()}`);
   }
 
   get numValue() {
@@ -158,7 +166,7 @@ export class Block extends Node {
 
   apply(args) {
     if(this.args.length)
-      throw 'apply args ≠ []';
+      throw new Error('Block.apply this.args ≠ []');
     else
       return new Block(this.body, this.src, args, this.meta);
   }
@@ -196,9 +204,9 @@ export class Register {
       return;
     }
     if(this.base.includes(ident))
-      throw `trying to overwrite base symbol ${ident}`;
+      throw new StreamError(null, `trying to overwrite base symbol ${ident}`);
     else if(this.includes(ident))
-      throw `duplicate definition of ${ident}`;
+      throw new StreamError(null, `duplicate definition of ${ident}`);
     else
       this._map[ident] = filter;
   }

@@ -1,7 +1,7 @@
 import './filters/basic.js';
 import './filters/arith.js';
 import {parse, ParseError} from './parser.js';
-import {mainEnv} from './base.js';
+import {mainEnv, StreamError} from './base.js';
 
 import repl from 'repl';
 
@@ -15,6 +15,11 @@ repl.start({eval: e => {
       console.error(e.str);
       console.error(' '.repeat(e.pos) + '^');
       console.error(`${e.name}: ${e.msg}`);
+    } else if(e instanceof StreamError) {
+      if(e.node)
+        console.error(`${e.node.desc()}: ${e.msg}`);
+      else
+        console.error(e.msg);
     } else if(typeof e === 'string')
       console.error(`Error: ${e}`);
     else

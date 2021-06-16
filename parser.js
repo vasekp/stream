@@ -335,7 +335,7 @@ function parse0(iter, close, array) {
         term = null;
         break;
       default:
-        throw new ParseError(`unknown input ${s.value}`, s.pos);
+        throw new Error(`unknown input ${s.value}`, s.pos);
     }
   }
 }
