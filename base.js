@@ -47,10 +47,31 @@ export class Node {
       throw new StreamError(this, `at least ${rec.minArg} arguments required`);
     else if(rec.maxArg !== undefined && this.args.length > rec.maxArg)
       throw new StreamError(this, `at most ${rec.maxArg} arguments required`);
-    const iter = rec.eval(this, env);
-    if(!iter.skip)
-      iter.skip = defaultSkip;
-    return iter;
+    try {
+      const iter = rec.eval(this, env);
+      if(iter instanceof Atom)
+        return iter;
+      if(!iter.wrapped) {
+        const pnext = iter.next.bind(iter);
+        iter.next = () => {
+          try {
+            return pnext();
+          } catch(e) {
+            if(e instanceof StreamError && !e.node)
+              e.node = this;
+            throw e;
+          }
+        };
+        iter.wrapped = true;
+      }
+      if(!iter.skip)
+        iter.skip = defaultSkip;
+      return iter;
+    } catch(e) {
+      if(e instanceof StreamError && !e.node)
+        e.node = this;
+      throw e;
+    }
   }
 
   desc() {
