@@ -24,11 +24,11 @@ mainReg.register(['iota', 'seq', 'I'], {
 mainReg.register(['range', 'ra'], {
   minArg: 1,
   maxArg: 3,
-  eval: function(src, args, env) {
-    const [min, max] = args[0] && args[1]
-      ? [asnum(args[0].prepend(src), env), asnum(args[1].prepend(src), env)]
-      : [1n, asnum(args[0].prepend(src), env)];
-    const step = args[2] ? asnum(args[2].prepend(src), env) : 1n;
+  eval: function(node, env) {
+    const [min, max] = node.args[0] && node.args[1]
+      ? [asnum(node.args[0].prepend(node.src), env), asnum(node.args[1].prepend(node.src), env)]
+      : [1n, asnum(node.args[0].prepend(node.src), env)];
+    const step = node.args[2] ? asnum(node.args[2].prepend(node.src), env) : 1n;
     let i = min;
     const iter = (function*() {
       while(step >= 0n ? i <= max : i >= max) {
@@ -48,8 +48,8 @@ mainReg.register(['range', 'ra'], {
 mainReg.register(['length', 'len'], {
   source: true,
   numArg: 0,
-  eval: function(src, args, env) {
-    const st = src.eval(env);
+  eval: function(node, env) {
+    const st = node.src.eval(env);
     if(st instanceof Atom)
       throw 'length of atom';
     let len = 0n;
@@ -67,8 +67,8 @@ mainReg.register(['length', 'len'], {
 mainReg.register('first', {
   source: true,
   numArg: 0,
-  eval: function(src, args, env) {
-    const st = src.eval(env);
+  eval: function(node, env) {
+    const st = node.src.eval(env);
     if(st instanceof Atom)
       throw 'length of atom';
     const {value, done} = st.next();
@@ -82,8 +82,8 @@ mainReg.register('first', {
 mainReg.register('last', {
   source: true,
   numArg: 0,
-  eval: function(src, args, env) {
-    const st = src.eval(env);
+  eval: function(node, env) {
+    const st = node.src.eval(env);
     if(st instanceof Atom)
       throw 'length of atom';
     let l;
@@ -105,10 +105,10 @@ mainReg.register('last', {
 });
 
 mainReg.register('array', {
-  eval: function(src, args) {
-    const len = BigInt(args.length);
+  eval: function(node) {
+    const len = BigInt(node.args.length);
     let i = 0n;
-    const iter = (function*() { while(i < len) yield args[i++].prepend(src); })();
+    const iter = (function*() { while(i < len) yield node.args[i++].prepend(node.src); })();
     iter.len = len;
     iter.skip = c => i += c;
     return iter;
@@ -118,8 +118,8 @@ mainReg.register('array', {
 mainReg.register('foreach', {
   source: true,
   numArg: 1,
-  eval: function(src, args, env) {
-    const sIn = src.eval(env);
+  eval: function(node, env) {
+    const sIn = node.src.eval(env);
     if(sIn instanceof Atom)
       throw 'foreach called on atom';
     const sOut = (function*() {
@@ -128,7 +128,7 @@ mainReg.register('foreach', {
         if(done)
           return;
         else
-          yield args[0].prepend(value);
+          yield node.args[0].prepend(value);
       }
     })();
     sOut.len = sIn.len;
@@ -140,26 +140,26 @@ mainReg.register('foreach', {
 mainReg.register('id', {
   source: true,
   numArg: 0,
-  eval: function(src, args, env) {
-    return src.eval(env);
+  eval: function(node, env) {
+    return node.src.eval(env);
   }
 });
 
 mainReg.register(['repeat', 're'], {
   source: true,
   maxArg: 1,
-  eval: function(src, args, env) {
-    if(args[0]) {
-      const num = asnum(args[0].prepend(src), env);
+  eval: function(node, env) {
+    if(node.args[0]) {
+      const num = asnum(node.args[0].prepend(node.src), env);
       if(num < 0n)
         throw 'repeat neg';
       let i = 0n;
-      const iter = (function*() { while(i++ < num) yield src; })();
+      const iter = (function*() { while(i++ < num) yield node.src; })();
       iter.skip = c => i += c;
       iter.len = num;
       return iter;
     } else {
-      const iter = (function*() { for(;;) yield src; })();
+      const iter = (function*() { for(;;) yield node.src; })();
       iter.skip = () => null;
       iter.len = null;
       return iter;
@@ -170,19 +170,19 @@ mainReg.register(['repeat', 're'], {
 mainReg.register(['cycle', 'cc'], {
   source: true,
   maxArg: 1,
-  eval: function(src, args, env) {
-    if(args[0]) {
-      const num = asnum(args[0].prepend(src), env);
+  eval: function(node, env) {
+    if(node.args[0]) {
+      const num = asnum(node.args[0].prepend(node.src), env);
       if(num < 0n)
         throw 'cycle neg';
       return (function*() {
         for(let i = 0n; i < num; i++)
-          yield* src.eval(env);
+          yield* node.src.eval(env);
       })();
     } else
       return (function*() {
         for(;;)
-          yield* src.eval(env);
+          yield* node.src.eval(env);
       })();
   }
 });
@@ -190,11 +190,11 @@ mainReg.register(['cycle', 'cc'], {
 mainReg.register(['group', 'g'], {
   source: true,
   numArg: 1,
-  eval: function(src, args, env) {
-    const sIn = src.eval(env);
+  eval: function(node, env) {
+    const sIn = node.src.eval(env);
     if(sIn instanceof Atom)
       throw 'group called on atom';
-    const sArg = args[0].prepend(src).eval(env);
+    const sArg = node.args[0].prepend(node.src).eval(env);
     const lFun = sArg instanceof Atom
       ? (() => {
         const len = asnum(sArg);
@@ -233,13 +233,13 @@ mainReg.register(['group', 'g'], {
 mainReg.register(['flatten', 'fl'], {
   source: true,
   maxArg: 1,
-  eval: function(src, args, env) {
-    const depth = args[0] ? asnum(args[0].prepend(src), env) : null;
+  eval: function(node, env) {
+    const depth = node.args[0] ? asnum(node.args[0].prepend(node.src), env) : null;
     return (function*() {
-      const it = src.eval(env);
+      const it = node.src.eval(env);
       if(it instanceof Atom)
         yield it;
-      else for(const s of src.eval(env)) {
+      else for(const s of node.src.eval(env)) {
         if(s instanceof Atom || depth === 0n)
           yield s;
         else {
@@ -254,10 +254,10 @@ mainReg.register(['flatten', 'fl'], {
 });
 
 mainReg.register('join', {
-  eval: function(src, args, env) {
+  eval: function(node, env) {
     return (function*() {
-      for(const arg of args) {
-        const ev = arg.prepend(src).eval(env);
+      for(const arg of node.args) {
+        const ev = arg.prepend(node.src).eval(env);
         if(ev instanceof Atom)
           yield ev;
         else
@@ -268,8 +268,8 @@ mainReg.register('join', {
 });
 
 mainReg.register('zip', {
-  eval: function(src, args, env) {
-    const is = args.map(arg => arg.prepend(src).eval(env));
+  eval: function(node, env) {
+    const is = node.args.map(arg => arg.prepend(node.src).eval(env));
     if(is.map(i => i instanceof Atom).includes(true))
       throw 'zip called with atom';
     return (function*() {
@@ -287,11 +287,11 @@ mainReg.register('zip', {
 mainReg.register('part', {
   source: true,
   numArg: 1,
-  eval: function(src, args, env) {
-    const sIn = src.eval(env);
+  eval: function(node, env) {
+    const sIn = node.src.eval(env);
     if(sIn instanceof Atom)
       throw 'part called on atom';
-    const sArg = args[0].prepend(src).eval(env);
+    const sArg = node.args[0].prepend(node.src).eval(env);
     if(sArg instanceof Atom) {
       const ix = asnum(sArg, env);
       if(ix <= 0n)
@@ -327,10 +327,10 @@ mainReg.register('part', {
 
 mainReg.register('in', {
   numArg: 1,
-  eval: function(src, args, env) {
+  eval: function(node, env) {
     if(!env.ins)
       throw '# outside block';
-    const ix = asnum(args[0].prepend(src), env);
+    const ix = asnum(node.args[0].prepend(node.src), env);
     if(ix < 0n || ix >= env.ins.length)
       throw `index ${ix} outside [0,${env.ins.length - 1}]`;
     if(ix === 0n && !env.ins[0])
@@ -342,12 +342,12 @@ mainReg.register('in', {
 mainReg.register('nest', {
   source: true,
   numArg: 1,
-  eval: function(src, args, env) {
+  eval: function(node, env) {
     const iter = (function*() {
-      let curr = src;
+      let curr = node.src;
       for(;;) {
         yield curr;
-        curr = args[0].prepend(curr);
+        curr = node.args[0].prepend(curr);
       }
     })();
     iter.len = null;
@@ -359,15 +359,15 @@ mainReg.register('reduce', {
   source: true,
   minArg: 1,
   maxArg: 2,
-  eval: function(src, args, env) {
-    const sIn = src.eval(env);
+  eval: function(node, env) {
+    const sIn = node.src.eval(env);
     if(sIn instanceof Atom)
       throw 'reduce called on atom';
-    const body = args[0].bare ? args[0] : new Block(args[0]);
+    const body = node.args[0].bare ? node.args[0] : new Block(node.args[0]);
     const iter = (function*() {
       let curr;
-      if(args[1])
-        curr = args[1].prepend(src);
+      if(node.args[1])
+        curr = node.args[1].prepend(node.src);
       else {
         let done;
         ({value: curr, done} = sIn.next());
@@ -389,7 +389,7 @@ mainReg.register('reduce', {
         iter.len = 0n;
         break;
       default:
-        iter.len = args[1] ? sIn.len : sIn.len - 1n;
+        iter.len = node.args[1] ? sIn.len : sIn.len - 1n;
         break;
     }
     return iter;
@@ -399,8 +399,8 @@ mainReg.register('reduce', {
 mainReg.register(['reverse', 'rev'], {
   source: true,
   numArg: 0,
-  eval: function(src, args, env) {
-    const sIn = src.eval(env);
+  eval: function(node, env) {
+    const sIn = node.src.eval(env);
     if(sIn instanceof Atom)
       throw 'reverse called on atom';
     if(sIn.len === null)
@@ -442,11 +442,11 @@ function takedrop(sIn, iter) {
 mainReg.register(['take', 'takedrop', 'td'], {
   source: true,
   numArg: 1,
-  eval: function(src, args, env) {
-    const sIn = src.eval(env);
+  eval: function(node, env) {
+    const sIn = node.src.eval(env);
     if(sIn instanceof Atom)
       throw 'take called on atom';
-    const sArg = args[0].prepend(src).eval(env);
+    const sArg = node.args[0].prepend(node.src).eval(env);
     if(sArg instanceof Atom) {
       const num = asnum(sArg, env);
       return takedrop(sIn, [num]);
@@ -462,11 +462,11 @@ mainReg.register(['take', 'takedrop', 'td'], {
 mainReg.register(['drop', 'droptake', 'dt'], {
   source: true,
   numArg: 1,
-  eval: function(src, args, env) {
-    const sIn = src.eval(env);
+  eval: function(node, env) {
+    const sIn = node.src.eval(env);
     if(sIn instanceof Atom)
       throw 'take called on atom';
-    const sArg = args[0].prepend(src).eval(env);
+    const sArg = node.args[0].prepend(node.src).eval(env);
     if(sArg instanceof Atom) {
       const num = asnum(sArg, env);
       return takedrop(sIn, [0n, num]);

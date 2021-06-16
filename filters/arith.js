@@ -13,9 +13,9 @@ function asnum(st, env) {
 function regReducer(name, fun) {
   mainReg.register(name, {
     minArg: 2,
-    eval: function(src, args, env) {
-      const is = args
-        .map(arg => arg.prepend(src).eval(env))
+    eval: function(node, env) {
+      const is = node.args
+        .map(arg => arg.prepend(node.src).eval(env))
         .map(st => st instanceof Atom ? st.numValue : st);
       if(!is.map(i => typeof i === 'bigint').includes(false))
         return new Atom(is.reduce(fun));

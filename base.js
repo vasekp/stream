@@ -47,7 +47,7 @@ export class Node {
       throw new StreamError(this, `at least ${rec.minArg} arguments required`);
     else if(rec.maxArg !== undefined && this.args.length > rec.maxArg)
       throw new StreamError(this, `at most ${rec.maxArg} arguments required`);
-    const iter = rec.eval(this.src, this.args, env);
+    const iter = rec.eval(this, env);
     if(!iter.skip)
       iter.skip = defaultSkip;
     return iter;
