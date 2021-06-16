@@ -1,6 +1,6 @@
 import {Node, Atom, mainReg, StreamError} from '../base.js';
 
-function regReducer(name, fun) {
+function regReducer(name, sign, fun) {
   mainReg.register(name, {
     minArg: 2,
     eval: function(node, env) {
@@ -32,11 +32,20 @@ function regReducer(name, fun) {
         };
         return iter;
       }
+    },
+    desc: function(node) {
+      let ret = '';
+      if(node.src)
+        ret = node.src.desc() + '.';
+      ret += '(';
+      ret += node.args.map(n => n.desc()).join(sign);
+      ret += ')';
+      return ret;
     }
   });
 }
 
-regReducer('plus', (a, b) => a + b);
-regReducer('minus', (a, b) => a - b);
-regReducer('times', (a, b) => a * b);
-regReducer('div', (a, b) => a / b);
+regReducer('plus', '+', (a, b) => a + b);
+regReducer('minus', '-', (a, b) => a - b);
+regReducer('times', '*', (a, b) => a * b);
+regReducer('div', '/', (a, b) => a / b);

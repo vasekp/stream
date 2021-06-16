@@ -95,6 +95,15 @@ mainReg.register('array', {
     iter.len = len;
     iter.skip = c => i += c;
     return iter;
+  },
+  desc: function(node) {
+    let ret = '';
+    if(node.src)
+      ret = node.src.desc() + '.';
+    ret += '[';
+    ret += node.args.map(n => n.desc()).join(',');
+    ret += ']';
+    return ret;
   }
 });
 
@@ -115,6 +124,15 @@ mainReg.register('foreach', {
     sOut.len = sIn.len;
     sOut.skip = sIn.skip;
     return sOut;
+  },
+  desc: function(node) {
+    let ret = '';
+    if(node.src)
+      ret = node.src.desc() + ':';
+    else
+      ret = 'foreach';
+    ret += '(' + node.args.map(a => a.desc()).join(',') + ')';
+    return ret;
   }
 });
 
@@ -123,6 +141,13 @@ mainReg.register('id', {
   numArg: 0,
   eval: function(node, env) {
     return node.src.eval(env);
+  },
+  desc: function(node) {
+    let ret = '';
+    if(this.src)
+      ret = this.src.desc() + '.';
+    ret += '#';
+    return ret;
   }
 });
 
@@ -238,6 +263,15 @@ mainReg.register('join', {
           yield* ev;
       }
     })();
+  },
+  desc: function(node) {
+    let ret = '';
+    if(node.src)
+      ret = node.src.desc() + '.';
+    ret += '(';
+    ret += node.args.map(n => n.desc()).join('~');
+    ret += ')';
+    return ret;
   }
 });
 
@@ -253,6 +287,15 @@ mainReg.register('zip', {
         yield new Node('array', null, vs);
       }
     })();
+  },
+  desc: function(node) {
+    let ret = '';
+    if(node.src)
+      ret = node.src.desc() + '.';
+    ret += '(';
+    ret += node.args.map(n => n.desc()).join('%');
+    ret += ')';
+    return ret;
   }
 });
 
@@ -288,6 +331,17 @@ mainReg.register('part', {
       iter.skip = sIn.skip;
       return iter;
     }
+  },
+  desc: function(node) {
+    let ret = '';
+    if(node.src) {
+      ret = node.src.desc();
+      ret += '[' + node.args.map(a => a.desc()).join(',') + ']';
+    } else {
+      ret = 'part';
+      ret += '(' + node.args.map(a => a.desc()).join(',') + ')';
+    }
+    return ret;
   }
 });
 
@@ -300,6 +354,21 @@ mainReg.register('in', {
     if(ix === 0n && !env.ins[0])
       throw new StreamError(null, 'block has empty source');
     return env.ins[ix].eval(env.pEnv);
+  },
+  desc: function(node) {
+    let ret = '';
+    if(node.src)
+      ret = node.src.desc() + '.';
+    if(node.args.length === 1
+        && node.args[0] instanceof Atom
+        && typeof node.args[0].value === 'bigint'
+        && node.args[0].value >= 0n)
+      ret += '#' + (node.args[0].value > 0n ? node.args[0].value : '#');
+    else {
+      ret = 'in';
+      ret += '(' + node.args.map(a => a.desc()).join(',') + ')';
+    }
+    return ret;
   }
 });
 

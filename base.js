@@ -91,6 +91,9 @@ export class Node {
   }
 
   desc() {
+    const rec = mainReg.find(this.ident);
+    if(rec && rec.desc)
+      return rec.desc(this);
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
