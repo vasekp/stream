@@ -114,13 +114,54 @@ mainReg.register(['total', 'tot'], {
   }
 });
 
-mainReg.register('pow', {
+mainReg.register('diff', {
   source: true,
-  numArg: 1,
+  maxArg: 0,
   eval: function(node, env) {
-    const base = node.src.evalNum(env);
-    const pow = node.args[0].prepend(node.src).evalNum(env, {min: 0n});
-    return new Atom(base ** pow);
+    const sIn = node.src.evalStream(env);
+    const iter = (function*() {
+      const {value, done} = sIn.next();
+      if(done)
+        return;
+      let prev = value.evalNum(env);
+      for(const next of sIn) {
+        const curr = next.evalNum(env);
+        yield new Atom(curr - prev);
+        prev = curr;
+      }
+    })();
+    switch(sIn.len) {
+      case undefined:
+        break;
+      case null:
+        iter.len = null;
+        break;
+      case 0n:
+        iter.len = 0n;
+        break;
+      default:
+        iter.len = sIn.len - 1n;
+        break;
+    }
+    return iter;
+  }
+});
+
+mainReg.register('pow', {
+  minArg: 1,
+  maxArg: 2,
+  eval: function(node, env) {
+    if(node.args.length === 1) {
+      if(!node.src)
+        throw new StreamError('needs source');
+      const base = node.src.evalNum(env);
+      const pow = node.args[0].prepend(node.src).evalNum(env, {min: 0n});
+      return new Atom(base ** pow);
+    } else {
+      const base = node.args[0].prepend(node.src).evalNum(env);
+      const pow = node.args[1].prepend(node.src).evalNum(env, {min: 0n});
+      return new Atom(base ** pow);
+    }
   }
 });
 
