@@ -67,23 +67,46 @@ mainReg.register('first', {
 
 mainReg.register('last', {
   source: true,
-  numArg: 0,
+  maxArg: 1,
   eval: function(node, env) {
     const st = node.src.evalStream(env, {finite: true});
-    let l;
-    if(st.len === undefined) {
-      for(const v of st)
-        l = v;
-    } else if(st.len === null) {
-      throw new Error('assertion failed');
-    } else if(st.len !== null && st.len !== 0n) {
-      st.skip(st.len - 1n);
-      ({value: l} = st.next());
+    if(node.args[0]) {
+      const len = node.args[0].prepend(node.src).evalNum(env, {min: 1n});
+      let l = [];
+      if(st.len === undefined) {
+        for(const v of st) {
+          l.push(v);
+          if(l.length > len)
+            l.shift();
+        }
+        const iter = l.values();
+        iter.len = BigInt(l.length);
+        return iter;
+      } else if(st.len !== null) {
+        if(st.len > len) {
+          st.skip(st.len - len);
+          st.len = len;
+        }
+        return st;
+      } else if(st.len === null) {
+        throw new Error('assertion failed');
+      }
+    } else {
+      let l;
+      if(st.len === undefined) {
+        for(const v of st)
+          l = v;
+      } else if(st.len === null) {
+        throw new Error('assertion failed');
+      } else if(st.len !== 0n) {
+        st.skip(st.len - 1n);
+        ({value: l} = st.next());
+      }
+      if(!l)
+        throw new StreamError(null, 'empty stream');
+      else
+        return l.eval(env);
     }
-    if(!l)
-      throw new StreamError(null, 'empty stream');
-    else
-      return l.eval(env);
   }
 });
 
@@ -404,14 +427,17 @@ mainReg.register('nest', {
 mainReg.register('reduce', {
   source: true,
   minArg: 1,
-  maxArg: 2,
+  maxArg: 3,
   eval: function(node, env) {
     const sIn = node.src.evalStream(env);
-    const body = node.args[0].bare ? node.args[0] : new Block(node.args[0], node.token);
+    const bodyMem = node.args[0].bare ? node.args[0] : new Block(node.args[0], node.token);
+    const bodyOut = node.args.length === 3
+      ? node.args[1].bare ? node.args[1] : new Block(node.args[1], node.token)
+      : bodyMem;
     const iter = (function*() {
       let curr;
-      if(node.args[1])
-        curr = node.args[1].prepend(node.src);
+      if(node.args.length > 1)
+        curr = node.args[node.args.length - 1].prepend(node.src);
       else {
         let done;
         ({value: curr, done} = sIn.next());
@@ -419,8 +445,8 @@ mainReg.register('reduce', {
           return;
       }
       for(const next of sIn) {
-        curr = body.apply([curr, next]);
-        yield curr;
+        yield bodyOut.apply([curr, next]);
+        curr = bodyMem.apply([curr, next]);
       }
     })();
     switch(sIn.len) {
@@ -433,9 +459,29 @@ mainReg.register('reduce', {
         iter.len = 0n;
         break;
       default:
-        iter.len = node.args[1] ? sIn.len : sIn.len - 1n;
+        iter.len = node.args.length > 1 ? sIn.len : sIn.len - 1n;
         break;
     }
+    return iter;
+  }
+});
+
+mainReg.register('recur', {
+  source: true,
+  numArg: 1,
+  eval: function(node, env) {
+    const sIn = node.src.evalStream(env, {finite: true});
+    const body = node.args[0].bare ? checks.stream(node.args[0]) : new Block(node.args[0], node.token);
+    const iter = (function*() {
+      let prev = [...sIn].reverse();
+      for(;;) {
+        const next = body.apply(prev);
+        yield next;
+        prev = prev.slice(0, -1);
+        prev.unshift(next);
+      }
+    })();
+    iter.len = null;
     return iter;
   }
 });

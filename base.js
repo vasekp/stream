@@ -275,5 +275,10 @@ export const checks = {
     if(opts.max !== undefined && value > opts.max)
       throw new StreamError(null, `value ${value} exceeds maximum ${opts.max}`);
     return value;
+  },
+  stream(node) {
+    if(node instanceof Atom)
+      throw new StreamError(null, `expected stream, got ${node.type} ${node.desc()}`);
+    return node;
   }
 };
