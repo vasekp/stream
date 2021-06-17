@@ -7,7 +7,7 @@ function regReducer(name, sign, fun) {
       const is = node.args
         .map(arg => arg.prepend(node.src).eval(env))
         .map(st => st instanceof Atom ? st.numValue : st);
-      if(!is.map(i => typeof i === 'bigint').includes(false))
+      if(is.every(i => typeof i === 'bigint'))
         return new Atom(is.reduce(fun));
       else {
         const iter = (function*() {
