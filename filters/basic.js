@@ -37,11 +37,11 @@ mainReg.register(['range', 'ran', 'r'], {
   }
 });
 
-/*mainReg.register(['length', 'len'], {
+mainReg.register(['length', 'len'], {
   source: true,
   numArg: 0,
-  eval: function(node, env) {
-    const st = node.src.evalStream(env, {finite: true});
+  eval: function() {
+    const st = this.src.evalStream({finite: true});
     let len = 0n;
     if(st.len === undefined) {
       for(const i of st)
@@ -57,23 +57,23 @@ mainReg.register(['range', 'ran', 'r'], {
 mainReg.register('first', {
   source: true,
   numArg: 0,
-  eval: function(node, env) {
-    const st = node.src.evalStream(env);
+  eval: function() {
+    const st = this.src.evalStream();
     const {value, done} = st.next();
     if(done)
       throw new StreamError(null, 'empty stream');
     else
-      return value.eval(env);
+      return value.eval();
   }
 });
 
 mainReg.register('last', {
   source: true,
   maxArg: 1,
-  eval: function(node, env) {
-    const st = node.src.evalStream(env, {finite: true});
-    if(node.args[0]) {
-      const len = node.args[0].prepend(node.src).evalNum(env, {min: 1n});
+  eval: function() {
+    const st = this.src.evalStream({finite: true});
+    if(this.args[0]) {
+      const len = this.args[0].evalNum({min: 1n});
       let l = [];
       if(st.len === undefined) {
         for(const v of st) {
@@ -107,29 +107,28 @@ mainReg.register('last', {
       if(!l)
         throw new StreamError(null, 'empty stream');
       else
-        return l.eval(env);
+        return l.eval();
     }
   }
 });
 
 mainReg.register('array', {
-  eval: function(node) {
-    const iter = node.args.map(arg => arg.prepend(node.src)).values();
-    iter.len = BigInt(node.args.length);
-    return iter;
+  source: false,
+  eval: function() {
+    return this.args.values();
   },
-  desc: function(node) {
+  desc: function() {
     let ret = '';
-    if(node.src)
-      ret = node.src.desc() + '.';
+    if(this.src)
+      ret = this.src.desc() + '.';
     ret += '[';
-    ret += node.args.map(n => n.desc()).join(',');
+    ret += this.args.map(n => n.desc()).join(',');
     ret += ']';
     return ret;
   }
 });
 
-mainReg.register('foreach', {
+/*mainReg.register('foreach', {
   source: true,
   numArg: 1,
   eval: function(node, env) {
@@ -173,19 +172,20 @@ mainReg.register('id', {
   }
 });
 
-/*mainReg.register(['repeat', 'rep'], {
+mainReg.register(['repeat', 'rep'], {
   source: true,
   maxArg: 1,
-  eval: function(node, env) {
-    if(node.args[0]) {
-      const num = node.args[0].prepend(node.src).evalNum(env, {min: 0n});
+  eval: function() {
+    const src = this.src;
+    if(this.args[0]) {
+      const num = this.args[0].evalNum({min: 0n});
       let i = 0n;
-      const iter = (function*() { while(i++ < num) yield node.src; })();
+      const iter = (function*() { while(i++ < num) yield src; })();
       iter.skip = c => i += c;
       iter.len = num;
       return iter;
     } else {
-      const iter = (function*() { for(;;) yield node.src; })();
+      const iter = (function*() { for(;;) yield src; })();
       iter.skip = () => null;
       iter.len = null;
       return iter;
@@ -196,17 +196,18 @@ mainReg.register('id', {
 mainReg.register(['cycle', 'cc'], {
   source: true,
   maxArg: 1,
-  eval: function(node, env) {
-    if(node.args[0]) {
-      const num = node.args[0].prepend(node.src).evalNum(env, {min: 0n});
+  eval: function() {
+    const src = this.src;
+    if(this.args[0]) {
+      const num = this.args[0].evalNum({min: 0n});
       return (function*() {
         for(let i = 0n; i < num; i++)
-          yield* node.src.evalStream(env);
+          yield* src.evalStream();
       })();
     } else
       return (function*() {
         for(;;)
-          yield* node.src.evalStream(env);
+          yield* src.evalStream();
       })();
   }
 });
@@ -214,26 +215,27 @@ mainReg.register(['cycle', 'cc'], {
 mainReg.register(['group', 'g'], {
   source: true,
   minArg: 1,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env);
+  eval: function() {
+    const sIn = this.src.evalStream();
     let lFun;
-    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+    const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i instanceof Atom)) {
-      if(node.args.length === 1) {
+      if(this.args.length === 1) {
         const len = checks.num(ins[0].numValue, {min: 0n});
         lFun = (function*() { for(;;) yield len; })();
       } else {
         lFun = ins.map(i => checks.num(i.numValue, {min: 0n}));
       }
     } else {
-      if(node.args.length > 1)
+      if(this.args.length > 1)
         throw new StreamError(null, 'required list of values or a single stream');
       else
         lFun = (function*() {
           for(const s of ins[0])
-            yield s.evalNum(env, {min: 0n});
+            yield s.evalNum({min: 0n});
         })();
     }
+    const token = this.token;
     const iter = (function*() {
       for(const len of lFun) {
         checks.num(len, {min: 0n});
@@ -246,7 +248,7 @@ mainReg.register(['group', 'g'], {
         }
         // Yield empty group if asked to, but don't output trailing [] on EOI
         if(r.length > 0n || len === 0n)
-          yield new Node('array', node.token, null, r, {});
+          yield new Node('array', token, null, r, {});
         if(r.length < len)
           break;
       }
@@ -258,20 +260,21 @@ mainReg.register(['group', 'g'], {
 mainReg.register(['flatten', 'fl'], {
   source: true,
   maxArg: 1,
-  eval: function(node, env) {
-    const depth = node.args[0] ? node.args[0].prepend(node.src).evalNum(env) : null;
+  eval: function() {
+    const depth = this.args[0] ? this.args[0].evalNum() : null;
+    const node = this;
     return (function*() {
-      const it = node.src.eval(env);
+      const it = node.src.eval();
       if(it instanceof Atom)
         yield it;
-      else for(const s of node.src.eval(env)) {
+      else for(const s of node.src.eval()) {
         if(s instanceof Atom || depth === 0n)
           yield s;
         else {
           const tmp = depth !== null
             ? new Node('flatten', node.token, s, [new Atom(depth - 1n)])
             : new Node('flatten', node.token, s);
-          yield* tmp.eval(env);
+          yield* tmp.eval();
         }
       }
     })();
@@ -279,10 +282,12 @@ mainReg.register(['flatten', 'fl'], {
 });
 
 mainReg.register('join', {
-  eval: function(node, env) {
+  source: false,
+  eval: function() {
+    const args = this.args;
     return (function*() {
-      for(const arg of node.args) {
-        const ev = arg.prepend(node.src).eval(env);
+      for(const arg of args) {
+        const ev = arg.eval();
         if(ev instanceof Atom)
           yield ev;
         else
@@ -290,20 +295,22 @@ mainReg.register('join', {
       }
     })();
   },
-  desc: function(node) {
+  desc: function() {
     let ret = '';
-    if(node.src)
-      ret = node.src.desc() + '.';
+    if(this.src)
+      ret = this.src.desc() + '.';
     ret += '(';
-    ret += node.args.map(n => n.desc()).join('~');
+    ret += this.args.map(n => n.desc()).join('~');
     ret += ')';
     return ret;
   }
 });
 
 mainReg.register('zip', {
-  eval: function(node, env) {
-    const is = node.args.map(arg => arg.prepend(node.src).evalStream(env));
+  source: false,
+  eval: function() {
+    const is = this.args.map(arg => arg.evalStream());
+    const node = this;
     return (function*() {
       for(;;) {
         const rs = is.map(i => i.next());
@@ -314,12 +321,12 @@ mainReg.register('zip', {
       }
     })();
   },
-  desc: function(node) {
+  desc: function() {
     let ret = '';
-    if(node.src)
-      ret = node.src.desc() + '.';
+    if(this.src)
+      ret = this.src.desc() + '.';
     ret += '(';
-    ret += node.args.map(n => n.desc()).join('%');
+    ret += this.args.map(n => n.desc()).join('%');
     ret += ')';
     return ret;
   }
@@ -344,43 +351,43 @@ function part(sIn, iter) {
 mainReg.register('part', {
   source: true,
   minArg: 1,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env);
-    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+  eval: function() {
+    const sIn = this.src.evalStream();
+    const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i instanceof Atom)) {
-      if(node.args.length === 1) {
+      if(this.args.length === 1) {
         const ix = checks.num(ins[0].numValue, {min: 1n});
         sIn.skip(ix - 1n);
         const {value, done} = sIn.next();
         if(done)
           throw new StreamError(null, `requested part ${ix} beyond end`);
-        return value.eval(env);
+        return value.eval();
       } else
         return part(sIn, ins.map(i => checks.num(i.numValue, {min: 1n})));
-    } else if(node.args.length > 1)
+    } else if(this.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
     const iter = part(sIn, (function*() {
       for(const s of ins[0])
-        yield s.evalNum(env, {min: 1n});
+        yield s.evalNum({min: 1n});
     })());
     iter.len = sIn.len;
     iter.skip = sIn.skip;
     return iter;
   },
-  desc: function(node) {
+  desc: function() {
     let ret = '';
-    if(node.src) {
-      ret = node.src.desc();
-      ret += '[' + node.args.map(a => a.desc()).join(',') + ']';
+    if(this.src) {
+      ret = this.src.desc();
+      ret += '[' + this.args.map(a => a.desc()).join(',') + ']';
     } else {
       ret = 'part';
-      ret += '(' + node.args.map(a => a.desc()).join(',') + ')';
+      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
     }
     return ret;
   }
 });
 
-mainReg.register('in', {
+/*mainReg.register('in', {
   numArg: 1,
   eval: function(node, env) {
     if(!env.ins)
@@ -483,16 +490,14 @@ mainReg.register('recur', {
     iter.len = null;
     return iter;
   }
-});
+});*/
 
 mainReg.register(['reverse', 'rev'], {
   source: true,
   numArg: 0,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env, {finite: true});
-    const iter = [...sIn].reverse().values();
-    iter.len = sIn.len;
-    return iter;
+  eval: function() {
+    const sIn = this.src.evalStream({finite: true});
+    return [...sIn].reverse().values();
   }
 });
 
@@ -519,16 +524,16 @@ function takedrop(sIn, iter) {
 mainReg.register(['take', 'takedrop', 'td'], {
   source: true,
   minArg: 1,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env);
-    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+  eval: function() {
+    const sIn = this.src.evalStream();
+    const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i instanceof Atom))
       return takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n})));
-    else if(node.args.length > 1)
+    else if(this.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
     return takedrop(sIn, (function*() {
       for(const s of ins[0])
-        yield s.evalNum(env, {min: 0n});
+        yield s.evalNum({min: 0n});
     })());
   }
 });
@@ -536,17 +541,17 @@ mainReg.register(['take', 'takedrop', 'td'], {
 mainReg.register(['drop', 'droptake', 'dt'], {
   source: true,
   minArg: 1,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env);
-    const ins = node.args.map(arg => arg.prepend(node.src).eval(env));
+  eval: function() {
+    const sIn = this.src.evalStream();
+    const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i instanceof Atom))
       return takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]);
-    else if(node.args.length > 1)
+    else if(this.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
     return takedrop(sIn, (function*() {
       yield 0n;
       for(const s of ins[0])
-        yield s.evalNum(env, {min: 0n});
+        yield s.evalNum({min: 0n});
     })());
   }
-});*/
+});

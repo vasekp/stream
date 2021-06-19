@@ -21,7 +21,7 @@ export class Node {
       if(rec.prepare)
         this.prepareIn = rec.prepare;
       if(rec.eval)
-        this.eval = rec.eval;
+        this.evalIn = rec.eval;
       if(rec.desc)
         this.desc = rec.desc;
       this.reqs = {source: rec.source, numArg: rec.numArg, minArg: rec.minArg, maxArg: rec.maxArg};
@@ -64,7 +64,13 @@ export class Node {
   }
 
   eval() {
-    throw new StreamError(this, `symbol ${this.ident} undefined`);
+    if(this.evalIn) {
+      const iter = this.evalIn();
+      if(!iter.skip)
+        iter.skip = defaultSkip;
+      return iter;
+    } else
+      throw new StreamError(this, `symbol ${this.ident} undefined`);
   }
 
   evalNum(opts = {}) {

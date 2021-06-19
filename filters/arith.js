@@ -1,11 +1,12 @@
 import {Node, Atom, mainReg, StreamError} from '../base.js';
 
-/*function regReducer(name, sign, fun) {
+function regReducer(name, sign, fun) {
   mainReg.register(name, {
+    source: false,
     minArg: 2,
-    eval: function(node, env) {
-      const is = node.args
-        .map(arg => arg.prepend(node.src).eval(env))
+    eval: function() {
+      const is = this.args
+        .map(arg => arg.eval())
         .map(st => st instanceof Atom ? st.numValue : st);
       if(is.every(i => typeof i === 'bigint'))
         return new Atom(is.reduce(fun));
@@ -20,7 +21,7 @@ import {Node, Atom, mainReg, StreamError} from '../base.js';
                 const {value: r, done} = i.next();
                 if(done)
                   return;
-                vs.push(r.evalNum(env));
+                vs.push(r.evalNum());
               }
             yield new Atom(vs.reduce(fun));
           }
@@ -33,12 +34,12 @@ import {Node, Atom, mainReg, StreamError} from '../base.js';
         return iter;
       }
     },
-    desc: function(node) {
+    desc: function() {
       let ret = '';
-      if(node.src)
-        ret = node.src.desc() + '.';
+      if(this.src)
+        ret = this.src.desc() + '.';
       ret += '(';
-      ret += node.args.map(n => n.desc()).join(sign);
+      ret += this.args.map(n => n.desc()).join(sign);
       ret += ')';
       return ret;
     }
@@ -51,18 +52,18 @@ regReducer('times', '*', (a, b) => a * b);
 regReducer('div', '/', (a, b) => a / b);
 
 mainReg.register('min', {
-  eval: function(node, env) {
-    if(node.args.length > 0) {
-      const ins = node.args.map(arg => arg.prepend(node.src).evalNum(env));
+  eval: function() {
+    if(this.args.length > 0) {
+      const ins = this.args.map(arg => arg.evalNum());
       const min = ins.reduce((a, b) => b < a ? b : a);
       return new Atom(min);
     } else {
-      if(!node.src)
+      if(!this.src)
         throw new StreamError(null, 'requires source');
-      const str = node.src.evalStream(env, {finite: true});
+      const str = this.src.evalStream({finite: true});
       const iter = (function*() {
         for(const s of str)
-          yield s.evalNum(env);
+          yield s.evalNum();
       })();
       const {value, done} = iter.next();
       if(done)
@@ -77,18 +78,18 @@ mainReg.register('min', {
 });
 
 mainReg.register('max', {
-  eval: function(node, env) {
-    if(node.args.length > 0) {
-      const ins = node.args.map(arg => arg.prepend(node.src).evalNum(env));
+  eval: function() {
+    if(this.args.length > 0) {
+      const ins = this.args.map(arg => arg.evalNum());
       const max = ins.reduce((a, b) => b > a ? b : a);
       return new Atom(max);
     } else {
-      if(!node.src)
+      if(!this.src)
         throw new StreamError(null, 'requires source');
-      const str = node.src.evalStream(env, {finite: true});
+      const str = this.src.evalStream({finite: true});
       const iter = (function*() {
         for(const s of str)
-          yield s.evalNum(env);
+          yield s.evalNum();
       })();
       const {value, done} = iter.next();
       if(done)
@@ -105,11 +106,11 @@ mainReg.register('max', {
 mainReg.register(['total', 'tot'], {
   source: true,
   maxArg: 0,
-  eval: function(node, env) {
-    const str = node.src.evalStream(env, {finite: true});
+  eval: function() {
+    const str = this.src.evalStream({finite: true});
     let tot = 0n;
     for(const s of str)
-      tot += s.evalNum(env);
+      tot += s.evalNum();
     return new Atom(tot);
   }
 });
@@ -117,15 +118,15 @@ mainReg.register(['total', 'tot'], {
 mainReg.register('diff', {
   source: true,
   maxArg: 0,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env);
+  eval: function() {
+    const sIn = this.src.evalStream();
     const iter = (function*() {
       const {value, done} = sIn.next();
       if(done)
         return;
-      let prev = value.evalNum(env);
+      let prev = value.evalNum();
       for(const next of sIn) {
-        const curr = next.evalNum(env);
+        const curr = next.evalNum();
         yield new Atom(curr - prev);
         prev = curr;
       }
@@ -150,16 +151,16 @@ mainReg.register('diff', {
 mainReg.register('pow', {
   minArg: 1,
   maxArg: 2,
-  eval: function(node, env) {
-    if(node.args.length === 1) {
-      if(!node.src)
+  eval: function() {
+    if(this.args.length === 1) {
+      if(!this.src)
         throw new StreamError('needs source');
-      const base = node.src.evalNum(env);
-      const pow = node.args[0].prepend(node.src).evalNum(env, {min: 0n});
+      const base = this.src.evalNum();
+      const pow = this.args[0].evalNum({min: 0n});
       return new Atom(base ** pow);
     } else {
-      const base = node.args[0].prepend(node.src).evalNum(env);
-      const pow = node.args[1].prepend(node.src).evalNum(env, {min: 0n});
+      const base = this.args[0].evalNum();
+      const pow = this.args[1].evalNum({min: 0n});
       return new Atom(base ** pow);
     }
   }
@@ -169,12 +170,12 @@ mainReg.register('mod', {
   source: true,
   minArg: 1,
   maxArg: 2,
-  eval: function(node, env) {
-    const inp = node.src.evalNum(env);
-    const mod = node.args[0].prepend(node.src).evalNum(env, {min: 1n});
-    const base = node.args[1] ? node.args[1].prepend(node.src).evalNum(env) : 0n;
+  eval: function() {
+    const inp = this.src.evalNum();
+    const mod = this.args[0].evalNum({min: 1n});
+    const base = this.args[1] ? this.args[1].evalNum() : 0n;
     const res0 = (inp - base) % mod;
     const res = (res0 >= 0n ? res0 : res0 + mod) + base;
     return new Atom(res);
   }
-});*/
+});
