@@ -1,6 +1,6 @@
 import {Node, Atom, mainReg, StreamError} from '../base.js';
 
-function regReducer(name, sign, fun) {
+/*function regReducer(name, sign, fun) {
   mainReg.register(name, {
     minArg: 2,
     eval: function(node, env) {
@@ -177,4 +177,4 @@ mainReg.register('mod', {
     const res = (res0 >= 0n ? res0 : res0 + mod) + base;
     return new Atom(res);
   }
-});
+});*/

@@ -8,9 +8,9 @@ import repl from 'repl';
 repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
-    const st = parse(str);
+    const st = parse(str).prepare(mainEnv);
     //console.log(st.desc());
-    console.log(st.writeout(mainEnv));
+    console.log(st.writeout());
   } catch(e) {
     if(e instanceof ParseError) {
       if(e.str !== '')

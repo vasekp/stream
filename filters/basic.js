@@ -1,6 +1,7 @@
 import {Node, Atom, Block, StreamError, checks, mainReg} from '../base.js';
 
 mainReg.register(['iota', 'seq', 'I'], {
+  source: false,
   numArg: 0,
   eval: function() {
     let i = 1n;
@@ -12,13 +13,14 @@ mainReg.register(['iota', 'seq', 'I'], {
 });
 
 mainReg.register(['range', 'ran', 'r'], {
+  source: false,
   minArg: 1,
   maxArg: 3,
-  eval: function(node, env) {
-    const [min, max] = node.args[0] && node.args[1]
-      ? [node.args[0].prepend(node.src).evalNum(env), node.args[1].prepend(node.src).evalNum(env)]
-      : [1n, node.args[0].prepend(node.src).evalNum(env)];
-    const step = node.args[2] ? node.args[2].prepend(node.src).evalNum(env) : 1n;
+  eval: function() {
+    const [min, max] = this.args[0] && this.args[1]
+      ? [this.args[0].evalNum(), this.args[1].evalNum()]
+      : [1n, this.args[0].evalNum()];
+    const step = this.args[2] ? this.args[2].evalNum() : 1n;
     let i = min;
     const iter = (function*() {
       while(step >= 0n ? i <= max : i >= max) {
@@ -35,7 +37,7 @@ mainReg.register(['range', 'ran', 'r'], {
   }
 });
 
-mainReg.register(['length', 'len'], {
+/*mainReg.register(['length', 'len'], {
   source: true,
   numArg: 0,
   eval: function(node, env) {
@@ -154,15 +156,15 @@ mainReg.register('foreach', {
     ret += '(' + node.args.map(a => a.desc()).join(',') + ')';
     return ret;
   }
-});
+});*/
 
 mainReg.register('id', {
   source: true,
   numArg: 0,
-  eval: function(node, env) {
-    return node.src.eval(env);
+  prepare: function(env, src) {
+    return this.src ? this.src.prepare(env, src) : src.prepare(env);
   },
-  desc: function(node) {
+  desc: function() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -171,7 +173,7 @@ mainReg.register('id', {
   }
 });
 
-mainReg.register(['repeat', 'rep'], {
+/*mainReg.register(['repeat', 'rep'], {
   source: true,
   maxArg: 1,
   eval: function(node, env) {
@@ -547,4 +549,4 @@ mainReg.register(['drop', 'droptake', 'dt'], {
         yield s.evalNum(env, {min: 0n});
     })());
   }
-});
+});*/

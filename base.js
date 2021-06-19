@@ -15,75 +15,67 @@ export class Node {
     this.src = src;
     this.args = args;
     this.meta = meta;
+    const rec = mainReg.find(this.ident);
+    if(rec) {
+      this.known = true;
+      if(rec.prepare)
+        this.prepareIn = rec.prepare;
+      if(rec.eval)
+        this.eval = rec.eval;
+      if(rec.desc)
+        this.desc = rec.desc;
+      this.reqs = {source: rec.source, numArg: rec.numArg, minArg: rec.minArg, maxArg: rec.maxArg};
+    } else
+      this.reqs = {};
   }
 
-  prepend(src) {
-    if(!src)
-      return this;
-    if(this.src)
-      return new Node(this.ident, this.token, this.src.prepend(src), this.args, this.meta);
-    else
-      return new Node(this.ident, this.token, src, this.args, this.meta);
-  }
-
-  apply(args) {
-    if(this.args.length)
-      throw new Error('Node.apply this.args ≠ []');
-    else
-      return new Node(this.ident, this.token, this.src, args, this.meta);
-  }
-
-  eval(env) {
-    //console.log(`E ${this.desc()}`);
-    const rec = env.register.find(this.ident);
-    if(!rec)
-      throw new StreamError(this, `undefined symbol ${this.ident}`);
-    if(rec.source === true && !this.src)
-      throw new StreamError(this, `needs source`);
-    else if(rec.numArg === 0 && this.args.length > 0)
+  checkArgs() {
+    if(this.reqs.numArg === 0 && this.args.length > 0)
       throw new StreamError(this, `does not allow arguments`);
-    else if(rec.numArg !== undefined && this.args.length !== rec.numArg)
-      throw new StreamError(this, `exactly ${rec.numArg} arguments required`);
-    else if(rec.minArg !== undefined && this.args.length < rec.minArg)
-      throw new StreamError(this, `at least ${rec.minArg} arguments required`);
-    else if(rec.maxArg !== undefined && this.args.length > rec.maxArg)
-      throw new StreamError(this, `at most ${rec.maxArg} arguments required`);
-    try {
-      const iter = rec.eval(this, env);
-      if(iter instanceof Atom)
-        return iter;
-      if(!iter.wrapped) {
-        const pnext = iter.next.bind(iter);
-        iter.next = () => {
-          try {
-            return pnext();
-          } catch(e) {
-            if(e instanceof StreamError && !e.node)
-              e.node = this;
-            throw e;
-          }
-        };
-        iter.wrapped = true;
-      }
-      if(!iter.skip)
-        iter.skip = defaultSkip;
-      return iter;
-    } catch(e) {
-      if(e instanceof StreamError && !e.node)
-        e.node = this;
-      throw e;
-    }
+    else if(this.reqs.numArg !== undefined && this.args.length !== this.reqs.numArg)
+      throw new StreamError(this, `exactly ${this.reqs.numArg} arguments required`);
+    else if(this.reqs.minArg !== undefined && this.args.length < this.reqs.minArg)
+      throw new StreamError(this, `at least ${this.reqs.minArg} arguments required`);
+    else if(this.reqs.maxArg !== undefined && this.args.length > this.reqs.maxArg)
+      throw new StreamError(this, `at most ${this.reqs.maxArg} arguments required`);
   }
 
-  evalNum(env, opts = {}) {
-    const ev = this.eval(env);
+  prepare(env, src, args) {
+    if(!this.known)
+      throw new StreamError(this, `symbol ${this.ident} undefined`);
+    if(this.reqs.source && !this.src && !src)
+      throw new StreamError(this, `requires source`);
+    this.checkArgs()
+    const nnode = this.prepareIn(env, src, args);
+    if(nnode !== this)
+      console.log(`${this.desc()} => ${nnode.desc()}`);
+    return nnode;
+  }
+
+  prepareIn(env, src, args) {
+    if(args && this.args.length !== 0)
+      throw new StreamError(this, `already have arguments`);
+    const src2 = this.src ? this.src.prepare(env, src, null) : src ? src.prepare(env) : null;
+    const args2 = (args ? args : this.args).map(arg => arg.prepare(env, src2));
+    if(src2 === this.src && !args && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+      return this;
+    else
+      return new Node(this.ident, this.token, this.reqs.source === false ? null : src2, args2, this.meta);
+  }
+
+  eval() {
+    throw new StreamError(this, `symbol ${this.ident} undefined`);
+  }
+
+  evalNum(opts = {}) {
+    const ev = this.eval();
     if(!(ev instanceof Atom))
       throw new StreamError(null, `expected number, got stream ${this.desc()}`);
     return checks.num(ev.numValue, opts);
   }
 
-  evalStream(env, opts = {}) {
-    const ev = this.eval(env);
+  evalStream(opts = {}) {
+    const ev = this.eval();
     if(ev instanceof Atom)
       throw new StreamError(null, `expected stream, got ${ev.type} ${ev.desc()}`);
     if(opts.finite && ev.len === null)
@@ -92,9 +84,6 @@ export class Node {
   }
 
   desc() {
-    const rec = mainReg.find(this.ident);
-    if(rec && rec.desc)
-      return rec.desc(this);
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -108,9 +97,9 @@ export class Node {
     return this.src === null && this.args.length === 0;
   }
 
-  writeout(env) {
+  writeout() {
     let d = '';
-    for(const s of this.writeout_gen(env)) {
+    for(const s of this.writeout_gen()) {
       d += s;
       if(d.length > MAXLEN) {
         d = d.substring(0, MAXLEN - 3) + '...';
@@ -120,8 +109,8 @@ export class Node {
     return d;
   }
 
-  *writeout_gen(env) {
-    const str = this.eval(env);
+  *writeout_gen() {
+    const str = this.eval();
     if(str instanceof Atom)
       yield str.desc();
     else {
@@ -131,7 +120,7 @@ export class Node {
         if(!first)
           yield ',';
         first = false;
-        yield* value.writeout_gen(env);
+        yield* value.writeout_gen();
       }
       yield ']';
     }
@@ -154,11 +143,11 @@ export class Atom extends Node {
     Object.defineProperty(this, 'type', { value: type, enumerable: true });
   }
 
-  prepend() {
+  prepare() {
     return this;
   }
 
-  eval(env) {
+  eval() {
     return this;
   }
 
@@ -196,39 +185,11 @@ export class Block extends Node {
     this.body = body;
   }
 
-  prepend(src) {
-    if(!src)
-      return this;
-    if(this.src)
-      return new Block(this.body, this.token, this.src.prepend(src), this.args, this.meta);
-    else
-      return new Block(this.body, this.token, src, this.args, this.meta);
-  }
-
-  apply(args) {
-    if(this.args.length)
-      throw new Error('Block.apply this.args ≠ []');
-    else
-      return new Block(this.body, this.token, this.src, args, this.meta);
-  }
-
-  eval(env) {
-    //console.log(`E ${this.desc()}`);
-    const env2 = {...env, ins: [this.src, ...this.args.map(arg => arg.prepend(this.src))], pEnv: env};
-    const ret = this.body.eval(env2);
-    if(ret instanceof Atom)
-      return ret;
-    const pnext = ret.next.bind(ret);
-    ret.next = () => {
-      const {value, done} = pnext();
-      if(done)
-        return {value, done};
-      else
-        return value instanceof Atom
-          ? {value, done}
-          : {value: new Block(value, this.token, this.src, this.args, this.meta), done};
-    };
-    return ret;
+  prepare(env, src, args) {
+    const src2 = this.src ? this.src.prepare(env, src) : src ? src.prepare(env) : null;
+    const args2 = (args ? args : this.args).map(arg => arg.prepare(env, src2))
+    const env2 = {...env, ins: [src2, ...args2], pEnv: env};
+    return this.body.prepare(env2);
   }
 }
 

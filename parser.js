@@ -1,4 +1,4 @@
-import {Node, Atom, Block, mainReg} from './base.js';
+import {Node, Atom, Block} from './base.js';
 import Enum from './enum.js';
 
 const cc = Enum.fromArray(['digit', 'alpha']);
@@ -187,7 +187,7 @@ class Stack {
       const entry = this._stack.shift();
       switch(entry.token.value) {
         case '.':
-          term = term.prepend(entry.terms[0]);
+          term.src = entry.terms[0];
           break;
         case ':':
           term = new Node('foreach', entry.token, entry.terms[0], [term]);
