@@ -1,4 +1,4 @@
-import {Node, Atom, mainReg, StreamError} from '../base.js';
+import {Node, Atom, Stream, mainReg, StreamError} from '../base.js';
 
 function regReducer(name, sign, fun) {
   mainReg.register(name, {
@@ -11,27 +11,30 @@ function regReducer(name, sign, fun) {
       if(is.every(i => typeof i === 'bigint'))
         return new Atom(is.reduce(fun));
       else {
-        const iter = (function*() {
-          for(;;) {
-            const vs = [];
-            for(const i of is)
-              if(typeof i === 'bigint')
-                vs.push(i);
-              else {
-                const {value: r, done} = i.next();
-                if(done)
-                  return;
-                vs.push(r.evalNum());
-              }
-            yield new Atom(vs.reduce(fun));
+        return new Stream(this,
+          (function*() {
+            for(;;) {
+              const vs = [];
+              for(const i of is)
+                if(typeof i === 'bigint')
+                  vs.push(i);
+                else {
+                  const {value: r, done} = i.next();
+                  if(done)
+                    return;
+                  vs.push(r.evalNum());
+                }
+              yield new Atom(vs.reduce(fun));
+            }
+          }()),
+          {
+            skip: c => {
+              for(const i of is)
+                if(typeof i !== 'bigint')
+                  i.skip(c);
+            }
           }
-        }());
-        iter.skip = c => {
-          for(const i of is)
-            if(typeof i !== 'bigint')
-              i.skip(c);
-        };
-        return iter;
+        );
       }
     },
     desc: function() {
@@ -123,31 +126,33 @@ mainReg.register('diff', {
   maxArg: 0,
   eval: function() {
     const sIn = this.src.evalStream();
-    const iter = (function*() {
-      const {value, done} = sIn.next();
-      if(done)
-        return;
-      let prev = value.evalNum();
-      for(const next of sIn) {
-        const curr = next.evalNum();
-        yield new Atom(curr - prev);
-        prev = curr;
-      }
-    })();
+    const ret = new Stream(this,
+      (function*() {
+        const {value, done} = sIn.next();
+        if(done)
+          return;
+        let prev = value.evalNum();
+        for(const next of sIn) {
+          const curr = next.evalNum();
+          yield new Atom(curr - prev);
+          prev = curr;
+        }
+      })()
+    );
     switch(sIn.len) {
       case undefined:
         break;
       case null:
-        iter.len = null;
+        ret.len = null;
         break;
       case 0n:
-        iter.len = 0n;
+        ret.len = 0n;
         break;
       default:
-        iter.len = sIn.len - 1n;
+        ret.len = sIn.len - 1n;
         break;
     }
-    return iter;
+    return ret;
   }
 });
 

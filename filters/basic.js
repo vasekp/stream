@@ -1,14 +1,17 @@
-import {Node, Atom, Block, StreamError, checks, mainReg} from '../base.js';
+import {Node, Atom, Block, Stream, StreamError, checks, mainReg} from '../base.js';
 
 mainReg.register(['iota', 'seq', 'I'], {
   source: false,
   numArg: 0,
   eval: function() {
     let i = 1n;
-    const iter = (function*() { for(;;) yield new Atom(i++); })();
-    iter.skip = c => i += c;
-    iter.len = null;
-    return iter;
+    return new Stream(this,
+      (function*() { for(;;) yield new Atom(i++); })(),
+      {
+        skip: c => i += c,
+        len: null
+      }
+    );
   }
 });
 
@@ -22,18 +25,20 @@ mainReg.register(['range', 'ran', 'r'], {
       : [1n, this.args[0].evalNum()];
     const step = this.args[2] ? this.args[2].evalNum() : 1n;
     let i = min;
-    const iter = (function*() {
-      while(step >= 0n ? i <= max : i >= max) {
-        yield new Atom(i);
-        i += step;
+    return new Stream(this,
+      (function*() {
+        while(step >= 0n ? i <= max : i >= max) {
+          yield new Atom(i);
+          i += step;
+        }
+      })(),
+      {
+        skip: c => i += c * step,
+        len: step !== 0n
+          ? (a => a >= 0n ? a : 0n)((max - min) / step + 1n)
+          : null
       }
-    })();
-    iter.skip = c => i += c * step;
-    if(step !== 0n)
-      iter.len = (a => a >= 0n ? a : 0n)((max - min) / step + 1n);
-    else
-      iter.len = null;
-    return iter;
+    );
   }
 });
 
@@ -81,9 +86,7 @@ mainReg.register('last', {
           if(l.length > len)
             l.shift();
         }
-        const iter = l.values();
-        iter.len = BigInt(l.length);
-        return iter;
+        return new Stream(this, l.values(), {len: BigInt(l.length)});
       } else if(st.len !== null) {
         if(st.len > len) {
           st.skip(st.len - len);
@@ -115,7 +118,7 @@ mainReg.register('last', {
 mainReg.register('array', {
   source: false,
   eval: function() {
-    return this.args.values();
+    return new Stream(this, this.args.values());
   },
   desc: function() {
     let ret = '';
@@ -135,18 +138,21 @@ mainReg.register('foreach', {
   eval: function() {
     const sIn = this.src.evalStream();
     const body = this.args[0];
-    const sOut = (function*() {
-      for(;;) {
-        const {value, done} = sIn.next();
-        if(done)
-          return;
-        else
-          yield body.withSrc(value).prepare();
+    return new Stream(this,
+      (function*() {
+        for(;;) {
+          const {value, done} = sIn.next();
+          if(done)
+            return;
+          else
+            yield body.withSrc(value).prepare();
+        }
+      })(),
+      {
+        skip: sIn.skip,
+        len: sIn.len
       }
-    })();
-    sOut.len = sIn.len;
-    sOut.skip = sIn.skip;
-    return sOut;
+    );
   },
   desc: function() {
     let ret = '';
@@ -186,15 +192,21 @@ mainReg.register(['repeat', 'rep'], {
     if(this.args[0]) {
       const num = this.args[0].evalNum({min: 0n});
       let i = 0n;
-      const iter = (function*() { while(i++ < num) yield src; })();
-      iter.skip = c => i += c;
-      iter.len = num;
-      return iter;
+      return new Stream(this,
+        (function*() { while(i++ < num) yield src; })(),
+        {
+          skip: c => i += c,
+          len: num
+        }
+      );
     } else {
-      const iter = (function*() { for(;;) yield src; })();
-      iter.skip = () => null;
-      iter.len = null;
-      return iter;
+      return new Stream(this,
+        (function*() { for(;;) yield src; })(),
+        {
+          skip: () => {},
+          len: null
+        }
+      );
     }
   }
 });
@@ -206,15 +218,19 @@ mainReg.register(['cycle', 'cc'], {
     const src = this.src;
     if(this.args[0]) {
       const num = this.args[0].evalNum({min: 0n});
-      return (function*() {
-        for(let i = 0n; i < num; i++)
-          yield* src.evalStream();
-      })();
-    } else
-      return (function*() {
-        for(;;)
-          yield* src.evalStream();
-      })();
+      return new Stream(this,
+        (function*() {
+          for(let i = 0n; i < num; i++)
+            yield* src.evalStream();
+        })());
+    } else {
+      return new Stream(this,
+        (function*() {
+          for(;;)
+            yield* src.evalStream();
+        })()
+      );
+    }
   }
 });
 
@@ -242,24 +258,25 @@ mainReg.register(['group', 'g'], {
         })();
     }
     const token = this.token;
-    const iter = (function*() {
-      for(const len of lFun) {
-        checks.num(len, {min: 0n});
-        const r = [];
-        for(let i = 0n; i < len; i++) {
-          const {value, done} = sIn.next();
-          if(done)
+    return new Stream(this,
+      (function*() {
+        for(const len of lFun) {
+          checks.num(len, {min: 0n});
+          const r = [];
+          for(let i = 0n; i < len; i++) {
+            const {value, done} = sIn.next();
+            if(done)
+              break;
+            r.push(value);
+          }
+          // Yield empty group if asked to, but don't output trailing [] on EOI
+          if(r.length > 0n || len === 0n)
+            yield new Node('array', token, null, r, {});
+          if(r.length < len)
             break;
-          r.push(value);
         }
-        // Yield empty group if asked to, but don't output trailing [] on EOI
-        if(r.length > 0n || len === 0n)
-          yield new Node('array', token, null, r, {});
-        if(r.length < len)
-          break;
-      }
-    })();
-    return iter;
+      })()
+    );
   }
 });
 
@@ -269,21 +286,23 @@ mainReg.register(['flatten', 'fl'], {
   eval: function() {
     const depth = this.args[0] ? this.args[0].evalNum() : null;
     const node = this;
-    return (function*() {
-      const it = node.src.eval();
-      if(it instanceof Atom)
-        yield it;
-      else for(const s of node.src.eval()) {
-        if(s instanceof Atom || depth === 0n)
-          yield s;
-        else {
-          const tmp = depth !== null
-            ? new Node('flatten', node.token, s, [new Atom(depth - 1n)])
-            : new Node('flatten', node.token, s);
-          yield* tmp.eval();
+    return new Stream(this,
+      (function*() {
+        const it = node.src.eval();
+        if(it instanceof Atom)
+          yield it;
+        else for(const s of node.src.eval()) {
+          if(s instanceof Atom || depth === 0n)
+            yield s;
+          else {
+            const tmp = depth !== null
+              ? new Node('flatten', node.token, s, [new Atom(depth - 1n)])
+              : new Node('flatten', node.token, s);
+            yield* tmp.eval();
+          }
         }
-      }
-    })();
+      })()
+    );
   }
 });
 
@@ -291,15 +310,17 @@ mainReg.register('join', {
   source: false,
   eval: function() {
     const args = this.args;
-    return (function*() {
-      for(const arg of args) {
-        const ev = arg.eval();
-        if(ev instanceof Atom)
-          yield ev;
-        else
-          yield* ev;
-      }
-    })();
+    return new Stream(this,
+      (function*() {
+        for(const arg of args) {
+          const ev = arg.eval();
+          if(ev instanceof Atom)
+            yield ev;
+          else
+            yield* ev;
+        }
+      })()
+    );
   },
   desc: function() {
     let ret = '';
@@ -317,15 +338,17 @@ mainReg.register('zip', {
   eval: function() {
     const is = this.args.map(arg => arg.evalStream());
     const node = this;
-    return (function*() {
-      for(;;) {
-        const rs = is.map(i => i.next());
-        if(rs.some(r => r.done))
-          break;
-        const vs = rs.map(r => r.value);
-        yield new Node('array', node.token, null, vs);
-      }
-    })();
+    return new Stream(this,
+      (function*() {
+        for(;;) {
+          const rs = is.map(i => i.next());
+          if(rs.some(r => r.done))
+            break;
+          const vs = rs.map(r => r.value);
+          yield new Node('array', node.token, null, vs);
+        }
+      })()
+    );
   },
   desc: function() {
     let ret = '';
@@ -369,16 +392,20 @@ mainReg.register('part', {
           throw new StreamError(null, `requested part ${ix} beyond end`);
         return value.eval();
       } else
-        return part(sIn, ins.map(i => checks.num(i.numValue, {min: 1n})));
+        return new Stream(this,
+          part(sIn, ins.map(i => checks.num(i.numValue, {min: 1n}))));
     } else if(this.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
-    const iter = part(sIn, (function*() {
-      for(const s of ins[0])
-        yield s.evalNum({min: 1n});
-    })());
-    iter.len = sIn.len;
-    iter.skip = sIn.skip;
-    return iter;
+    return new Stream(this,
+      part(sIn, (function*() {
+        for(const s of ins[0])
+          yield s.evalNum({min: 1n});
+      })()),
+      {
+        len: sIn.len,
+        skip: sIn.skip
+      }
+    );
   },
   desc: function() {
     let ret = '';
@@ -435,14 +462,15 @@ mainReg.register('nest', {
   eval: function() {
     let curr = this.src;
     const body = this.args[0];
-    const iter = (function*() {
-      for(;;) {
-        yield curr;
-        curr = body.withSrc(curr).prepare();
-      }
-    })();
-    iter.len = null;
-    return iter;
+    return new Stream(this,
+      (function*() {
+        for(;;) {
+          yield curr;
+          curr = body.withSrc(curr).prepare();
+        }
+      })(),
+      {len: null}
+    );
   }
 });
 
@@ -466,26 +494,28 @@ mainReg.register('reduce', {
       if(done)
         return;
     }
-    const iter = (function*() {
-      for(const next of sIn) {
-        yield bodyOut.withArgs([curr, next]).prepare();
-        curr = bodyMem.withArgs([curr, next]).prepare();
-      }
-    })();
+    const ret = new Stream(this,
+      (function*() {
+        for(const next of sIn) {
+          yield bodyOut.withArgs([curr, next]).prepare();
+          curr = bodyMem.withArgs([curr, next]).prepare();
+        }
+      })()
+    );
     switch(sIn.len) {
       case undefined:
         break;
       case null:
-        iter.len = null;
+        ret.len = null;
         break;
       case 0n:
-        iter.len = 0n;
+        ret.len = 0n;
         break;
       default:
-        iter.len = this.args.length > 1 ? sIn.len : sIn.len - 1n;
+        ret.len = this.args.length > 1 ? sIn.len : sIn.len - 1n;
         break;
     }
-    return iter;
+    return ret;
   }
 });
 
@@ -496,17 +526,18 @@ mainReg.register('recur', {
   eval: function() {
     const sIn = this.src.evalStream({finite: true});
     const body = this.args[0].bare ? checks.stream(this.args[0]) : new Block(this.args[0], this.token);
-    const iter = (function*() {
-      let prev = [...sIn].reverse();
-      for(;;) {
-        const next = body.withArgs(prev).prepare();
-        yield next;
-        prev = prev.slice(0, -1);
-        prev.unshift(next);
-      }
-    })();
-    iter.len = null;
-    return iter;
+    return new Stream(this,
+      (function*() {
+        let prev = [...sIn].reverse();
+        for(;;) {
+          const next = body.withArgs(prev).prepare();
+          yield next;
+          prev = prev.slice(0, -1);
+          prev.unshift(next);
+        }
+      })(),
+      {len: null}
+    );
   }
 });
 
@@ -515,7 +546,7 @@ mainReg.register(['reverse', 'rev'], {
   numArg: 0,
   eval: function() {
     const sIn = this.src.evalStream({finite: true});
-    return [...sIn].reverse().values();
+    return new Stream(this, [...sIn].reverse().values());
   }
 });
 
@@ -546,13 +577,16 @@ mainReg.register(['take', 'takedrop', 'td'], {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i instanceof Atom))
-      return takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n})));
+      return new Stream(this,
+        takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n}))));
     else if(this.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
-    return takedrop(sIn, (function*() {
-      for(const s of ins[0])
-        yield s.evalNum({min: 0n});
-    })());
+    return new Stream(this,
+      takedrop(sIn, (function*() {
+        for(const s of ins[0])
+          yield s.evalNum({min: 0n});
+      })())
+    );
   }
 });
 
@@ -563,13 +597,16 @@ mainReg.register(['drop', 'droptake', 'dt'], {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i instanceof Atom))
-      return takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]);
+      return new Stream(this,
+        takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]));
     else if(this.args.length > 1)
       throw new StreamError(null, 'required list of values or a single stream');
-    return takedrop(sIn, (function*() {
-      yield 0n;
-      for(const s of ins[0])
-        yield s.evalNum({min: 0n});
-    })());
+    return new Stream(this,
+      takedrop(sIn, (function*() {
+        yield 0n;
+        for(const s of ins[0])
+          yield s.evalNum({min: 0n});
+      })())
+    );
   }
 });

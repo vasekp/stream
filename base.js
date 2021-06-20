@@ -88,13 +88,7 @@ export class Node {
   }
 
   eval() {
-    if(this.evalIn) {
-      const iter = this.evalIn();
-      if(!iter.skip)
-        iter.skip = defaultSkip;
-      return iter;
-    } else
-      throw new StreamError(this, `symbol ${this.ident} undefined`);
+    throw new StreamError(this, `symbol ${this.ident} undefined`);
   }
 
   evalNum(opts = {}) {
@@ -155,12 +149,6 @@ export class Node {
       yield ']';
     }
   }
-}
-
-// injection for iterator instrumentation
-function defaultSkip(c) {
-  for(let i = 0n; i < c; i++)
-    this.next();
 }
 
 export class Atom extends Node {
@@ -252,6 +240,33 @@ export class Block extends Node {
       return this;
     else
       return new Block(this.body, this.token, src2, args2, this.meta);
+  }
+}
+
+export class Stream {
+  constructor(node, iter, opts) {
+    this.node = node;
+    this.iter = iter;
+    Object.assign(this, opts);
+  }
+
+  next() {
+    try {
+      return this.iter.next();
+    } catch(e) {
+      if(e instanceof StreamError && !e.node)
+        e.node = this.node;
+      throw e;
+    }
+  }
+
+  [Symbol.iterator]() {
+    return this;
+  }
+
+  skip(c) {
+    for(let i = 0n; i < c; i++)
+      this.next();
   }
 }
 
