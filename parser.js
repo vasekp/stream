@@ -7,6 +7,7 @@ const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close'
 const priority = Enum.fromObj({
   ':': 5,
   '.': 5,
+  '@': 5,
   '*': 4,
   '/': 4,
   '+': 3,
@@ -49,6 +50,7 @@ function tokcls(c) {
       return tc.close;
     case '.':
     case ':':
+    case '@':
     case '+':
     case '-':
     case '*':
@@ -183,7 +185,8 @@ class Stack {
   }
 
   reduce(oper, prio, term) {
-    while(!this.empty && (this.topPrio > prio || this.topOper === '.' || this.topOper === ':')) {
+    while(!this.empty && (this.topPrio > prio
+        || this.topOper === '.' || this.topOper === ':' || this.topOper === '@')) {
       const entry = this._stack.shift();
       switch(entry.token.value) {
         case '.':
@@ -191,6 +194,9 @@ class Stack {
           break;
         case ':':
           term = new Node('foreach', entry.token, entry.terms[0], [term]);
+          break;
+        case '@':
+          term = new Node('over', entry.token, entry.terms[0], [term]);
           break;
         default:
           term = new Node(operMap[entry.token.value], entry.token, null, [...entry.terms, term]);

@@ -629,3 +629,45 @@ mainReg.register(['drop', 'droptake', 'dt'], {
     );
   }
 });
+
+mainReg.register('over', {
+  source: true,
+  minArg: 1,
+  prepare: function() {
+    const args2 = this.args.map(arg => arg.prepare());
+    this.checkArgs(this.src, args2);
+    if([...this.args.keys()].every(key => args2[key] === this.args[key]))
+      return this;
+    else
+      return new Node(this.ident, this.token, this.src, args2, this.meta);
+  },
+  eval: function() {
+    const body = this.src;
+    const is = this.args.map(arg => arg.evalStream());
+    return new Stream(this,
+      (function*() {
+        for(;;) {
+          const rs = is.map(i => i.next());
+          if(rs.some(r => r.done))
+            break;
+          const vs = rs.map(r => r.value);
+          yield body.withArgs(vs).prepare();
+        }
+      })()
+    );
+  },
+  desc: function() {
+    let ret = '';
+    if(this.src && this.args.length === 1)
+      ret = this.src.desc() + '@'
+    else {
+      if(this.src)
+        ret = this.src.desc() + '.';
+      ret += this.ident;
+    }
+    ret += '(';
+    ret += this.args.map(n => n.desc()).join(',');
+    ret += ')';
+    return ret;
+  }
+});
