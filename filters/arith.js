@@ -38,9 +38,12 @@ function regReducer(name, sign, fun) {
       let ret = '';
       if(this.src)
         ret = this.src.desc() + '.';
-      ret += '(';
-      ret += this.args.map(n => n.desc()).join(sign);
-      ret += ')';
+      if(this.args.length > 0) {
+        ret += '(';
+        ret += this.args.map(n => n.desc()).join(sign);
+        ret += ')';
+      } else
+        ret += name;
       return ret;
     }
   });

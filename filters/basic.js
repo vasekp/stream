@@ -128,34 +128,36 @@ mainReg.register('array', {
   }
 });
 
-/*mainReg.register('foreach', {
+mainReg.register('foreach', {
   source: true,
   numArg: 1,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env);
+  prepare: Node.prototype.prepareSrc,
+  eval: function() {
+    const sIn = this.src.evalStream();
+    const body = this.args[0];
     const sOut = (function*() {
       for(;;) {
         const {value, done} = sIn.next();
         if(done)
           return;
         else
-          yield node.args[0].prepend(value);
+          yield body.withSrc(value).prepare();
       }
     })();
     sOut.len = sIn.len;
     sOut.skip = sIn.skip;
     return sOut;
   },
-  desc: function(node) {
+  desc: function() {
     let ret = '';
-    if(node.src)
-      ret = node.src.desc() + ':';
+    if(this.src)
+      ret = this.src.desc() + ':';
     else
       ret = 'foreach';
-    ret += '(' + node.args.map(a => a.desc()).join(',') + ')';
+    ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
     return ret;
   }
-});*/
+});
 
 mainReg.register('id', {
   source: true,
@@ -390,28 +392,36 @@ mainReg.register('part', {
   }
 });
 
-/*mainReg.register('in', {
-  numArg: 1,
-  eval: function(node, env) {
-    if(!env.ins)
-      throw new StreamError(null, 'no surrounding block');
-    const ix = node.args[0].prepend(node.src).evalNum(env, {min: 0n, max: env.ins.length - 1});
-    if(ix === 0n && !env.ins[0])
-      throw new StreamError(null, 'block has empty source');
-    return env.ins[ix].eval(env.pEnv);
+mainReg.register('in', {
+  maxArg: 1,
+  withEnv(env) {
+    if(this.args[0]) {
+      const ix = this.args[0].evalNum(env, {min: 1n, max: env.args.length});
+      return env.args[Number(ix) - 1];
+    } else {
+      if(env.src)
+        return env.src;
+      else
+        throw new StreamError(this, 'outer scope has empty source');
+    }
   },
-  desc: function(node) {
+  eval: function() {
+    throw new StreamError(this, 'out of scope');
+  },
+  desc: function() {
     let ret = '';
-    if(node.src)
-      ret = node.src.desc() + '.';
-    if(node.args.length === 1
-        && node.args[0] instanceof Atom
-        && typeof node.args[0].value === 'bigint'
-        && node.args[0].value >= 0n)
-      ret += '#' + (node.args[0].value > 0n ? node.args[0].value : '#');
+    if(this.src)
+      ret = this.src.desc() + '.';
+    if(this.args.length === 0)
+      ret += '##';
+    else if(this.args.length === 1
+        && this.args[0] instanceof Atom
+        && typeof this.args[0].value === 'bigint'
+        && this.args[0].value > 0n)
+      ret += '#' + this.args[0].value;
     else {
       ret = 'in';
-      ret += '(' + node.args.map(a => a.desc()).join(',') + ')';
+      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
     }
     return ret;
   }
@@ -420,12 +430,14 @@ mainReg.register('part', {
 mainReg.register('nest', {
   source: true,
   numArg: 1,
-  eval: function(node, env) {
+  prepare: Node.prototype.prepareSrc,
+  eval: function() {
+    let curr = this.src;
+    const body = this.args[0];
     const iter = (function*() {
-      let curr = node.src;
       for(;;) {
         yield curr;
-        curr = node.args[0].prepend(curr);
+        curr = body.withSrc(curr).prepare();
       }
     })();
     iter.len = null;
@@ -437,25 +449,26 @@ mainReg.register('reduce', {
   source: true,
   minArg: 1,
   maxArg: 3,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env);
-    const bodyMem = node.args[0].bare ? node.args[0] : new Block(node.args[0], node.token);
-    const bodyOut = node.args.length === 3
-      ? node.args[1].bare ? node.args[1] : new Block(node.args[1], node.token)
+  prepare: Node.prototype.prepareSrc,
+  eval: function() {
+    const sIn = this.src.evalStream();
+    const bodyMem = this.args[0].bare ? this.args[0] : new Block(this.args[0], this.token);
+    const bodyOut = this.args.length === 3
+      ? this.args[1].bare ? this.args[1] : new Block(this.args[1], this.token)
       : bodyMem;
+    let curr;
+    if(this.args.length > 1)
+      curr = this.args[this.args.length - 1].withSrc(this.src).prepare();
+    else {
+      let done;
+      ({value: curr, done} = sIn.next());
+      if(done)
+        return;
+    }
     const iter = (function*() {
-      let curr;
-      if(node.args.length > 1)
-        curr = node.args[node.args.length - 1].prepend(node.src);
-      else {
-        let done;
-        ({value: curr, done} = sIn.next());
-        if(done)
-          return;
-      }
       for(const next of sIn) {
-        yield bodyOut.apply([curr, next]);
-        curr = bodyMem.apply([curr, next]);
+        yield bodyOut.withArgs([curr, next]).prepare();
+        curr = bodyMem.withArgs([curr, next]).prepare();
       }
     })();
     switch(sIn.len) {
@@ -468,7 +481,7 @@ mainReg.register('reduce', {
         iter.len = 0n;
         break;
       default:
-        iter.len = node.args.length > 1 ? sIn.len : sIn.len - 1n;
+        iter.len = this.args.length > 1 ? sIn.len : sIn.len - 1n;
         break;
     }
     return iter;
@@ -478,13 +491,14 @@ mainReg.register('reduce', {
 mainReg.register('recur', {
   source: true,
   numArg: 1,
-  eval: function(node, env) {
-    const sIn = node.src.evalStream(env, {finite: true});
-    const body = node.args[0].bare ? checks.stream(node.args[0]) : new Block(node.args[0], node.token);
+  prepare: Node.prototype.prepareSrc,
+  eval: function() {
+    const sIn = this.src.evalStream({finite: true});
+    const body = this.args[0].bare ? checks.stream(this.args[0]) : new Block(this.args[0], this.token);
     const iter = (function*() {
       let prev = [...sIn].reverse();
       for(;;) {
-        const next = body.apply(prev);
+        const next = body.withArgs(prev).prepare();
         yield next;
         prev = prev.slice(0, -1);
         prev.unshift(next);
@@ -493,7 +507,7 @@ mainReg.register('recur', {
     iter.len = null;
     return iter;
   }
-});*/
+});
 
 mainReg.register(['reverse', 'rev'], {
   source: true,

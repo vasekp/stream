@@ -250,10 +250,10 @@ function parse0(iter, close, array) {
         if(s.value === '#')
           term = new Node('id', s);
         else if(s.value === '##')
-          term = new Node('in', s, null, [new Atom(0)]);
+          term = new Node('in', s, null, []);
         else {
           const ix = Number(s.value.substr(1));
-          if(Number.isNaN(ix))
+          if(Number.isNaN(ix) || ix === 0)
             throw new ParseError(`malformed identifier "${s.value}"`, s.pos);
           else
             term = new Node('in', s, null, [new Atom(ix)]);

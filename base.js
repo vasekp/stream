@@ -17,7 +17,8 @@ export class Node {
     this.meta = meta;
     const rec = mainReg.find(this.ident);
     if(rec) {
-      this.known = true;
+      if(rec.withEnv)
+        this.withEnv = rec.withEnv;
       if(rec.prepare)
         this.prepare = rec.prepare;
       if(rec.eval)
@@ -27,6 +28,16 @@ export class Node {
       this.reqs = {source: rec.source, numArg: rec.numArg, minArg: rec.minArg, maxArg: rec.maxArg};
     } else
       this.reqs = {};
+    /* Debug: */
+    /*for(const fn of ['withSrc', 'withArgs', 'withEnv', 'prepare']) {
+      const pFn = this[fn];
+      this[fn] = (...args) => {
+        const nnode = pFn.apply(this, args);
+        if(nnode !== this)
+          console.log(`${fn}: ${this.desc()} => ${nnode.desc()}`);
+        return nnode;
+      };
+    }*/
   }
 
   withSrc(src) {
@@ -39,21 +50,17 @@ export class Node {
 
   withArgs(args) {
     if(this.args.length !== 0)
-      throw new StreamError(this, `already have arguments`);
+      throw new Error('already have arguments');
     return new Node(this.ident, this.token, this.src, args, this.meta);
   }
 
   withEnv(env) {
-    const src2 = this.src.withEnv(env);
+    const src2 = this.src ? this.src.withEnv(env) : null;
     const args2 = this.args.map(arg => arg.withEnv(env));
-    if(src2 === this.src && !args && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
     else
       return new Node(this.ident, this.token, src2, args2, this.meta);
-    /*const nnode = this.adaptIn(env);
-    if(nnode !== this)
-      console.log(`${this.desc()} => ${nnode.desc()}`);
-    return nnode;*/
   }
 
   prepare() {
@@ -63,6 +70,15 @@ export class Node {
       return this;
     else
       return new Node(this.ident, this.token, this.reqs.source === false ? null : src2, args2, this.meta);
+  }
+
+  /* never called directly, convenience for register */
+  prepareSrc() {
+    const src2 = this.src ? this.src.prepare() : null;
+    if(src2 === this.src)
+      return this;
+    else
+      return new Node(this.ident, this.token, src2, this.args, this.meta);
   }
 
   checkArgs() {
@@ -219,11 +235,31 @@ export class Block extends Node {
     this.body = body;
   }
 
-  prepare(env, src, args) {
-    const src2 = this.src ? this.src.prepare(env, src) : src ? src.prepare(env) : null;
-    const args2 = (args ? args : this.args).map(arg => arg.prepare(env, src2))
-    const env2 = {...env, ins: [src2, ...args2], pEnv: env};
-    return this.body.prepare(env2);
+  prepare() {
+    return this.body.withEnv(this).prepare();
+  }
+
+  withSrc(src) {
+    const src2 = this.src ? this.src.withSrc(src) : src;
+    if(src2 === this.src)
+      return this;
+    else
+      return new Block(this.body, this.token, src, this.args, this.meta);
+  }
+
+  withArgs(args) {
+    if(this.args.length !== 0)
+      throw new Error('already have arguments');
+    return new Block(this.body, this.token, this.src, args, this.meta);
+  }
+
+  withEnv(env) {
+    const src2 = this.src ? this.src.withEnv(env) : null;
+    const args2 = this.args.map(arg => arg.withEnv(env));
+    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+      return this;
+    else
+      return new Block(this.body, this.token, src2, args2, this.meta);
   }
 }
 
