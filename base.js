@@ -213,12 +213,8 @@ export class Atom extends Node {
       throw new StreamError(null, `expected ${type}, got ${this.type} ${this.desc()}`);
   }
 
-  get numValue() {
-    return this.getTyped('number');
-  }
-
-  get strValue() {
-    return this.getTyped('string');
+  numValue(opts = {}) {
+    return checks.num(this.getTyped('number'), opts);
   }
 }
 

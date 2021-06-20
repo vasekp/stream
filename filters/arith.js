@@ -7,7 +7,7 @@ function regReducer(name, sign, fun) {
     prepare: function() {
       const nnode = Node.prototype.prepare.call(this);
       if(nnode.args.every(arg => arg.isAtom))
-        return new Atom(nnode.args.map(arg => arg.numValue).reduce(fun));
+        return new Atom(nnode.args.map(arg => arg.numValue()).reduce(fun));
       else
         return nnode;
     },

@@ -262,10 +262,10 @@ mainReg.register(['group', 'g'], {
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom)) {
       if(this.args.length === 1) {
-        const len = checks.num(ins[0].numValue, {min: 0n});
+        const len = ins[0].numValue({min: 0n});
         lFun = (function*() { for(;;) yield len; })();
       } else {
-        lFun = ins.map(i => checks.num(i.numValue, {min: 0n}));
+        lFun = ins.map(i => i.numValue({min: 0n}));
       }
     } else {
       if(this.args.length > 1)
@@ -410,7 +410,7 @@ mainReg.register('part', {
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom)) {
       if(this.args.length === 1) {
-        const ix = checks.num(ins[0].numValue, {min: 1n});
+        const ix = ins[0].numValue({min: 1n});
         sIn.skip(ix - 1n);
         const {value, done} = sIn.next();
         if(done)
@@ -418,7 +418,7 @@ mainReg.register('part', {
         return value.eval();
       } else
         return new Stream(this,
-          part(sIn, ins.map(i => checks.num(i.numValue, {min: 1n}))));
+          part(sIn, ins.map(i => i.numValue({min: 1n}))));
     } else if(this.args.length > 1)
       throw new StreamError(this, 'required list of values or a single stream');
     return new Stream(this,
@@ -603,7 +603,7 @@ mainReg.register(['take', 'takedrop', 'td'], {
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom))
       return new Stream(this,
-        takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n}))));
+        takedrop(sIn, ins.map(i => i.numValue({min: 0n}))));
     else if(this.args.length > 1)
       throw new StreamError(this, 'required list of values or a single stream');
     return new Stream(this,
@@ -623,7 +623,7 @@ mainReg.register(['drop', 'droptake', 'dt'], {
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom))
       return new Stream(this,
-        takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]));
+        takedrop(sIn, [0n, ...ins.map(i => i.numValue({min: 0n}))]));
     else if(this.args.length > 1)
       throw new StreamError(this, 'required list of values or a single stream');
     return new Stream(this,
