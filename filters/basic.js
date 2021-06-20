@@ -738,6 +738,26 @@ mainReg.register(['select', 'sel'], {
   }
 });
 
+mainReg.register('while', {
+  source: true,
+  numArg: 1,
+  prepare: Node.prototype.prepareSrc,
+  eval: function() {
+    const sIn = this.src.evalStream();
+    const cond = this.args[0];
+    return new Stream(this,
+      (function*() {
+        for(const value of sIn) {
+          if(cond.withSrc(value).prepare().evalAtom('boolean'))
+            yield value;
+          else
+            return;
+        }
+      })()
+    );
+  }
+});
+
 function eq(args) {
   const ins = args.map(arg => arg.eval());
   if(ins.every(i => i.isAtom)) {
