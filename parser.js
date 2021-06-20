@@ -246,11 +246,16 @@ function parse0(iter, close, array) {
         state = ss.term;
         break;
       case tc.ident:
-        if(state === ss.base || state === ss.oper)
-          term = new Node(s.value, s);
-        else
+        if(state === ss.base || state === ss.oper) {
+          if(s.value === 'true' || s.value === 'false') {
+            term = new Atom(s.value === 'true');
+            state = ss.term;
+          } else {
+            term = new Node(s.value, s);
+            state = ss.sym;
+          }
+        } else
           throw new ParseError(`"${s.value}" can't appear here`, s.pos);
-        state = ss.sym;
         break;
       case tc.hash:
         if(s.value === '#')
