@@ -1,7 +1,7 @@
 import './filters/basic.js';
 import './filters/arith.js';
 import {parse, ParseError} from './parser.js';
-import {mainEnv, StreamError} from './base.js';
+import {StreamError} from './base.js';
 
 import repl from 'repl';
 

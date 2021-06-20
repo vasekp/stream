@@ -311,8 +311,6 @@ export class Register {
 
 export const mainReg = new Register();
 
-export const mainEnv = {register: mainReg};
-
 export const checks = {
   num(value, opts = {}) {
     if(opts.min !== undefined && value < opts.min)
