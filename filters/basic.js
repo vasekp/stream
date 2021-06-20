@@ -46,13 +46,13 @@ mainReg.register(['length', 'len'], {
   source: true,
   numArg: 0,
   eval: function() {
-    const st = this.src.evalStream({finite: true});
+    const sIn = this.src.evalStream({finite: true});
     let len = 0n;
-    if(st.len === undefined) {
-      for(const i of st)
+    if(sIn.len === undefined) {
+      for(const i of sIn)
         len++;
-    } else if(st.len !== null)
-      len = st.len;
+    } else if(sIn.len !== null)
+      len = sIn.len;
     else
       throw new Error('assertion failed');
     return new Atom(len);
@@ -95,36 +95,36 @@ mainReg.register('last', {
   source: true,
   maxArg: 1,
   eval: function() {
-    const st = this.src.evalStream({finite: true});
+    const sIn = this.src.evalStream({finite: true});
     if(this.args[0]) {
       const len = this.args[0].evalNum({min: 1n});
       let l = [];
-      if(st.len === undefined) {
-        for(const v of st) {
+      if(sIn.len === undefined) {
+        for(const v of sIn) {
           l.push(v);
           if(l.length > len)
             l.shift();
         }
         return new Stream(this, l.values(), {len: BigInt(l.length)});
-      } else if(st.len !== null) {
-        if(st.len > len) {
-          st.skip(st.len - len);
-          st.len = len;
+      } else if(sIn.len !== null) {
+        if(sIn.len > len) {
+          sIn.skip(sIn.len - len);
+          sIn.len = len;
         }
-        return st;
-      } else if(st.len === null) {
+        return sIn;
+      } else if(sIn.len === null) {
         throw new Error('assertion failed');
       }
     } else {
       let l;
-      if(st.len === undefined) {
-        for(const v of st)
+      if(sIn.len === undefined) {
+        for(const v of sIn)
           l = v;
-      } else if(st.len === null) {
+      } else if(sIn.len === null) {
         throw new Error('assertion failed');
-      } else if(st.len !== 0n) {
-        st.skip(st.len - 1n);
-        ({value: l} = st.next());
+      } else if(sIn.len !== 0n) {
+        sIn.skip(sIn.len - 1n);
+        ({value: l} = sIn.next());
       }
       if(!l)
         throw new StreamError(this, 'empty stream');
