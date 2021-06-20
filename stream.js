@@ -10,7 +10,7 @@ repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
     const st = parse(str).prepare();
-    console.log(st.desc());
+    //console.log(st.desc());
     console.log(st.writeout());
   } catch(e) {
     if(e instanceof ParseError) {

@@ -193,3 +193,25 @@ mainReg.register('mod', {
     return new Atom(res);
   }
 });
+
+mainReg.register('odd', {
+  source: true,
+  numArg: 0,
+  prepare: function() {
+    this.checkArgs(this.src, this.args);
+    const src2 = this.src.prepare();
+    const val = src2.evalNum();
+    return new Atom((val & 1n) === 1n);
+  }
+});
+
+mainReg.register('even', {
+  source: true,
+  numArg: 0,
+  prepare: function() {
+    this.checkArgs(this.src, this.args);
+    const src2 = this.src.prepare();
+    const val = src2.evalNum();
+    return new Atom((val & 1n) === 0n);
+  }
+});

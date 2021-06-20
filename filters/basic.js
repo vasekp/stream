@@ -677,3 +677,31 @@ mainReg.register('over', {
     return ret;
   }
 });
+
+mainReg.register('if', {
+  numArg: 3,
+  prepare: function() {
+    this.checkArgs(this.src, this.args);
+    const src2 = this.src.prepare();
+    const val = this.args[0].withSrc(src2).prepare().evalAtom('boolean');
+    return this.args[val ? 1 : 2].withSrc(src2).prepare();//.eval();
+  }
+});
+
+mainReg.register(['select', 'sel'], {
+  source: true,
+  numArg: 1,
+  prepare: Node.prototype.prepareSrc,
+  eval: function() {
+    const sIn = this.src.evalStream();
+    const cond = this.args[0];
+    return new Stream(this,
+      (function*() {
+        for(const value of sIn) {
+          if(cond.withSrc(value).prepare().evalAtom('boolean'))
+            yield value;
+        }
+      })()
+    );
+  }
+});
