@@ -102,19 +102,19 @@ export class Node {
   }
 
   evalNum(opts = {}) {
-    const ev = this.eval();
-    if(!(ev instanceof Atom))
+    const r = this.eval();
+    if(!r.isAtom)
       throw new StreamError(null, `expected number, got stream ${this.desc()}`);
-    return checks.num(ev.numValue, opts);
+    return checks.num(r.numValue, opts);
   }
 
   evalStream(opts = {}) {
-    const ev = this.eval();
-    if(ev instanceof Atom)
-      throw new StreamError(null, `expected stream, got ${ev.type} ${ev.desc()}`);
-    if(opts.finite && ev.len === null)
+    const r = this.eval();
+    if(r.isAtom)
+      throw new StreamError(null, `expected stream, got ${r.type} ${r.desc()}`);
+    if(opts.finite && r.len === null)
       throw new StreamError(null, 'infinite stream');
-    return ev;
+    return r;
   }
 
   desc() {
@@ -145,7 +145,7 @@ export class Node {
 
   *writeout_gen() {
     const str = this.eval();
-    if(str instanceof Atom)
+    if(str.isAtom)
       yield str.desc();
     else {
       yield '[';
@@ -164,11 +164,9 @@ export class Node {
 export class Atom extends Node {
   constructor(val, meta = {}) {
     super(null, null, null, [], meta);
-    if(typeof val === 'number')
-      val = BigInt(val);
-    Object.defineProperty(this, 'value', { value: val, enumerable: true });
-    const type = typeof val === 'bigint' ? 'number' : 'string'; // displayed to user
-    Object.defineProperty(this, 'type', { value: type, enumerable: true });
+    this.isAtom = true;
+    this.value = typeof val === 'number' ? BigInt(val) : val;
+    this.type = typeof val === 'bigint' ? 'number' : 'string'; // displayed to user
   }
 
   withSrc() {
@@ -201,6 +199,10 @@ export class Atom extends Node {
       default:
         throw new Error(`unknown atom type ${typeof this.value}`);
     }
+  }
+
+  asAtom(type) {
+    return this.getTyped(type);
   }
 
   getTyped(type) {
@@ -255,6 +257,7 @@ export class Block extends Node {
 
 export class Stream {
   constructor(node, iter, opts) {
+    this.isAtom = false;
     this.node = node;
     this.iter = iter;
     Object.assign(this, opts);
@@ -277,6 +280,10 @@ export class Stream {
   skip(c) {
     for(let i = 0n; i < c; i++)
       this.next();
+  }
+
+  asAtom(type) {
+    throw new StreamError(null, `expected ${type}, got stream ${node.desc()}`);
   }
 }
 
@@ -322,9 +329,9 @@ export const checks = {
       throw new StreamError(null, `value ${value} exceeds maximum ${opts.max}`);
     return value;
   },
-  stream(node) {
-    if(node instanceof Atom)
-      throw new StreamError(null, `expected stream, got ${node.type} ${node.desc()}`);
-    return node;
+  stream(r) {
+    if(r.isAtom)
+      throw new StreamError(null, `expected stream, got ${r.type} ${r.desc()}`);
+    return r;
   }
 };

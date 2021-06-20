@@ -260,7 +260,7 @@ mainReg.register(['group', 'g'], {
     const sIn = this.src.evalStream();
     let lFun;
     const ins = this.args.map(arg => arg.eval());
-    if(ins.every(i => i instanceof Atom)) {
+    if(ins.every(i => i.isAtom)) {
       if(this.args.length === 1) {
         const len = checks.num(ins[0].numValue, {min: 0n});
         lFun = (function*() { for(;;) yield len; })();
@@ -307,11 +307,11 @@ mainReg.register(['flatten', 'fl'], {
     const node = this;
     return new Stream(this,
       (function*() {
-        const it = node.src.eval();
-        if(it instanceof Atom)
-          yield it;
+        const r = node.src.eval();
+        if(r.isAtom)
+          yield r;
         else for(const s of node.src.eval()) {
-          if(s instanceof Atom || depth === 0n)
+          if(s.isAtom || depth === 0n)
             yield s;
           else {
             const tmp = depth !== null
@@ -332,11 +332,11 @@ mainReg.register('join', {
     return new Stream(this,
       (function*() {
         for(const arg of args) {
-          const ev = arg.eval();
-          if(ev instanceof Atom)
-            yield ev;
+          const r = arg.eval();
+          if(r.isAtom)
+            yield r;
           else
-            yield* ev;
+            yield* r;
         }
       })()
     );
@@ -402,7 +402,7 @@ mainReg.register('part', {
   eval: function() {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
-    if(ins.every(i => i instanceof Atom)) {
+    if(ins.every(i => i.isAtom)) {
       if(this.args.length === 1) {
         const ix = checks.num(ins[0].numValue, {min: 1n});
         sIn.skip(ix - 1n);
@@ -462,8 +462,8 @@ mainReg.register('in', {
     if(this.args.length === 0)
       ret += '##';
     else if(this.args.length === 1
-        && this.args[0] instanceof Atom
-        && typeof this.args[0].value === 'bigint'
+        && this.args[0].isAtom
+        && this.args[0].type === 'number'
         && this.args[0].value > 0n)
       ret += '#' + this.args[0].value;
     else {
@@ -595,7 +595,7 @@ mainReg.register(['take', 'takedrop', 'td'], {
   eval: function() {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
-    if(ins.every(i => i instanceof Atom))
+    if(ins.every(i => i.isAtom))
       return new Stream(this,
         takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n}))));
     else if(this.args.length > 1)
@@ -615,7 +615,7 @@ mainReg.register(['drop', 'droptake', 'dt'], {
   eval: function() {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
-    if(ins.every(i => i instanceof Atom))
+    if(ins.every(i => i.isAtom))
       return new Stream(this,
         takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]));
     else if(this.args.length > 1)

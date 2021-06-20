@@ -6,25 +6,24 @@ function regReducer(name, sign, fun) {
     minArg: 2,
     prepare: function() {
       const nnode = Node.prototype.prepare.call(this);
-      if(nnode.args.every(arg => arg instanceof Atom))
+      if(nnode.args.every(arg => arg.isAtom))
         return new Atom(nnode.args.map(arg => arg.numValue).reduce(fun));
       else
         return nnode;
     },
     eval: function() {
       const is = this.args
-        .map(arg => arg.eval())
-        .map(st => st instanceof Atom ? st.numValue : st);
-      if(is.every(i => typeof i === 'bigint'))
-        return new Atom(is.reduce(fun));
+        .map(arg => arg.eval());
+      if(is.every(i => i.isAtom))
+        return new Atom(is.map(a => a.value).reduce(fun));
       else {
         return new Stream(this,
           (function*() {
             for(;;) {
               const vs = [];
               for(const i of is)
-                if(typeof i === 'bigint')
-                  vs.push(i);
+                if(i.isAtom)
+                  vs.push(i.value);
                 else {
                   const {value: r, done} = i.next();
                   if(done)
@@ -37,7 +36,7 @@ function regReducer(name, sign, fun) {
           {
             skip: c => {
               for(const i of is)
-                if(typeof i !== 'bigint')
+                if(!i.isAtom)
                   i.skip(c);
             }
           }
