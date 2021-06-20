@@ -22,7 +22,7 @@ mainReg.register('split', {
           for(const c of chars)
             yield new Atom(c);
         })(),
-        {len: chars.length}
+        {len: BigInt(chars.length)}
       );
     }
   }
@@ -97,7 +97,9 @@ mainReg.register('chrm', {
       const abcEval = [...abc];
       if(!abcEval.length)
         throw new StreamError('empty alphabet');
-      return abcEval[Number(ix) % abcEval.length].eval();
+      ix = Number(ix) % abcEval.length;
+      if(ix < 0n) ix += abcEval.length;
+      return abcEval[ix].eval();
     }
   }
 });
