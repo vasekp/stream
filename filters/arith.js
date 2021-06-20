@@ -219,3 +219,42 @@ mainReg.register('even', {
     return new Atom((val & 1n) === 0n);
   }
 });
+
+function regComparer(name, sign, fun) {
+  mainReg.register(name, {
+    source: false,
+    minArg: 2,
+    prepare: function() {
+      const nnode = Node.prototype.prepare.call(this);
+      if(nnode.args.every(arg => arg.isAtom)) {
+        const vals = nnode.args.map(arg => arg.numValue());
+        let res = true;
+        for(let i = 1; i < vals.length; i++)
+          res &&= fun(vals[i-1], vals[i]);
+        return new Atom(res);
+      } else
+        return nnode;
+    },
+    eval: function() {
+      throw new StreamError('comparison with stream(s)');
+    },
+    desc: function() {
+      let ret = '';
+      if(this.src)
+        ret = this.src.desc() + '.';
+      if(this.args.length > 0) {
+        ret += '(';
+        ret += this.args.map(n => n.desc()).join(sign);
+        ret += ')';
+      } else
+        ret += name;
+      return ret;
+    }
+  });
+}
+
+regComparer('equal', '=', (a, b) => a == b);
+regComparer('lt', '<', (a, b) => a < b);
+regComparer('gt', '>', (a, b) => a > b);
+regComparer('le', '<=', (a, b) => a <= b);
+regComparer('ge', '>=', (a, b) => a >= b);

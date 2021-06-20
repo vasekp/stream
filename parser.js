@@ -5,15 +5,20 @@ const cc = Enum.fromArray(['digit', 'alpha']);
 const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'hash']);
 
 const priority = Enum.fromObj({
-  ':': 5,
-  '.': 5,
-  '@': 5,
-  '*': 4,
-  '/': 4,
-  '+': 3,
-  '-': 3,
-  '~': 2,
-  '%': 1
+  ':': 6,
+  '.': 6,
+  '@': 6,
+  '*': 5,
+  '/': 5,
+  '+': 4,
+  '-': 4,
+  '~': 3,
+  '%': 2,
+  '=': 1,
+  '>': 1,
+  '<': 1,
+  '>=': 1,
+  '<=': 1
 });
 
 const operMap = Enum.fromObj({
@@ -22,7 +27,12 @@ const operMap = Enum.fromObj({
   '*': 'times',
   '/': 'div',
   '~': 'join',
-  '%': 'zip'
+  '%': 'zip',
+  '=': 'equal',
+  '<': 'lt',
+  '>': 'gt',
+  '<=': 'le',
+  '>=': 'ge'
 });
 
 function charcls(c) {
@@ -57,6 +67,7 @@ function tokcls(c) {
     case '/':
     case '%':
     case '~':
+    case '=':
       return tc.oper;
     default:
       return c;
@@ -73,7 +84,8 @@ export class ParseError extends Error {
 }
 
 function* tokenize(str) {
-  const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc', 'hash', 'hashd']);
+  const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc',
+    'hash', 'hashd', 'comp']);
   let state = ss.base;
   let accum = '';
   let read = 0;
@@ -111,6 +123,11 @@ function* tokenize(str) {
       accum += c;
       state = ss.hashd;
       continue;
+    } else if(state === ss.comp && cls === '=') {
+      accum += c;
+      yield {value: accum, cls: tc.oper, pos: accumStart};
+      state = ss.base;
+      continue;
     }
     /*** accumulation did not happen: dispatch the result ***/
     if(state === ss.ident)
@@ -119,6 +136,8 @@ function* tokenize(str) {
       yield {value: accum, cls: tc.number, pos: accumStart};
     else if(state === ss.hash || state === ss.hashd)
       yield {value: accum, cls: tc.hash, pos: accumStart};
+    else if(state === ss.comp)
+      yield {value: accum, cls: tc.oper, pos: accumStart};
     /*** now handle the new character ***/
     switch(cls) {
       case cc.digit:
@@ -139,6 +158,12 @@ function* tokenize(str) {
       case '"':
         state = ss.string;
         accum = '';
+        accumStart = read - 1;
+        break;
+      case '>':
+      case '<':
+        state = ss.comp;
+        accum = c;
         accumStart = read - 1;
         break;
       default:
