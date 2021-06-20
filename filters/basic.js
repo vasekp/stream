@@ -282,7 +282,7 @@ mainReg.register(['group', 'g'], {
         len = sIn.len === null ? null
           : sIn.len === undefined ? undefined
           : l === 0n ? null
-          : sIn.len / l;
+          : (sIn.len + l - 1n) / l;
       } else
         lFun = ins.map(i => i.numValue({min: 0n}));
     } else {
