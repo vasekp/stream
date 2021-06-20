@@ -15,7 +15,7 @@ function regReducer(name, sign, fun) {
       const is = this.args
         .map(arg => arg.eval());
       if(is.every(i => i.isAtom))
-        return new Atom(is.map(a => a.value).reduce(fun));
+        return new Atom(is.map(a => a.numValue()).reduce(fun));
       else {
         const lens = is.filter(i => !i.isAtom).map(i => i.len);
         const len = lens.some(len => len === undefined) ? undefined
