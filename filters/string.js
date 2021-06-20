@@ -9,11 +9,13 @@ mainReg.register('split', {
     const str = this.src.evalAtom(S);
     if(this.args[0]) {
       const sep = this.args[0].evalAtom(S);
+      const split = str.split(sep);
       return new Stream(this,
         (function*() {
-          for(const c of str.split(sep))
+          for(const c of split)
             yield new Atom(c);
-        })()
+        })(),
+        {len: BigInt(split.length)}
       );
     } else {
       const chars = [...str];

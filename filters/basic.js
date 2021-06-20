@@ -137,7 +137,10 @@ mainReg.register('last', {
 mainReg.register('array', {
   source: false,
   eval: function() {
-    return new Stream(this, this.args.values());
+    return new Stream(this,
+      this.args.values(),
+      {len: BigInt(this.args.length)}
+    );
   },
   desc: function() {
     let ret = '';
@@ -237,17 +240,28 @@ mainReg.register(['cycle', 'cc'], {
     const src = this.src;
     if(this.args[0]) {
       const num = this.args[0].evalNum({min: 0n});
+      const ev = src.evalStream();
       return new Stream(this,
         (function*() {
           for(let i = 0n; i < num; i++)
             yield* src.evalStream();
-        })());
+        })(),
+        {
+          len: ev.len === null ? null
+            : ev.len === undefined ? undefined
+            : ev.len * num
+        }
+      );
     } else {
       return new Stream(this,
         (function*() {
           for(;;)
             yield* src.evalStream();
-        })()
+        })(),
+        {
+          len: ev.len === undefined ? undefined
+            : ev.len === 0n ? 0n : null
+        }
       );
     }
   }
@@ -259,22 +273,27 @@ mainReg.register(['group', 'g'], {
   eval: function() {
     const sIn = this.src.evalStream();
     let lFun;
+    let len;
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom)) {
       if(this.args.length === 1) {
-        const len = ins[0].numValue({min: 0n});
-        lFun = (function*() { for(;;) yield len; })();
-      } else {
+        const l = ins[0].numValue({min: 0n});
+        lFun = (function*() { for(;;) yield l; })();
+        len = sIn.len === null ? null
+          : sIn.len === undefined ? undefined
+          : l === 0n ? null
+          : sIn.len / l;
+      } else
         lFun = ins.map(i => i.numValue({min: 0n}));
-      }
     } else {
       if(this.args.length > 1)
         throw new StreamError('required list of values or a single stream');
-      else
+      else {
         lFun = (function*() {
           for(const s of ins[0])
             yield s.evalNum({min: 0n});
         })();
+      }
     }
     const token = this.token;
     return new Stream(this,
@@ -294,7 +313,8 @@ mainReg.register(['group', 'g'], {
           if(r.length < len)
             break;
         }
-      })()
+      })(),
+      {len}
     );
   }
 });
@@ -328,17 +348,21 @@ mainReg.register(['flatten', 'fl'], {
 mainReg.register('join', {
   source: false,
   eval: function() {
-    const args = this.args;
+    const args = this.args.map(arg => arg.eval());
+    const lens = args.map(arg => arg.isAtom ? 1n : arg.len);
+    const len = lens.some(len => len === undefined) ? undefined
+      : lens.some(len => len === null) ? null
+      : lens.reduce((a,b) => a+b);
     return new Stream(this,
       (function*() {
         for(const arg of args) {
-          const r = arg.eval();
-          if(r.isAtom)
-            yield r;
+          if(arg.isAtom)
+            yield arg;
           else
-            yield* r;
+            yield* arg;
         }
-      })()
+      })(),
+      {len}
     );
   },
   desc: function() {
@@ -358,18 +382,23 @@ mainReg.register('join', {
 mainReg.register('zip', {
   source: false,
   eval: function() {
-    const is = this.args.map(arg => arg.evalStream());
+    const args = this.args.map(arg => arg.evalStream());
+    const lens = args.map(arg => arg.len);
+    const len = lens.some(len => len === undefined) ? undefined
+      : lens.every(len => len === null) ? null
+      : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
     const node = this;
     return new Stream(this,
       (function*() {
         for(;;) {
-          const rs = is.map(i => i.next());
+          const rs = args.map(arg => arg.next());
           if(rs.some(r => r.done))
             break;
           const vs = rs.map(r => r.value);
           yield new Node('array', node.token, null, vs);
         }
-      })()
+      })(),
+      {len}
     );
   },
   desc: function() {
@@ -418,7 +447,8 @@ mainReg.register('part', {
         return value.eval();
       } else
         return new Stream(this,
-          part(sIn, ins.map(i => i.numValue({min: 1n}))));
+          part(sIn, ins.map(i => i.numValue({min: 1n}))),
+          {len: BigInt(ins.length)});
     } else if(this.args.length > 1)
       throw new StreamError('required list of values or a single stream');
     return new Stream(this,
@@ -519,28 +549,21 @@ mainReg.register('reduce', {
       if(done)
         return;
     }
-    const ret = new Stream(this,
+    return new Stream(this,
       (function*() {
         for(const next of sIn) {
           yield bodyOut.withArgs([curr, next]).prepare();
           curr = bodyMem.withArgs([curr, next]).prepare();
         }
-      })()
+      })(),
+      {
+        len: sIn.len === undefined ? undefined
+          : sIn.len === null ? null
+          : sIn.len === 0n ? 0n
+          : this.args.length > 1 ? sIn.len
+          : sIn.len - 1n
+      }
     );
-    switch(sIn.len) {
-      case undefined:
-        break;
-      case null:
-        ret.len = null;
-        break;
-      case 0n:
-        ret.len = 0n;
-        break;
-      default:
-        ret.len = this.args.length > 1 ? sIn.len : sIn.len - 1n;
-        break;
-    }
-    return ret;
   }
 });
 
@@ -571,7 +594,11 @@ mainReg.register(['reverse', 'rev'], {
   numArg: 0,
   eval: function() {
     const sIn = this.src.evalStream({finite: true});
-    return new Stream(this, [...sIn].reverse().values());
+    const vals = [...sIn].reverse();
+    return new Stream(this,
+      vals.values(),
+      {len: BigInt(vals.length)}
+    );
   }
 });
 
@@ -649,17 +676,22 @@ mainReg.register('over', {
   },
   eval: function() {
     const body = this.src;
-    const is = this.args.map(arg => arg.evalStream());
+    const args = this.args.map(arg => arg.evalStream());
+    const lens = args.map(arg => arg.len);
+    const len = lens.some(len => len === undefined) ? undefined
+      : lens.every(len => len === null) ? null
+      : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
     return new Stream(this,
       (function*() {
         for(;;) {
-          const rs = is.map(i => i.next());
+          const rs = args.map(arg => arg.next());
           if(rs.some(r => r.done))
             break;
           const vs = rs.map(r => r.value);
           yield body.withArgs(vs).prepare();
         }
-      })()
+      })(),
+      {len}
     );
   },
   desc: function() {

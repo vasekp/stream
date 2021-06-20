@@ -17,6 +17,10 @@ function regReducer(name, sign, fun) {
       if(is.every(i => i.isAtom))
         return new Atom(is.map(a => a.value).reduce(fun));
       else {
+        const lens = is.filter(i => !i.isAtom).map(i => i.len);
+        const len = lens.some(len => len === undefined) ? undefined
+          : lens.every(len => len === null) ? null
+          : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
         return new Stream(this,
           (function*() {
             for(;;) {
@@ -34,6 +38,7 @@ function regReducer(name, sign, fun) {
             }
           }()),
           {
+            len,
             skip: c => {
               for(const i of is)
                 if(!i.isAtom)
@@ -134,7 +139,7 @@ mainReg.register('diff', {
   numArg: 0,
   eval: function() {
     const sIn = this.src.evalStream();
-    const ret = new Stream(this,
+    return new Stream(this,
       (function*() {
         const {value, done} = sIn.next();
         if(done)
@@ -145,22 +150,14 @@ mainReg.register('diff', {
           yield new Atom(curr - prev);
           prev = curr;
         }
-      })()
+      })(),
+      {
+        len: sIn.len === undefined ? undefined
+          : sIn.len === null ? null
+          : sIn.len === 0n ? 0n
+          : sIn.len - 1n
+      }
     );
-    switch(sIn.len) {
-      case undefined:
-        break;
-      case null:
-        ret.len = null;
-        break;
-      case 0n:
-        ret.len = 0n;
-        break;
-      default:
-        ret.len = sIn.len - 1n;
-        break;
-    }
-    return ret;
   }
 });
 
