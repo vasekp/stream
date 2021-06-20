@@ -119,7 +119,7 @@ mainReg.register('max', {
 
 mainReg.register(['total', 'tot'], {
   source: true,
-  maxArg: 0,
+  numArg: 0,
   eval: function() {
     const str = this.src.evalStream({finite: true});
     let tot = 0n;
@@ -131,7 +131,7 @@ mainReg.register(['total', 'tot'], {
 
 mainReg.register('diff', {
   source: true,
-  maxArg: 0,
+  numArg: 0,
   eval: function() {
     const sIn = this.src.evalStream();
     const ret = new Stream(this,

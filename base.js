@@ -91,11 +91,11 @@ export class Node {
     if(this.numArg === 0 && args.length > 0)
       throw new StreamError(`does not allow arguments`);
     if(this.numArg !== undefined && args.length !== this.numArg)
-      throw new StreamError(`exactly ${this.numArg} arguments required`);
+      throw new StreamError(`exactly ${this.numArg} argument(s) required`);
     if(this.minArg !== undefined && args.length < this.minArg)
-      throw new StreamError(`at least ${this.minArg} arguments required`);
+      throw new StreamError(`at least ${this.minArg} argument(s) required`);
     if(this.maxArg !== undefined && args.length > this.maxArg)
-      throw new StreamError(`at most ${this.maxArg} arguments required`);
+      throw new StreamError(`at most ${this.maxArg} argument(s) required`);
   }
 
   eval() {
