@@ -116,7 +116,7 @@ export class Node {
   }
 
   evalNum(opts = {}) {
-    return checks.num(this.evalAtom('number'), opts);
+    return checks.bounds(this.evalAtom('number'), opts);
   }
 
   desc() {
@@ -215,7 +215,7 @@ export class Atom extends Node {
   }
 
   numValue(opts = {}) {
-    return checks.num(this.getTyped('number'), opts);
+    return checks.bounds(this.getTyped('number'), opts);
   }
 }
 
@@ -317,7 +317,7 @@ export class Register {
 export const mainReg = new Register();
 
 export const checks = {
-  num(value, opts = {}) {
+  bounds(value, opts = {}) {
     if(opts.min !== undefined && value < opts.min)
       throw new StreamError(`expected ${
         opts.min === 0n ? 'nonnegative'
@@ -326,6 +326,18 @@ export const checks = {
     if(opts.max !== undefined && value > opts.max)
       throw new StreamError(`value ${value} exceeds maximum ${opts.max}`);
     return value;
+  },
+  atom(r, type) {
+    if(!r.isAtom)
+      throw new StreamError(`expected ${type}, got stream ${r.node.desc()}`);
+    if(r.type !== type)
+      throw new StreamError(`expected ${type}, got ${r.type} ${r.value}`);
+    return r;
+  },
+  num(r, opts = {}) {
+    checks.atom(r, 'number');
+    checks.bounds(r.value, opts);
+    return r;
   },
   stream(r) {
     if(r.isAtom)

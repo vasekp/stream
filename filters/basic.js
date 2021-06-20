@@ -299,7 +299,7 @@ mainReg.register(['group', 'g'], {
     return new Stream(this,
       (function*() {
         for(const len of lFun) {
-          checks.num(len, {min: 0n});
+          checks.bounds(len, {min: 0n});
           const r = [];
           for(let i = 0n; i < len; i++) {
             const {value, done} = sIn.next();
@@ -787,5 +787,52 @@ mainReg.register('equal', {
     } else
       ret += name;
     return ret;
+  }
+});
+
+function numCompare(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+const strCompare = Intl.Collator().compare;
+
+function usort(arr, fn = x => x) {
+  if(arr.length === 0)
+    return arr;
+  const first = fn(arr[0]);
+  if(!first.isAtom)
+    throw new StreamError(`expected number or string, got stream ${first.node.desc()}`);
+  if(first.type === 'number') {
+    arr.forEach(a => checks.num(fn(a)));
+    arr.sort((a, b) => numCompare(fn(a).value, fn(b).value));
+  } else if(first.type === 'string') {
+    arr.forEach(a => checks.atom(fn(a), 'string'));
+    arr.sort((a, b) => strCompare(fn(a).value, fn(b).value));
+  } else
+    throw new StreamError(`expected number or string, got ${first.type} ${first.value}`);
+}
+
+mainReg.register('sort', {
+  source: true,
+  maxArg: 1,
+  prepare: Node.prototype.prepareSrc,
+  eval: function() {
+    const sIn = this.src.evalStream({finite: true});
+    if(this.args[0]) {
+      const temp = [...sIn].map(s => [s, this.args[0].withSrc(s).prepare().eval()]);
+      usort(temp, x => x[1]);
+      const vals = temp.map(x => x[0]);
+      return new Stream(this,
+        vals.values(),
+        {len: BigInt(vals.length)}
+      );
+    } else {
+      const vals = [...sIn].map(s => s.prepare().eval());
+      usort(vals);
+      return new Stream(this,
+        vals.values(),
+        {len: BigInt(vals.length)}
+      );
+    }
   }
 });
