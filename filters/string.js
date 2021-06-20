@@ -29,12 +29,17 @@ mainReg.register('split', {
 });
 
 mainReg.register('cat', {
-  source: true,
-  maxArg: 1,
   eval: function() {
-    const strs = [...this.src.evalStream({finite: true})].map(a => a.evalAtom(S));
-    const sep = this.args[0] ? this.args[0].evalAtom(S) : '';
-    return new Atom(strs.join(sep));
+    if(this.args.length > 1) {
+      const strs = this.args.map(arg => arg.evalAtom(S));
+      return new Atom(strs.join(''));
+    } else {
+      if(!this.src)
+        throw new StreamError('requires source');
+      const strs = [...this.src.evalStream({finite: true})].map(a => a.evalAtom(S));
+      const sep = this.args[0] ? this.args[0].evalAtom(S) : '';
+      return new Atom(strs.join(sep));
+    }
   }
 });
 
