@@ -154,7 +154,7 @@ mainReg.register('pow', {
   eval: function() {
     if(this.args.length === 1) {
       if(!this.src)
-        throw new StreamError('needs source');
+        throw new StreamError(this, 'needs source');
       const base = this.src.evalNum();
       const pow = this.args[0].evalNum({min: 0n});
       return new Atom(base ** pow);

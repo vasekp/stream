@@ -160,8 +160,11 @@ mainReg.register('array', {
 mainReg.register('id', {
   source: true,
   numArg: 0,
-  prepare: function(env, src) {
-    return this.src ? this.src.prepare(env, src) : src.prepare(env);
+  prepare: function() {
+    return this.src ? this.src.prepare() : this;
+  },
+  eval: function() {
+    throw new StreamError(this, 'out of scope');
   },
   desc: function() {
     let ret = '';

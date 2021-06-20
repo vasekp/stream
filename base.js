@@ -19,7 +19,7 @@ export class Node {
     if(rec) {
       this.known = true;
       if(rec.prepare)
-        this.prepareIn = rec.prepare;
+        this.prepare = rec.prepare;
       if(rec.eval)
         this.evalIn = rec.eval;
       if(rec.desc)
@@ -27,6 +27,42 @@ export class Node {
       this.reqs = {source: rec.source, numArg: rec.numArg, minArg: rec.minArg, maxArg: rec.maxArg};
     } else
       this.reqs = {};
+  }
+
+  withSrc(src) {
+    const src2 = this.src ? this.src.withSrc(src) : src;
+    if(src2 === this.src)
+      return this;
+    else
+      return new Node(this.ident, this.token, src, this.args, this.meta);
+  }
+
+  withArgs(args) {
+    if(this.args.length !== 0)
+      throw new StreamError(this, `already have arguments`);
+    return new Node(this.ident, this.token, this.src, args, this.meta);
+  }
+
+  withEnv(env) {
+    const src2 = this.src.withEnv(env);
+    const args2 = this.args.map(arg => arg.withEnv(env));
+    if(src2 === this.src && !args && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+      return this;
+    else
+      return new Node(this.ident, this.token, src2, args2, this.meta);
+    /*const nnode = this.adaptIn(env);
+    if(nnode !== this)
+      console.log(`${this.desc()} => ${nnode.desc()}`);
+    return nnode;*/
+  }
+
+  prepare() {
+    const src2 = this.src ? this.src.prepare() : null;
+    const args2 = this.args.map(arg => arg.withSrc(src2).prepare());
+    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+      return this;
+    else
+      return new Node(this.ident, this.token, this.reqs.source === false ? null : src2, args2, this.meta);
   }
 
   checkArgs() {
@@ -40,30 +76,10 @@ export class Node {
       throw new StreamError(this, `at most ${this.reqs.maxArg} arguments required`);
   }
 
-  prepare(env, src, args) {
-    if(!this.known)
-      throw new StreamError(this, `symbol ${this.ident} undefined`);
-    if(this.reqs.source && !this.src && !src)
+  eval() {
+    if(this.reqs.source && !this.src)
       throw new StreamError(this, `requires source`);
     this.checkArgs()
-    const nnode = this.prepareIn(env, src, args);
-    if(nnode !== this)
-      console.log(`${this.desc()} => ${nnode.desc()}`);
-    return nnode;
-  }
-
-  prepareIn(env, src, args) {
-    if(args && this.args.length !== 0)
-      throw new StreamError(this, `already have arguments`);
-    const src2 = this.src ? this.src.prepare(env, src, null) : src ? src.prepare(env) : null;
-    const args2 = (args ? args : this.args).map(arg => arg.prepare(env, src2));
-    if(src2 === this.src && !args && [...this.args.keys()].every(key => args2[key] === this.args[key]))
-      return this;
-    else
-      return new Node(this.ident, this.token, this.reqs.source === false ? null : src2, args2, this.meta);
-  }
-
-  eval() {
     if(this.evalIn) {
       const iter = this.evalIn();
       if(!iter.skip)
@@ -147,6 +163,18 @@ export class Atom extends Node {
     Object.defineProperty(this, 'value', { value: val, enumerable: true });
     const type = typeof val === 'bigint' ? 'number' : 'string'; // displayed to user
     Object.defineProperty(this, 'type', { value: type, enumerable: true });
+  }
+
+  withSrc() {
+    return this;
+  }
+
+  withArgs() {
+    return this;
+  }
+
+  withEnv() {
+    return this;
   }
 
   prepare() {
