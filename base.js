@@ -18,6 +18,16 @@ export class Node {
     const rec = mainReg.find(this.ident);
     if(rec)
       Object.assign(this, rec);
+    const pEval = this.eval;
+    this.eval = () => {
+      try {
+        return pEval.call(this);
+      } catch(e) {
+        if(e instanceof StreamError && !e.node)
+          e.node = this;
+        throw e;
+      }
+    };
     /* Debug: */
     /*for(const fn of ['withSrc', 'withArgs', 'withEnv', 'prepare']) {
       const pFn = this[fn];
