@@ -45,7 +45,7 @@ export class Node {
     if(src2 === this.src)
       return this;
     else
-      return new Node(this.ident, this.token, src, this.args, this.meta);
+      return new Node(this.ident, this.token, src2, this.args, this.meta);
   }
 
   withArgs(args) {
