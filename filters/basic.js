@@ -345,9 +345,12 @@ mainReg.register('join', {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
-    ret += '(';
-    ret += this.args.map(n => n.desc()).join('~');
-    ret += ')';
+    if(this.args.length > 0) {
+      ret += '(';
+      ret += this.args.map(n => n.desc()).join('~');
+      ret += ')';
+    } else
+      ret += 'join()';
     return ret;
   }
 });
@@ -373,9 +376,12 @@ mainReg.register('zip', {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
-    ret += '(';
-    ret += this.args.map(n => n.desc()).join('%');
-    ret += ')';
+    if(this.args.length > 0) {
+      ret += '(';
+      ret += this.args.map(n => n.desc()).join('%');
+      ret += ')';
+    } else
+      ret += 'zip()';
     return ret;
   }
 });
