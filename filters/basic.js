@@ -61,14 +61,33 @@ mainReg.register(['length', 'len'], {
 
 mainReg.register('first', {
   source: true,
-  numArg: 0,
+  maxArg: 1,
   eval: function() {
-    const st = this.src.evalStream();
-    const {value, done} = st.next();
-    if(done)
-      throw new StreamError(this, 'empty stream');
-    else
-      return value.eval();
+    const sIn = this.src.evalStream();
+    if(this.args[0]) {
+      const l = this.args[0].evalNum({min: 1n});
+      let i = 0n;
+      return new Stream(this,
+        (function*() {
+          while(i++ < l) {
+            const {value, done} = sIn.next();
+            if(done)
+              return;
+            yield value;
+          }
+        })(),
+        { len: sIn.len === undefined ? undefined
+            : sIn.len === null ? l
+            : sIn.len >= l ? l
+            : sIn.len }
+      );
+    } else {
+      const {value, done} = sIn.next();
+      if(done)
+        throw new StreamError(this, 'empty stream');
+      else
+        return value.eval();
+    }
   }
 });
 
