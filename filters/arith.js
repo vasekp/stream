@@ -4,6 +4,13 @@ function regReducer(name, sign, fun) {
   mainReg.register(name, {
     source: false,
     minArg: 2,
+    prepare: function() {
+      const nnode = Node.prototype.prepare.call(this);
+      if(nnode.args.every(arg => arg instanceof Atom))
+        return new Atom(nnode.args.map(arg => arg.numValue).reduce(fun));
+      else
+        return nnode;
+    },
     eval: function() {
       const is = this.args
         .map(arg => arg.eval())
