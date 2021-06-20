@@ -16,18 +16,8 @@ export class Node {
     this.args = args;
     this.meta = meta;
     const rec = mainReg.find(this.ident);
-    if(rec) {
-      if(rec.withEnv)
-        this.withEnv = rec.withEnv;
-      if(rec.prepare)
-        this.prepare = rec.prepare;
-      if(rec.eval)
-        this.evalIn = rec.eval;
-      if(rec.desc)
-        this.desc = rec.desc;
-      this.reqs = {source: rec.source, numArg: rec.numArg, minArg: rec.minArg, maxArg: rec.maxArg};
-    } else
-      this.reqs = {};
+    if(rec)
+      Object.assign(this, rec);
     /* Debug: */
     /*for(const fn of ['withSrc', 'withArgs', 'withEnv', 'prepare']) {
       const pFn = this[fn];
@@ -69,7 +59,7 @@ export class Node {
     if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
     else
-      return new Node(this.ident, this.token, this.reqs.source === false ? null : src2, args2, this.meta);
+      return new Node(this.ident, this.token, this.source === false ? null : src2, args2, this.meta);
   }
 
   /* never called directly, convenience for register */
@@ -82,18 +72,18 @@ export class Node {
   }
 
   checkArgs() {
-    if(this.reqs.numArg === 0 && this.args.length > 0)
+    if(this.numArg === 0 && this.args.length > 0)
       throw new StreamError(this, `does not allow arguments`);
-    else if(this.reqs.numArg !== undefined && this.args.length !== this.reqs.numArg)
-      throw new StreamError(this, `exactly ${this.reqs.numArg} arguments required`);
-    else if(this.reqs.minArg !== undefined && this.args.length < this.reqs.minArg)
-      throw new StreamError(this, `at least ${this.reqs.minArg} arguments required`);
-    else if(this.reqs.maxArg !== undefined && this.args.length > this.reqs.maxArg)
-      throw new StreamError(this, `at most ${this.reqs.maxArg} arguments required`);
+    else if(this.numArg !== undefined && this.args.length !== this.numArg)
+      throw new StreamError(this, `exactly ${this.numArg} arguments required`);
+    else if(this.minArg !== undefined && this.args.length < this.minArg)
+      throw new StreamError(this, `at least ${this.minArg} arguments required`);
+    else if(this.maxArg !== undefined && this.args.length > this.maxArg)
+      throw new StreamError(this, `at most ${this.maxArg} arguments required`);
   }
 
   eval() {
-    if(this.reqs.source && !this.src)
+    if(this.source && !this.src)
       throw new StreamError(this, `requires source`);
     this.checkArgs()
     if(this.evalIn) {
