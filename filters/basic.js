@@ -66,7 +66,7 @@ mainReg.register('first', {
     const st = this.src.evalStream();
     const {value, done} = st.next();
     if(done)
-      throw new StreamError(null, 'empty stream');
+      throw new StreamError(this, 'empty stream');
     else
       return value.eval();
   }
@@ -108,7 +108,7 @@ mainReg.register('last', {
         ({value: l} = st.next());
       }
       if(!l)
-        throw new StreamError(null, 'empty stream');
+        throw new StreamError(this, 'empty stream');
       else
         return l.eval();
     }
@@ -250,7 +250,7 @@ mainReg.register(['group', 'g'], {
       }
     } else {
       if(this.args.length > 1)
-        throw new StreamError(null, 'required list of values or a single stream');
+        throw new StreamError(this, 'required list of values or a single stream');
       else
         lFun = (function*() {
           for(const s of ins[0])
@@ -369,7 +369,7 @@ function part(sIn, iter) {
         for(let i = mem.length; i < ix; i++) {
           const {value, done} = sIn.next();
           if(done)
-            throw new StreamError(null, `requested part ${ix} beyond end`);
+            throw new StreamError(this, `requested part ${ix} beyond end`);
           mem.push(value);
         }
       yield mem[Number(ix) - 1];
@@ -389,13 +389,13 @@ mainReg.register('part', {
         sIn.skip(ix - 1n);
         const {value, done} = sIn.next();
         if(done)
-          throw new StreamError(null, `requested part ${ix} beyond end`);
+          throw new StreamError(this, `requested part ${ix} beyond end`);
         return value.eval();
       } else
         return new Stream(this,
           part(sIn, ins.map(i => checks.num(i.numValue, {min: 1n}))));
     } else if(this.args.length > 1)
-      throw new StreamError(null, 'required list of values or a single stream');
+      throw new StreamError(this, 'required list of values or a single stream');
     return new Stream(this,
       part(sIn, (function*() {
         for(const s of ins[0])
@@ -580,7 +580,7 @@ mainReg.register(['take', 'takedrop', 'td'], {
       return new Stream(this,
         takedrop(sIn, ins.map(i => checks.num(i.numValue, {min: 0n}))));
     else if(this.args.length > 1)
-      throw new StreamError(null, 'required list of values or a single stream');
+      throw new StreamError(this, 'required list of values or a single stream');
     return new Stream(this,
       takedrop(sIn, (function*() {
         for(const s of ins[0])
@@ -600,7 +600,7 @@ mainReg.register(['drop', 'droptake', 'dt'], {
       return new Stream(this,
         takedrop(sIn, [0n, ...ins.map(i => checks.num(i.numValue, {min: 0n}))]));
     else if(this.args.length > 1)
-      throw new StreamError(null, 'required list of values or a single stream');
+      throw new StreamError(this, 'required list of values or a single stream');
     return new Stream(this,
       takedrop(sIn, (function*() {
         yield 0n;

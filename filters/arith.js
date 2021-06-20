@@ -65,7 +65,7 @@ mainReg.register('min', {
       return new Atom(min);
     } else {
       if(!this.src)
-        throw new StreamError(null, 'requires source');
+        throw new StreamError(this, 'requires source');
       const str = this.src.evalStream({finite: true});
       const iter = (function*() {
         for(const s of str)
@@ -73,7 +73,7 @@ mainReg.register('min', {
       })();
       const {value, done} = iter.next();
       if(done)
-        throw new StreamError(null, 'empty stream');
+        throw new StreamError(this, 'empty stream');
       let min = value;
       for(const v of iter)
         if(v < min)
@@ -91,7 +91,7 @@ mainReg.register('max', {
       return new Atom(max);
     } else {
       if(!this.src)
-        throw new StreamError(null, 'requires source');
+        throw new StreamError(this, 'requires source');
       const str = this.src.evalStream({finite: true});
       const iter = (function*() {
         for(const s of str)
@@ -99,7 +99,7 @@ mainReg.register('max', {
       })();
       const {value, done} = iter.next();
       if(done)
-        throw new StreamError(null, 'empty stream');
+        throw new StreamError(this, 'empty stream');
       let max = value;
       for(const v of iter)
         if(v > max)
