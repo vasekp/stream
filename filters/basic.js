@@ -84,7 +84,7 @@ mainReg.register('first', {
     } else {
       const {value, done} = sIn.next();
       if(done)
-        throw new StreamError(this, 'empty stream');
+        throw new StreamError('empty stream');
       else
         return value.eval();
     }
@@ -127,7 +127,7 @@ mainReg.register('last', {
         ({value: l} = sIn.next());
       }
       if(!l)
-        throw new StreamError(this, 'empty stream');
+        throw new StreamError('empty stream');
       else
         return l.eval();
     }
@@ -192,7 +192,7 @@ mainReg.register('id', {
     return this.src.prepare();
   },
   eval: function() {
-    throw new StreamError(this, 'out of scope');
+    throw new StreamError('out of scope');
   },
   desc: function() {
     let ret = '';
@@ -269,7 +269,7 @@ mainReg.register(['group', 'g'], {
       }
     } else {
       if(this.args.length > 1)
-        throw new StreamError(this, 'required list of values or a single stream');
+        throw new StreamError('required list of values or a single stream');
       else
         lFun = (function*() {
           for(const s of ins[0])
@@ -394,7 +394,7 @@ function part(sIn, iter) {
         for(let i = mem.length; i < ix; i++) {
           const {value, done} = sIn.next();
           if(done)
-            throw new StreamError(this, `requested part ${ix} beyond end`);
+            throw new StreamError(`requested part ${ix} beyond end`);
           mem.push(value);
         }
       yield mem[Number(ix) - 1];
@@ -414,13 +414,13 @@ mainReg.register('part', {
         sIn.skip(ix - 1n);
         const {value, done} = sIn.next();
         if(done)
-          throw new StreamError(this, `requested part ${ix} beyond end`);
+          throw new StreamError(`requested part ${ix} beyond end`);
         return value.eval();
       } else
         return new Stream(this,
           part(sIn, ins.map(i => i.numValue({min: 1n}))));
     } else if(this.args.length > 1)
-      throw new StreamError(this, 'required list of values or a single stream');
+      throw new StreamError('required list of values or a single stream');
     return new Stream(this,
       part(sIn, (function*() {
         for(const s of ins[0])
@@ -455,11 +455,11 @@ mainReg.register('in', {
       if(env.src)
         return env.src;
       else
-        throw new StreamError(this, 'outer scope has empty source');
+        throw new StreamError('outer scope has empty source');
     }
   },
   eval: function() {
-    throw new StreamError(this, 'out of scope');
+    throw new StreamError('out of scope');
   },
   desc: function() {
     let ret = '';
@@ -605,7 +605,7 @@ mainReg.register(['take', 'takedrop', 'td'], {
       return new Stream(this,
         takedrop(sIn, ins.map(i => i.numValue({min: 0n}))));
     else if(this.args.length > 1)
-      throw new StreamError(this, 'required list of values or a single stream');
+      throw new StreamError('required list of values or a single stream');
     return new Stream(this,
       takedrop(sIn, (function*() {
         for(const s of ins[0])
@@ -625,7 +625,7 @@ mainReg.register(['drop', 'droptake', 'dt'], {
       return new Stream(this,
         takedrop(sIn, [0n, ...ins.map(i => i.numValue({min: 0n}))]));
     else if(this.args.length > 1)
-      throw new StreamError(this, 'required list of values or a single stream');
+      throw new StreamError('required list of values or a single stream');
     return new Stream(this,
       takedrop(sIn, (function*() {
         yield 0n;

@@ -1,9 +1,8 @@
 const MAXLEN = 100;
 
 export class StreamError extends Error {
-  constructor(node, msg) {
+  constructor(msg) {
     super();
-    this.node = node;
     this.msg = msg;
   }
 }
@@ -88,27 +87,27 @@ export class Node {
 
   checkArgs(src, args) {
     if(this.source && !src)
-      throw new StreamError(this, `requires source`);
+      throw new StreamError(`requires source`);
     if(this.numArg === 0 && args.length > 0)
-      throw new StreamError(this, `does not allow arguments`);
+      throw new StreamError(`does not allow arguments`);
     if(this.numArg !== undefined && args.length !== this.numArg)
-      throw new StreamError(this, `exactly ${this.numArg} arguments required`);
+      throw new StreamError(`exactly ${this.numArg} arguments required`);
     if(this.minArg !== undefined && args.length < this.minArg)
-      throw new StreamError(this, `at least ${this.minArg} arguments required`);
+      throw new StreamError(`at least ${this.minArg} arguments required`);
     if(this.maxArg !== undefined && args.length > this.maxArg)
-      throw new StreamError(this, `at most ${this.maxArg} arguments required`);
+      throw new StreamError(`at most ${this.maxArg} arguments required`);
   }
 
   eval() {
-    throw new StreamError(this, `symbol ${this.ident} undefined`);
+    throw new StreamError(`symbol ${this.ident} undefined`);
   }
 
   evalStream(opts = {}) {
     const r = this.eval();
     if(r.isAtom)
-      throw new StreamError(null, `expected stream, got ${r.type} ${r.desc()}`);
+      throw new StreamError(`expected stream, got ${r.type} ${r.desc()}`);
     if(opts.finite && r.len === null)
-      throw new StreamError(null, 'infinite stream');
+      throw new StreamError('infinite stream');
     return r;
   }
 
@@ -212,7 +211,7 @@ export class Atom extends Node {
     if(this.type === type)
       return this.value;
     else
-      throw new StreamError(null, `expected ${type}, got ${this.type} ${this.desc()}`);
+      throw new StreamError(`expected ${type}, got ${this.type} ${this.desc()}`);
   }
 
   numValue(opts = {}) {
@@ -282,7 +281,7 @@ export class Stream {
   }
 
   asAtom(type) {
-    throw new StreamError(null, `expected ${type}, got stream ${this.node.desc()}`);
+    throw new StreamError(`expected ${type}, got stream ${this.node.desc()}`);
   }
 }
 
@@ -299,9 +298,9 @@ export class Register {
       return;
     }
     if(this.base.includes(ident))
-      throw new StreamError(null, `trying to overwrite base symbol ${ident}`);
+      throw new StreamError(`trying to overwrite base symbol ${ident}`);
     else if(this.includes(ident))
-      throw new StreamError(null, `duplicate definition of ${ident}`);
+      throw new StreamError(`duplicate definition of ${ident}`);
     else
       this._map[ident] = filter;
   }
@@ -320,17 +319,17 @@ export const mainReg = new Register();
 export const checks = {
   num(value, opts = {}) {
     if(opts.min !== undefined && value < opts.min)
-      throw new StreamError(null, `expected ${
+      throw new StreamError(`expected ${
         opts.min === 0n ? 'nonnegative'
         : opts.min === 1n ? 'positive'
         : `≥ ${opts.min}`}, got ${value}`);
     if(opts.max !== undefined && value > opts.max)
-      throw new StreamError(null, `value ${value} exceeds maximum ${opts.max}`);
+      throw new StreamError(`value ${value} exceeds maximum ${opts.max}`);
     return value;
   },
   stream(r) {
     if(r.isAtom)
-      throw new StreamError(null, `expected stream, got ${r.type} ${r.desc()}`);
+      throw new StreamError(`expected stream, got ${r.type} ${r.desc()}`);
     return r;
   }
 };

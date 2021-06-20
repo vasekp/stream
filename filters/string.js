@@ -47,12 +47,12 @@ mainReg.register('ord', {
       const abc = [...this.args[0].evalStream({finite: true})].map(a => a.evalAtom(S));
       const ix = abc.indexOf(c);
       if(ix < 0)
-        throw new StreamError(this, `character "${c}" not in list`);
+        throw new StreamError(`character "${c}" not in list`);
       else
         return new Atom(ix + 1);
     } else {
       if(c.codePointAt(1) !== undefined)
-        throw new StreamError(this, `expected single character, got "${c}"`);
+        throw new StreamError(`expected single character, got "${c}"`);
       return new Atom(c.codePointAt(0));
     }
   }
@@ -68,7 +68,7 @@ mainReg.register('chr', {
       abc.skip(ix - 1n);
       const {value, done} = abc.next();
       if(done)
-        throw new StreamError(this, `index ${ix} beyond end`);
+        throw new StreamError(`index ${ix} beyond end`);
       else
         return value.eval();
     } else {
@@ -93,7 +93,7 @@ mainReg.register('chrm', {
     } else {
       const abcEval = [...abc];
       if(!abcEval.length)
-        throw new StreamError(this, 'empty alphabet');
+        throw new StreamError('empty alphabet');
       return abcEval[Number(ix) % abcEval.length].eval();
     }
   }
@@ -120,7 +120,7 @@ mainReg.register('chars', {
             yield new Atom(best);
             ix += best.length;
           } else
-            throw new StreamError(this, `no match for "...${str.substring(ix)}" in alphabet`);
+            throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
         }
       })()
     );
@@ -152,7 +152,7 @@ mainReg.register('ords', {
             yield new Atom(bestIx + 1);
             ix += bestLen;
           } else
-            throw new StreamError(this, `no match for "...${str.substring(ix)}" in alphabet`);
+            throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
         }
       })()
     );
