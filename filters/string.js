@@ -8,15 +8,32 @@ mainReg.register('split', {
   eval: function() {
     const str = this.src.evalAtom(S);
     if(this.args[0]) {
-      const sep = this.args[0].evalAtom(S);
-      const split = str.split(sep);
-      return new Stream(this,
-        (function*() {
-          for(const c of split)
-            yield new Atom(c);
-        })(),
-        {len: BigInt(split.length)}
-      );
+      const ev = this.args[0].eval();
+      if(!ev.isAtom)
+        throw new StreamError(`expected number or string, got stream ${first.node.desc()}`);
+      if(ev.type === S) {
+        const sep = ev.value;
+        const split = str.split(sep);
+        return new Stream(this,
+          (function*() {
+            for(const c of split)
+              yield new Atom(c);
+          })(),
+          {len: BigInt(split.length)}
+        );
+      } else if(ev.type === 'number') {
+        const l = ev.value;
+        const re = new RegExp(`.{1,${l}}`, 'ug');
+        const split = [...str.match(re)];
+        return new Stream(this,
+          (function*() {
+            for(const c of split)
+              yield new Atom(c);
+          })(),
+          {len: BigInt(split.length)}
+        );
+      } else
+        throw new StreamError(`expected number or string, got ${first.type} ${first.value}`);
     } else {
       const chars = [...str];
       return new Stream(this,
