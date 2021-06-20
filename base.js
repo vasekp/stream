@@ -101,13 +101,6 @@ export class Node {
     throw new StreamError(this, `symbol ${this.ident} undefined`);
   }
 
-  evalNum(opts = {}) {
-    const r = this.eval();
-    if(!r.isAtom)
-      throw new StreamError(null, `expected number, got stream ${this.desc()}`);
-    return checks.num(r.numValue, opts);
-  }
-
   evalStream(opts = {}) {
     const r = this.eval();
     if(r.isAtom)
@@ -115,6 +108,14 @@ export class Node {
     if(opts.finite && r.len === null)
       throw new StreamError(null, 'infinite stream');
     return r;
+  }
+
+  evalAtom(type) {
+    return this.eval().asAtom(type);
+  }
+
+  evalNum(opts = {}) {
+    return checks.num(this.evalAtom('number'), opts);
   }
 
   desc() {
@@ -283,7 +284,7 @@ export class Stream {
   }
 
   asAtom(type) {
-    throw new StreamError(null, `expected ${type}, got stream ${node.desc()}`);
+    throw new StreamError(null, `expected ${type}, got stream ${this.node.desc()}`);
   }
 }
 

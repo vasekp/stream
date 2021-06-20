@@ -1,5 +1,6 @@
 import './filters/basic.js';
 import './filters/arith.js';
+import './filters/string.js';
 import {parse, ParseError} from './parser.js';
 import {StreamError} from './base.js';
 
