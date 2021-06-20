@@ -54,38 +54,40 @@ export class Node {
   }
 
   prepare() {
-    const src2 = this.src ? this.src.prepare() : null;
-    const args2 = this.args.map(arg => arg.withSrc(src2).prepare());
+    const srcTemp = this.src ? this.src.prepare() : null;
+    const args2 = this.args.map(arg => arg.withSrc(srcTemp).prepare());
+    const src2 = this.source !== false ? srcTemp : null;
+    this.checkArgs(src2, args2);
     if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
     else
-      return new Node(this.ident, this.token, this.source === false ? null : src2, args2, this.meta);
+      return new Node(this.ident, this.token, src2, args2, this.meta);
   }
 
   /* never called directly, convenience for register */
   prepareSrc() {
     const src2 = this.src ? this.src.prepare() : null;
+    this.checkArgs(src2, this.args);
     if(src2 === this.src)
       return this;
     else
       return new Node(this.ident, this.token, src2, this.args, this.meta);
   }
 
-  checkArgs() {
-    if(this.numArg === 0 && this.args.length > 0)
+  checkArgs(src, args) {
+    if(this.source && !src)
+      throw new StreamError(this, `requires source`);
+    if(this.numArg === 0 && args.length > 0)
       throw new StreamError(this, `does not allow arguments`);
-    else if(this.numArg !== undefined && this.args.length !== this.numArg)
+    if(this.numArg !== undefined && args.length !== this.numArg)
       throw new StreamError(this, `exactly ${this.numArg} arguments required`);
-    else if(this.minArg !== undefined && this.args.length < this.minArg)
+    if(this.minArg !== undefined && args.length < this.minArg)
       throw new StreamError(this, `at least ${this.minArg} arguments required`);
-    else if(this.maxArg !== undefined && this.args.length > this.maxArg)
+    if(this.maxArg !== undefined && args.length > this.maxArg)
       throw new StreamError(this, `at most ${this.maxArg} arguments required`);
   }
 
   eval() {
-    if(this.source && !this.src)
-      throw new StreamError(this, `requires source`);
-    this.checkArgs()
     if(this.evalIn) {
       const iter = this.evalIn();
       if(!iter.skip)

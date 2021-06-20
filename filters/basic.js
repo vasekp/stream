@@ -163,7 +163,8 @@ mainReg.register('id', {
   source: true,
   numArg: 0,
   prepare: function() {
-    return this.src ? this.src.prepare() : this;
+    this.checkArgs(this.src, this.args);
+    return this.src.prepare();
   },
   eval: function() {
     throw new StreamError(this, 'out of scope');
