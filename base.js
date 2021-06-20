@@ -166,7 +166,7 @@ export class Atom extends Node {
   constructor(val, meta = {}) {
     super(null, null, null, [], meta);
     this.isAtom = true;
-    this.value = typeof val === 'number' ? BigInt(val) : val;
+    this.value = val = typeof val === 'number' ? BigInt(val) : val;
     this.type = typeof val === 'bigint' ? 'number' : 'string'; // displayed to user
   }
 

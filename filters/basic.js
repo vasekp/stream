@@ -443,7 +443,7 @@ mainReg.register('in', {
   maxArg: 1,
   withEnv(env) {
     if(this.args[0]) {
-      const ix = this.args[0].evalNum(env, {min: 1n, max: env.args.length});
+      const ix = this.args[0].evalNum({min: 1n, max: env.args.length});
       return env.args[Number(ix) - 1];
     } else {
       if(env.src)
