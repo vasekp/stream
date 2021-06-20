@@ -41,10 +41,11 @@ mainReg.register('cat', {
 mainReg.register('ord', {
   source: true,
   maxArg: 1,
-  eval: function() {
-    const c = this.src.evalAtom(S);
-    if(this.args[0]) {
-      const abc = [...this.args[0].evalStream({finite: true})].map(a => a.evalAtom(S));
+  prepare: function() {
+    const nnode = Node.prototype.prepare.call(this);
+    const c = nnode.src.evalAtom(S);
+    if(nnode.args[0]) {
+      const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(S));
       const ix = abc.indexOf(c);
       if(ix < 0)
         throw new StreamError(`character "${c}" not in list`);
@@ -61,10 +62,11 @@ mainReg.register('ord', {
 mainReg.register('chr', {
   source: true,
   maxArg: 1,
-  eval: function() {
-    if(this.args[0]) {
-      const ix = this.src.evalNum({min: 1n});
-      const abc = this.args[0].evalStream({finite: true});
+  prepare: function() {
+    const nnode = Node.prototype.prepare.call(this);
+    if(nnode.args[0]) {
+      const ix = nnode.src.evalNum({min: 1n});
+      const abc = nnode.args[0].evalStream({finite: true});
       abc.skip(ix - 1n);
       const {value, done} = abc.next();
       if(done)
@@ -72,7 +74,7 @@ mainReg.register('chr', {
       else
         return value.eval();
     } else {
-      const cp = this.src.evalNum({min: 0n});
+      const cp = nnode.src.evalNum({min: 0n});
       return new Atom(String.fromCodePoint(Number(cp)));
     }
   }
@@ -81,9 +83,10 @@ mainReg.register('chr', {
 mainReg.register('chrm', {
   source: true,
   numArg: 1,
-  eval: function() {
-    let ix = this.src.evalNum() - 1n;
-    const abc = this.args[0].evalStream({finite: true});
+  prepare: function() {
+    const nnode = Node.prototype.prepare.call(this);
+    let ix = nnode.src.evalNum() - 1n;
+    const abc = nnode.args[0].evalStream({finite: true});
     if(typeof abc.len === 'bigint' && abc.len !== 0n) {
       ix %= abc.len;
       if(ix < 0n) ix += abc.len;
@@ -162,8 +165,9 @@ mainReg.register('ords', {
 mainReg.register('lcase', {
   source: true,
   numArg: 0,
-  eval: function() {
-    const str = this.src.evalAtom(S);
+  prepare: function() {
+    this.checkArgs(this.src, this.args);
+    const str = this.src.prepare().evalAtom(S);
     return new Atom(str.toLowerCase());
   }
 });
@@ -171,8 +175,9 @@ mainReg.register('lcase', {
 mainReg.register('ucase', {
   source: true,
   numArg: 0,
-  eval: function() {
-    const str = this.src.evalAtom(S);
+  prepare: function() {
+    this.checkArgs(this.src, this.args);
+    const str = this.src.prepare().evalAtom(S);
     return new Atom(str.toUpperCase());
   }
 });
