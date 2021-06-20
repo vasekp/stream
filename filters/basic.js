@@ -737,3 +737,55 @@ mainReg.register(['select', 'sel'], {
     );
   }
 });
+
+function eq(args) {
+  const ins = args.map(arg => arg.eval());
+  if(ins.every(i => i.isAtom)) {
+    const vals = args.map(arg => arg.value);
+    return vals.every(val => val === vals[0]);
+  } else if(ins.some(i => i.isAtom))
+    return false;
+  // else
+  /* all ins confirmed streams now */
+  const lens = ins.map(i => i.len).filter(i => i !== undefined);
+  if(lens.length > 1 && lens.some(l => l !== lens[0]))
+    return false;
+  if(lens.some(l => l === null))
+    throw new StreamError('can\'t determine equality');
+  for(;;) {
+    const rs = ins.map(i => i.next());
+    if(rs.every(r => r.done))
+      return true;
+    else if(rs.some(r => r.done))
+      return false;
+    if(!eq(rs.map(r => r.value)))
+      return false;
+  }
+}
+
+mainReg.register('equal', {
+  source: false,
+  minArg: 2,
+  prepare: function() {
+    const nnode = Node.prototype.prepare.call(this);
+    if(nnode.args.every(arg => arg.isAtom))
+      return new Atom(eq(nnode.args));
+    else
+      return nnode;
+  },
+  eval: function() {
+    return new Atom(eq(this.args));
+  },
+  desc: function() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.desc() + '.';
+    if(this.args.length > 0) {
+      ret += '(';
+      ret += this.args.map(n => n.desc()).join('=');
+      ret += ')';
+    } else
+      ret += name;
+    return ret;
+  }
+});

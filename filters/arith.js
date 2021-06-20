@@ -250,7 +250,6 @@ function regComparer(name, sign, fun) {
   });
 }
 
-regComparer('equal', '=', (a, b) => a == b);
 regComparer('lt', '<', (a, b) => a < b);
 regComparer('gt', '>', (a, b) => a > b);
 regComparer('le', '<=', (a, b) => a <= b);
