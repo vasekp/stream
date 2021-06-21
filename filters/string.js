@@ -76,7 +76,8 @@ mainReg.register('ord', {
       else
         return new Atom(ix + 1);
     } else {
-      if(c.codePointAt(1) !== undefined)
+      const cp = c.codePointAt(0);
+      if(c !== String.fromCodePoint(cp))
         throw new StreamError(`expected single character, got "${c}"`);
       return new Atom(c.codePointAt(0));
     }
