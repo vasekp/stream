@@ -333,3 +333,77 @@ mainReg.register(['fromdigits', 'fdig'], {
     return new Atom(val);
   }
 });
+
+const primes = (() => {
+  const cache = [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n, 31n, 37n, 41n, 43n, 47n, 53n, 59n, 61n, 67n, 71n, 73n, 79n, 83n, 89n, 97n, 101n, 103n, 107n, 109n, 113n, 127n, 131n, 137n, 139n, 149n, 151n, 157n, 163n, 167n, 173n, 179n, 181n, 191n, 193n, 197n, 199n, 211n, 223n, 227n, 229n, 233n, 239n, 241n, 251n, 257n, 263n, 269n, 271n, 277n, 281n, 283n, 293n, 307n, 311n, 313n, 317n, 331n, 337n, 347n, 349n, 353n, 359n, 367n, 373n, 379n, 383n, 389n, 397n, 401n, 409n, 419n, 421n, 431n, 433n, 439n, 443n, 449n, 457n, 461n, 463n, 467n, 479n, 487n, 491n, 499n, 503n, 509n, 521n, 523n, 541n];
+  return function*() {
+    yield* cache;
+    for(let i = cache[cache.length - 1] + 2n; ; i += 2n) {
+      let prime = true;
+      for(const p of cache) {
+        if(i % p === 0n) {
+          prime = false;
+          break;
+        } else if(p*p > i)
+          break;
+      }
+      if(prime) {
+        cache.push(i);
+        yield i;
+      }
+    }
+  };
+})();
+
+mainReg.register('primes', {
+  source: false,
+  numArg: 0,
+  eval: function() {
+    return new Stream(this,
+      (function*() {
+        for(const p of primes())
+          yield new Atom(p);
+      })(),
+      {len: null}
+    );
+  }
+});
+
+mainReg.register('isprime', {
+  source: true,
+  numArg: 0,
+  prepare: function() {
+    const nnode = Node.prototype.prepare.call(this);
+    const val = nnode.src.evalNum();
+    if(val <= 1n)
+      return new Atom(false);
+    for(const p of primes()) {
+      if(p === val)
+        return new Atom(true);
+      else if(p * p < val && (val % p) === 0n)
+        return new Atom(false);
+      else if(p > val)
+        return new Atom(false);
+    }
+  }
+});
+
+mainReg.register('factor', {
+  source: true,
+  numArg: 0,
+  eval: function() {
+    let val = this.src.evalNum({min: 1n});
+    return new Stream(this,
+      (function*() {
+        for(const p of primes()) {
+          while((val % p) === 0n) {
+            yield new Atom(p);
+            val /= p;
+          }
+          if(val === 1n)
+            return;
+        }
+      })()
+    );
+  }
+});
