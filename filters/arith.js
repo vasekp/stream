@@ -254,3 +254,82 @@ regComparer('lt', '<', (a, b) => a < b);
 regComparer('gt', '>', (a, b) => a > b);
 regComparer('le', '<=', (a, b) => a <= b);
 regComparer('ge', '>=', (a, b) => a >= b);
+
+mainReg.register(['tobase', 'tbase'], {
+  source: true,
+  maxArg: 1,
+  prepare: function() {
+    const nnode = Node.prototype.prepare.call(this);
+    let val = nnode.src.evalNum();
+    const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    const digit = c => c < 10 ? String.fromCharCode(c + 48) : String.fromCharCode(c + 97 - 10);
+    let ret = val < 0 ? '-' : val > 0 ? '' : '0';
+    if(val < 0)
+      val = -val;
+    const digits = [];
+    while(val) {
+      digits.push(val % base);
+      val /= base;
+    }
+    ret += digits.reverse().map(d => digit(Number(d))).join('');
+    return new Atom(ret);
+  }
+});
+
+mainReg.register(['frombase', 'fbase'], {
+  source: true,
+  maxArg: 1,
+  prepare: function() {
+    const nnode = Node.prototype.prepare.call(this);
+    const str = nnode.src.evalAtom('string');
+    const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    if(!/^-?[0-9a-zA-Z]+$/.test(str))
+      throw new StreamError(`invalid input "${str}"`);
+    const digit = c => {
+      const d = c >= '0' && c <= '9' ? c.charCodeAt('0') - 48
+        : c >= 'a' && c <= 'z' ? c.charCodeAt('a') - 97 + 10
+        : c.charCodeAt('a') - 65 + 10;
+      if(d >= base)
+        throw new StreamError(`invalid digit "${c}" for base ${base}`);
+      else
+        return d;
+    };
+    const val = str[0] === '-'
+      ? -[...str.substring(1)].map(digit).reduce((v, d) => v * base + BigInt(d), 0n)
+      : [...str].map(digit).reduce((v, d) => v * base + BigInt(d), 0n);
+    return new Atom(val);
+  }
+});
+
+mainReg.register(['todigits', 'tdig'], {
+  source: true,
+  maxArg: 1,
+  eval: function() {
+    let val = this.src.evalNum({min: 0n});
+    const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    const digits = [];
+    while(val) {
+      digits.push(val % base);
+      val /= base;
+    }
+    return new Stream(this,
+      digits.reverse().map(d => new Atom(d)).values(),
+      {len: digits.length}
+    );
+  }
+});
+
+mainReg.register(['fromdigits', 'fdig'], {
+  source: true,
+  maxArg: 1,
+  eval: function() {
+    const sIn = this.src.evalStream({finite: true});
+    const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    let val = 0n;
+    for(const r of sIn) {
+      const digit = r.prepare().evalNum({min: 0n, max: base - 1n});
+      val = val * base + digit;
+    }
+    return new Atom(val);
+  }
+});
