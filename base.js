@@ -1,4 +1,4 @@
-const MAXLEN = 100;
+const DEFLEN = 100;
 const DEFTIME = 1000;
 
 export class StreamError extends Error {
@@ -180,12 +180,12 @@ export class Node {
     return this.src === null && this.args.length === 0;
   }
 
-  writeout() {
+  writeout(maxLen = DEFLEN) {
     let d = '';
     for(const s of this.writeout_gen()) {
       d += s;
-      if(d.length > MAXLEN) {
-        d = d.substring(0, MAXLEN - 3) + '...';
+      if(d.length > maxLen) {
+        d = d.substring(0, maxLen - 3) + '...';
         break;
       }
     }
@@ -209,10 +209,10 @@ export class Node {
     }
   }
 
-  writeoutT(limit) {
+  writeoutT(maxLen, limit) {
     try {
       watchdog.start(limit);
-      return this.writeout();
+      return this.writeout(maxLen);
     } finally {
       watchdog.stop();
     }
