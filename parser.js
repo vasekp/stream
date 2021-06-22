@@ -287,18 +287,21 @@ function parse0(iter, open, close, array) {
           throw new ParseError(`"${s.value}" can't appear here`, s);
         break;
       case tc.hash:
-        if(s.value === '#')
-          term = new Node('id', s);
-        else if(s.value === '##')
-          term = new Node('in', s, null, []);
-        else {
-          const ix = Number(s.value.substr(1));
-          if(Number.isNaN(ix) || ix === 0)
-            throw new ParseError(`malformed identifier "${s.value}"`, s);
-          else
-            term = new Node('in', s, null, [new Atom(ix)]);
-        }
-        state = ss.term;
+        if(state === ss.base || state === ss.oper) {
+          if(s.value === '#')
+            term = new Node('id', s);
+          else if(s.value === '##')
+            term = new Node('in', s, null, []);
+          else {
+            const ix = Number(s.value.substr(1));
+            if(Number.isNaN(ix) || ix === 0)
+              throw new ParseError(`malformed identifier "${s.value}"`, s);
+            else
+              term = new Node('in', s, null, [new Atom(ix)]);
+          }
+          state = ss.term;
+        } else
+          throw new ParseError(`"${s.value}" can't appear here`, s);
         break;
       case tc.open:
         if(state === ss.base || state === ss.oper) {
