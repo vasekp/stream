@@ -75,11 +75,15 @@ function tokcls(c) {
 }
 
 export class ParseError extends Error {
-  constructor(msg, pos) {
+  constructor(msg, a1, a2) {
     super();
     this.name = 'ParseError';
     this.msg = msg;
-    this.pos = pos;
+    this.pos = typeof a1 === 'object' ? a1.pos : a1;
+    this.len = typeof a2 === 'object' ? a2.pos + a2.value.length - this.pos
+      : typeof a2 === 'number' ? a2 - this.pos
+      : typeof a1 === 'object' ? a1.value.length
+      : 1;
   }
 }
 
@@ -185,11 +189,11 @@ function* tokenize(str) {
       break;
     case ss.string:
     case ss.stresc:
-      throw new ParseError('unterminated string', accumStart);
+      throw new ParseError('unterminated string', accumStart, read);
     case ss.base: // default:
       // nothing to do
   }
-  yield {value: '', cls: tc.close, pos: read - 1};
+  yield {value: '', cls: tc.close, pos: read};
 }
 
 class Stack {
@@ -249,7 +253,7 @@ class Stack {
   }
 }
 
-function parse0(iter, close, array) {
+function parse0(iter, open, close, array) {
   const ss = Enum.fromArray(['base', 'sym', 'term', 'oper']);
   let state = ss.base;
   let term = null;
@@ -258,7 +262,7 @@ function parse0(iter, close, array) {
   for(;;) {
     let {value: s, done} = iter.next();
     if(done)
-      s = {value: '', cls: tc.close};
+      throw new Error('internal parser error');
     switch(s.cls) {
       case tc.space:
         continue;
@@ -267,7 +271,7 @@ function parse0(iter, close, array) {
         if(state === ss.base || state === ss.oper)
           term = new Atom(s.cls === tc.number ? BigInt(s.value) : s.value);
         else
-          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
+          throw new ParseError(`"${s.value}" can't appear here`, s);
         state = ss.term;
         break;
       case tc.ident:
@@ -280,7 +284,7 @@ function parse0(iter, close, array) {
             state = ss.sym;
           }
         } else
-          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
+          throw new ParseError(`"${s.value}" can't appear here`, s);
         break;
       case tc.hash:
         if(s.value === '#')
@@ -290,7 +294,7 @@ function parse0(iter, close, array) {
         else {
           const ix = Number(s.value.substr(1));
           if(Number.isNaN(ix) || ix === 0)
-            throw new ParseError(`malformed identifier "${s.value}"`, s.pos);
+            throw new ParseError(`malformed identifier "${s.value}"`, s);
           else
             term = new Node('in', s, null, [new Atom(ix)]);
         }
@@ -300,46 +304,48 @@ function parse0(iter, close, array) {
         if(state === ss.base || state === ss.oper) {
           switch(s.value) {
             case '[': {
-              const args = parse0(iter, ']', true);
+              const args = parse0(iter, s, ']', true);
               term = new Node('array', s, null, args);
               state = ss.term;
               break; }
             case '(':
-              term = parse0(iter, ')', false);
+              term = parse0(iter, s, ')', false);
               state = ss.term;
               break;
             case '{': {
-              const body = parse0(iter, '}', false);
+              const body = parse0(iter, s, '}', false);
               term = new Block(body, s);
               state = ss.sym;
               break; }
             default:
-              throw new ParseError(`internal parse error`, s.pos);
+              throw new Error(`internal parser error: tc.open "${s.value}"`);
           }
         } else if(state === ss.sym && s.value === '(') {
-          term.args = parse0(iter, ')', true);
+          term.args = parse0(iter, s, ')', true);
           state = ss.term;
         } else if(s.value === '{' && state === ss.oper) {
-          const body = parse0(iter, '}', false);
+          const body = parse0(iter, s, '}', false);
           term = new Block(body, s);
           state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
-          const args = parse0(iter, ']', true);
+          const args = parse0(iter, s, ']', true);
           term = new Node('part', s, term, args);
           state = ss.term;
         } else
-          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
+          throw new ParseError(`"${s.value}" can't appear here`, s);
         break;
       case tc.close:
         if(s.value !== close)
-          throw new ParseError(`unexpected ${s.value ? s.value : 'end of input'}`, s.pos);
+          throw s.value
+            ? new ParseError(`unexpected ${s.value}`, s)
+            : new ParseError(`unfinished expression`, open, s);
         if(state === ss.base) {
           if(!array)
-            throw new ParseError(`empty input not allowed here`, s.pos);
+            throw new ParseError(`empty input not allowed here`, open, s);
           else
             return [];
         } else if(state === ss.oper)
-          throw new ParseError(`unfinished expression`, s.pos);
+          throw new ParseError(`unfinished expression`, open, s);
         else {
           term = stack.flatten(term);
           if(array) {
@@ -347,7 +353,6 @@ function parse0(iter, close, array) {
             return ret;
           } else
             return term;
-          return;
         }
       case tc.oper:
         if(state === ss.sym || state === ss.term)
@@ -356,29 +361,29 @@ function parse0(iter, close, array) {
           // Unary minus
           stack.addOper(s, new Atom(0));
         else
-          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
+          throw new ParseError(`"${s.value}" can't appear here`, s);
         term = null;
         state = ss.oper;
         break;
       case ',':
         if(!array)
-          throw new ParseError(`multi-part expression not allowed here`, s.pos);
+          throw new ParseError(`multi-part expression not allowed here`, s);
         else if(state === ss.sym || state === ss.term)
           ret.push(stack.flatten(term));
         else
-          throw new ParseError(`"${s.value}" can't appear here`, s.pos);
+          throw new ParseError(`"${s.value}" can't appear here`, s);
         state = ss.base;
         term = null;
         break;
       default:
-        throw new ParseError(`unknown token "${s.value}"`, s.pos);
+        throw new ParseError(`unknown token "${s.value}"`, s);
     }
   }
 }
 
 export function parse(str) {
   try {
-    return parse0(tokenize(str), '', false);
+    return parse0(tokenize(str), 0, '', false);
   } catch(e) {
     if(e instanceof ParseError)
       e.str = str;

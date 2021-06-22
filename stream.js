@@ -17,7 +17,7 @@ repl.start({eval: str => {
       if(e.str !== '')
         console.error(e.str);
       if(e.pos >= 0)
-        console.error(' '.repeat(e.pos) + '^');
+        console.error(' '.repeat(e.pos) + '^'.repeat(e.len));
       console.error(`${e.name}: ${e.msg}`);
     } else if(e instanceof StreamError) {
       if(e.node) {
