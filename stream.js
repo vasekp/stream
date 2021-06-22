@@ -2,16 +2,16 @@ import './filters/basic.js';
 import './filters/arith.js';
 import './filters/string.js';
 import {parse, ParseError} from './parser.js';
-import {StreamError} from './base.js';
+import {StreamError, TimeoutError} from './base.js';
 
 import repl from 'repl';
 
 repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
-    const st = parse(str).prepare();
+    const st = parse(str).prepareT();
     //console.log(st.desc());
-    console.log(st.writeout());
+    console.log(st.writeoutT());
   } catch(e) {
     if(e instanceof ParseError) {
       if(e.str !== '')
@@ -26,6 +26,8 @@ repl.start({eval: str => {
         console.error(`${e.node.desc()}: ${e.msg}`);
       } else
         console.error(e.msg);
+    } else if(e instanceof TimeoutError) {
+      console.error(`Timeout`);
     } else if(typeof e === 'string')
       console.error(`Error: ${e}`);
     else

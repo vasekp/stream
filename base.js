@@ -1,4 +1,5 @@
 const MAXLEN = 100;
+const DEFTIME = 1000;
 
 export class StreamError extends Error {
   constructor(msg) {
@@ -6,6 +7,42 @@ export class StreamError extends Error {
     this.msg = msg;
   }
 }
+
+export class TimeoutError extends Error {
+  constructor(count) {
+    super();
+    this.count = count;
+  }
+}
+
+export const watchdog = (function() {
+  let timeEnd;
+  let counter = 0;
+
+  return {
+    start: function(limit = DEFTIME) {
+      if(!timeEnd) {
+        timeEnd = Date.now() + limit;
+        counter = 0;
+      } else
+        throw new Error('Watchdog restarted without stopping');
+    },
+
+    stop: function() {
+      timeEnd = null;
+    },
+
+    tick: function() {
+      if((counter++ & 0xFFF) === 0) {
+        if(!timeEnd)
+          throw new Error('Watchdog tick() called without start()');
+        if(Date.now() > timeEnd) {
+          throw new TimeoutError(counter);
+        }
+      }
+    }
+  };
+})();
 
 export class Node {
   constructor(ident, token, src = null, args = [], meta = {}) {
@@ -21,6 +58,7 @@ export class Node {
       const pFn = this[fn];
       this[fn] = () => {
         try {
+          watchdog.tick();
           return pFn.call(this);
         } catch(e) {
           if(e instanceof StreamError && !e.node)
@@ -83,6 +121,15 @@ export class Node {
       return this;
     else
       return new Node(this.ident, this.token, src2, this.args, this.meta);
+  }
+
+  prepareT(limit) {
+    try {
+      watchdog.start(limit);
+      return this.prepare();
+    } finally {
+      watchdog.stop();
+    }
   }
 
   checkArgs(src, args) {
@@ -159,6 +206,15 @@ export class Node {
         yield* value.writeout_gen();
       }
       yield ']';
+    }
+  }
+
+  writeoutT(limit) {
+    try {
+      watchdog.start(limit);
+      return this.writeout();
+    } finally {
+      watchdog.stop();
     }
   }
 }

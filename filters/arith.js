@@ -1,4 +1,4 @@
-import {Node, Atom, Stream, mainReg, StreamError} from '../base.js';
+import {Node, Atom, Stream, mainReg, StreamError, watchdog} from '../base.js';
 
 function regReducer(name, sign, fun) {
   mainReg.register(name, {
@@ -350,6 +350,7 @@ const primes = (() => {
       if(prime) {
         cache.push(i);
         yield i;
+        watchdog.tick();
       }
     }
   };
