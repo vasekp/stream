@@ -477,16 +477,19 @@ mainReg.register('part', {
 
 mainReg.register('in', {
   maxArg: 1,
-  withEnv(env) {
-    if(this.args[0]) {
-      const ix = this.args[0].evalNum({min: 1n, max: env.args.length});
-      return env.args[Number(ix) - 1];
-    } else {
-      if(env.src)
-        return env.src;
-      else
-        throw new StreamError('outer scope has empty source');
-    }
+  withScope: function(scope) {
+    if(scope.block) {
+      if(this.args[0]) {
+        const ix = this.args[0].evalNum({min: 1n, max: scope.block.args.length});
+        return scope.block.args[Number(ix) - 1];
+      } else {
+        if(scope.block.src)
+          return scope.block.src;
+        else
+          throw new StreamError('outer scope has empty source');
+      }
+    } else
+      return Node.prototype.withScope.call(this, scope);
   },
   eval: function() {
     throw new StreamError('out of scope');
@@ -854,5 +857,49 @@ mainReg.register('sort', {
         {len: BigInt(vals.length)}
       );
     }
+  }
+});
+
+mainReg.register('history', {
+  source: false,
+  maxArg: 1,
+  withScope: function(scope) {
+    if(scope.history) {
+      if(this.args[0]) {
+        const ix = this.args[0].evalNum({min: 1n});
+        const ret = scope.history.at(Number(ix));
+        if(!ret)
+          throw new StreamError(`history element ${ix} not found`);
+        else
+          return ret;
+      } else {
+        const ret = scope.history.last();
+        if(!ret)
+          throw new StreamError(`history is empty`);
+        else
+          return ret;
+      }
+    } else
+      return Node.prototype.withScope.call(this, scope);
+  },
+  eval: function() {
+    throw new StreamError('out of scope');
+  },
+  desc: function() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.desc() + '.';
+    if(this.args.length === 0)
+      ret += '$';
+    else if(this.args.length === 1
+        && this.args[0].isAtom
+        && this.args[0].type === 'number'
+        && this.args[0].value > 0n)
+      ret += '$' + this.args[0].value;
+    else {
+      ret = this.ident;
+      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+    }
+    return ret;
   }
 });

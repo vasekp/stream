@@ -2,16 +2,18 @@ import './filters/basic.js';
 import './filters/arith.js';
 import './filters/string.js';
 import {parse, ParseError} from './parser.js';
-import {StreamError, TimeoutError} from './base.js';
+import {History, StreamError, TimeoutError} from './base.js';
 
 import repl from 'repl';
+
+const history = new History();
 
 repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
-    const st = parse(str).prepareT();
-    //console.log(st.desc());
-    console.log(st.writeoutT());
+    const node = parse(str).withScope({history}).prepareT();
+    const out = node.writeoutT();
+    console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {
     if(e instanceof ParseError) {
       if(e.str !== '')

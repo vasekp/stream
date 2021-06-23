@@ -2,7 +2,7 @@ import {Node, Atom, Block} from './base.js';
 import Enum from './enum.js';
 
 const cc = Enum.fromArray(['digit', 'alpha']);
-const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'hash']);
+const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'spec']);
 
 const priority = Enum.fromObj({
   ':': 6,
@@ -89,7 +89,7 @@ export class ParseError extends Error {
 
 function* tokenize(str) {
   const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc',
-    'hash', 'hashd', 'comp']);
+    'spec', 'specd', 'comp']);
   let state = ss.base;
   let accum = '';
   let read = 0;
@@ -120,12 +120,12 @@ function* tokenize(str) {
     } else if(state === ss.ident && (cls === cc.digit || cls === cc.alpha)) {
       accum += c;
       continue;
-    } else if(state === ss.hash && cls === '#') {
+    } else if(state === ss.spec && (cls === '#' || cls === '$')) {
       accum += c;
       continue;
-    } else if((state === ss.hash || state === ss.hashd) && cls === cc.digit) {
+    } else if((state === ss.spec || state === ss.specd) && cls === cc.digit) {
       accum += c;
-      state = ss.hashd;
+      state = ss.specd;
       continue;
     } else if(state === ss.comp && cls === '=') {
       accum += c;
@@ -138,8 +138,8 @@ function* tokenize(str) {
       yield {value: accum, cls: tc.ident, pos: accumStart};
     else if(state === ss.number)
       yield {value: accum, cls: tc.number, pos: accumStart};
-    else if(state === ss.hash || state === ss.hashd)
-      yield {value: accum, cls: tc.hash, pos: accumStart};
+    else if(state === ss.spec || state === ss.specd)
+      yield {value: accum, cls: tc.spec, pos: accumStart};
     else if(state === ss.comp)
       yield {value: accum, cls: tc.oper, pos: accumStart};
     /*** now handle the new character ***/
@@ -155,7 +155,8 @@ function* tokenize(str) {
         accumStart = read - 1;
         break;
       case '#':
-        state = ss.hash;
+      case '$':
+        state = ss.spec;
         accum = c;
         accumStart = read - 1;
         break;
@@ -183,9 +184,9 @@ function* tokenize(str) {
     case ss.number:
       yield {value: accum, cls: tc.number, pos: accumStart};
       break;
-    case ss.hash:
-    case ss.hashd:
-      yield {value: accum, cls: tc.hash, pos: accumStart};
+    case ss.spec:
+    case ss.specd:
+      yield {value: accum, cls: tc.spec, pos: accumStart};
       break;
     case ss.string:
     case ss.stresc:
@@ -286,18 +287,20 @@ function parse0(iter, open, close, array) {
         } else
           throw new ParseError(`"${s.value}" can't appear here`, s);
         break;
-      case tc.hash:
+      case tc.spec:
         if(state === ss.base || state === ss.oper) {
           if(s.value === '#')
             term = new Node('id', s);
           else if(s.value === '##')
             term = new Node('in', s, null, []);
+          else if(s.value === '$')
+            term = new Node('history', s, null, []);
           else {
             const ix = Number(s.value.substr(1));
             if(Number.isNaN(ix) || ix === 0)
               throw new ParseError(`malformed identifier "${s.value}"`, s);
             else
-              term = new Node('in', s, null, [new Atom(ix)]);
+              term = new Node(s.value[0] === '#' ? 'in' : 'history', s, null, [new Atom(ix)]);
           }
           state = ss.term;
         } else

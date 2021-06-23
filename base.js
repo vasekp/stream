@@ -68,7 +68,7 @@ export class Node {
       };
     }
     /* Debug: */
-    /*for(const fn of ['withSrc', 'withArgs', 'withEnv', 'prepare']) {
+    /*for(const fn of ['withSrc', 'withArgs', 'withScope', 'prepare']) {
       const pFn = this[fn];
       this[fn] = (...args) => {
         const nnode = pFn.apply(this, args);
@@ -93,9 +93,9 @@ export class Node {
     return new Node(this.ident, this.token, this.src, args, this.meta);
   }
 
-  withEnv(env) {
-    const src2 = this.src ? this.src.withEnv(env) : null;
-    const args2 = this.args.map(arg => arg.withEnv(env));
+  withScope(scope) {
+    const src2 = this.src ? this.src.withScope(scope) : null;
+    const args2 = this.args.map(arg => arg.withScope(scope));
     if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
     else
@@ -235,7 +235,7 @@ export class Atom extends Node {
     return this;
   }
 
-  withEnv() {
+  withScope() {
     return this;
   }
 
@@ -282,7 +282,7 @@ export class Block extends Node {
   }
 
   prepare() {
-    return this.body.withEnv(this).prepare();
+    return this.body.withScope({block: this}).prepare();
   }
 
   withSrc(src) {
@@ -299,9 +299,9 @@ export class Block extends Node {
     return new Block(this.body, this.token, this.src, args, this.meta);
   }
 
-  withEnv(env) {
-    const src2 = this.src ? this.src.withEnv(env) : null;
-    const args2 = this.args.map(arg => arg.withEnv(env));
+  withScope(scope) {
+    const src2 = this.src ? this.src.withScope(scope) : null;
+    const args2 = this.args.map(arg => arg.withScope(scope));
     if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
     else
@@ -374,6 +374,35 @@ export class Register {
 }
 
 export const mainReg = new Register();
+
+export class History {
+  constructor() {
+    this._hist = [];
+  }
+
+  add(node) {
+    this._hist.push(node);
+    return this._hist.length;
+  }
+
+  clear() {
+    this._hist = [];
+  }
+
+  at(id) {
+    if(id <= 0 || id > this._hist.length)
+      return null;
+    else
+      return this._hist[id - 1];
+  }
+
+  last() {
+    if(!this._hist.length)
+      return null;
+    else
+      return this._hist[this._hist.length - 1];
+  }
+};
 
 export const checks = {
   bounds(value, opts = {}) {
