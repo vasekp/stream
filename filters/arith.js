@@ -314,7 +314,7 @@ mainReg.register(['todigits', 'tdig'], {
     }
     return new Stream(this,
       digits.reverse().map(d => new Atom(d)).values(),
-      {len: digits.length}
+      {len: BigInt(digits.length)}
     );
   }
 });
