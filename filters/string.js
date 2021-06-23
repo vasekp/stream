@@ -213,24 +213,11 @@ mainReg.register('abc', {
   source: false,
   numArg: 0,
   eval: function() {
-    let i = 97;
+    const ucase = this.ident === 'ABC';
+    const base = ucase ? 65 : 97;
+    let i = base;
     return new Stream(this,
-      (function*() { while(i < 97+26) yield new Atom(String.fromCharCode(i++)); })(),
-      {
-        skip: c => i += Number(c),
-        len: 26n
-      }
-    );
-  }
-});
-
-mainReg.register('ABC', {
-  source: false,
-  numArg: 0,
-  eval: function() {
-    let i = 65;
-    return new Stream(this,
-      (function*() { while(i < 65+26) yield new Atom(String.fromCharCode(i++)); })(),
+      (function*() { while(i < base + 26) yield new Atom(String.fromCharCode(i++)); })(),
       {
         skip: c => i += Number(c),
         len: 26n

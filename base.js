@@ -353,6 +353,7 @@ export class Register {
       ident.forEach(e => this.register(e, filter));
       return;
     }
+    ident = ident.toLowerCase();
     if(this.base.includes(ident))
       throw new StreamError(`trying to overwrite base symbol ${ident}`);
     else if(this.includes(ident))
@@ -362,10 +363,12 @@ export class Register {
   }
 
   find(ident) {
-    return this._map[ident] || (this.parent ? this.parent._map[ident] : null);
+    ident = ident?.toLowerCase();
+    return this._map[ident] || this.parent?._map[ident];
   }
 
   includes(ident) {
+    ident = ident?.toLowerCase();
     return this._map.hasOwnProperty(ident);
   }
 }
