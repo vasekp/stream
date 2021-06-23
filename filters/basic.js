@@ -717,7 +717,7 @@ mainReg.register('if', {
   numArg: 3,
   prepare: function() {
     this.checkArgs(this.src, this.args);
-    const src2 = this.src.prepare();
+    const src2 = this.src?.prepare();
     const val = this.args[0].withSrc(src2).prepare().evalAtom('boolean');
     return this.args[val ? 1 : 2].withSrc(src2).prepare();//.eval();
   }
