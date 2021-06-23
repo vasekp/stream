@@ -227,7 +227,7 @@ function regComparer(name, sign, fun) {
         const vals = nnode.args.map(arg => arg.numValue());
         let res = true;
         for(let i = 1; i < vals.length; i++)
-          res &&= fun(vals[i-1], vals[i]);
+          res = res && fun(vals[i-1], vals[i]);
         return new Atom(res);
       } else
         return nnode;
