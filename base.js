@@ -52,8 +52,10 @@ export class Node {
     this.args = args;
     this.meta = meta;
     const rec = mainReg.find(this.ident);
-    if(rec)
+    if(rec) {
+      this.known = true;
       Object.assign(this, rec);
+    }
     for(const fn of ['eval', 'prepare']) {
       const pFn = this[fn];
       this[fn] = () => {
@@ -103,6 +105,8 @@ export class Node {
   }
 
   prepare() {
+    if(!this.known)
+      throw new StreamError(`symbol ${this.ident} undefined`);
     const srcTemp = this.src ? this.src.prepare() : null;
     const args2 = this.args.map(arg => arg.withSrc(srcTemp).prepare());
     const src2 = this.source !== false ? srcTemp : null;
@@ -115,6 +119,8 @@ export class Node {
 
   /* never called directly, convenience for register */
   prepareSrc() {
+    if(!this.known)
+      throw new StreamError(`symbol ${this.ident} undefined`);
     const src2 = this.src ? this.src.prepare() : null;
     this.checkArgs(src2, this.args);
     if(src2 === this.src)
@@ -146,7 +152,7 @@ export class Node {
   }
 
   eval() {
-    throw new StreamError(`symbol ${this.ident} undefined`);
+    throw new Error(`Node.prototype.eval()`);
   }
 
   evalStream(opts = {}) {
@@ -344,7 +350,6 @@ export class Stream {
 export class Register {
   constructor(parent) {
     this.parent = parent;
-    this.base = parent ? parent.base : this;
     this._map = {};
   }
 
@@ -354,7 +359,7 @@ export class Register {
       return;
     }
     ident = ident.toLowerCase();
-    if(this.base.includes(ident))
+    if(mainReg.includes(ident))
       throw new StreamError(`trying to overwrite base symbol ${ident}`);
     else if(this.includes(ident))
       throw new StreamError(`duplicate definition of ${ident}`);
