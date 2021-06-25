@@ -18,6 +18,12 @@ export class StreamError extends Error {
     this.desc = node.desc();
     return this;
   }
+
+  withToken(token) {
+    this.pos = token.pos;
+    this.len = token.value.length;
+    return this;
+  }
 }
 
 export class TimeoutError extends Error {
@@ -339,8 +345,27 @@ export class CustomNode extends Node {
   }
 
   prepare() {
-    const nnode = this.prepareAll();
-    return this.body.withScope({block: nnode}).prepare();
+    const pnode = this.prepareAll();
+    try {
+      const rnode = this.body.withScope({block: pnode}).prepare();
+      const pEval = rnode.eval;
+      rnode.eval = () => {
+        try {
+          return pEval.call(rnode);
+        } catch(e) {
+          if(e instanceof StreamError)
+            throw e.withToken(this.token);
+          else
+            throw e;
+        }
+      };
+      return rnode;
+    } catch(e) {
+      if(e instanceof StreamError)
+        throw e.withToken(this.token);
+      else
+        throw e;
+    }
   }
 
   withSrc(src) {
