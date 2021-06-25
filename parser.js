@@ -5,21 +5,21 @@ const cc = Enum.fromArray(['digit', 'alpha']);
 const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'spec']);
 
 const priority = Enum.fromObj({
-  ':': 7,
-  '.': 7,
-  '@': 7,
-  '^': 6,
-  '*': 5,
-  '/': 5,
-  '+': 4,
-  '-': 4,
-  '~': 3,
-  '%': 2,
-  '=': 1,
-  '>': 1,
-  '<': 1,
-  '>=': 1,
-  '<=': 1
+  ':': 8,
+  '.': 8,
+  '@': 8,
+  '^': 7,
+  '*': 6,
+  '/': 6,
+  '+': 5,
+  '-': 5,
+  '~': 4,
+  '%': 3,
+  '>': 2,
+  '<': 2,
+  '>=': 2,
+  '<=': 2,
+  '=': 1
 });
 
 const operMap = Enum.fromObj({
