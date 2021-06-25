@@ -5,9 +5,10 @@ const cc = Enum.fromArray(['digit', 'alpha']);
 const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'spec']);
 
 const priority = Enum.fromObj({
-  ':': 6,
-  '.': 6,
-  '@': 6,
+  ':': 7,
+  '.': 7,
+  '@': 7,
+  '^': 6,
   '*': 5,
   '/': 5,
   '+': 4,
@@ -26,6 +27,7 @@ const operMap = Enum.fromObj({
   '-': 'minus',
   '*': 'times',
   '/': 'div',
+  '^': 'pow',
   '~': 'join',
   '%': 'zip',
   '=': 'equal',
@@ -65,6 +67,7 @@ function tokcls(c) {
     case '-':
     case '*':
     case '/':
+    case '^':
     case '%':
     case '~':
     case '=':

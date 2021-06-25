@@ -177,6 +177,22 @@ mainReg.register('pow', {
       const pow = nnode.args[1].evalNum({min: 0n});
       return new Atom(base ** pow);
     }
+  },
+  desc: function() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.desc() + '.';
+    if(this.args.length === 2) {
+      ret += '(';
+      ret += this.args.map(n => n.desc()).join('^');
+      ret += ')';
+    } else {
+      ret += this.ident;
+      ret += '(';
+      ret += this.args.map(n => n.desc()).join(',');
+      ret += ')';
+    }
+    return ret;
   }
 });
 
