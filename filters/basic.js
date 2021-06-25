@@ -790,7 +790,7 @@ mainReg.register('equal', {
   source: false,
   minArg: 2,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     if(nnode.args.every(arg => arg.isAtom))
       return new Atom(eq(nnode.args));
     else

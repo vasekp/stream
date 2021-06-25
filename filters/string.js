@@ -66,7 +66,7 @@ mainReg.register('ord', {
   source: true,
   maxArg: 1,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     const c = nnode.src.evalAtom(S);
     if(nnode.args[0]) {
       const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(S));
@@ -88,7 +88,7 @@ mainReg.register('chr', {
   source: true,
   maxArg: 1,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     if(nnode.args[0]) {
       const ix = nnode.src.evalNum({min: 1n});
       const abc = nnode.args[0].evalStream({finite: true});
@@ -109,7 +109,7 @@ mainReg.register('chrm', {
   source: true,
   numArg: 1,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     let ix = nnode.src.evalNum() - 1n;
     const abc = nnode.args[0].evalStream({finite: true});
     if(typeof abc.len === 'bigint' && abc.len !== 0n) {

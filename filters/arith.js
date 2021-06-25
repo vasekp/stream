@@ -5,7 +5,7 @@ function regReducer(name, sign, fun) {
     source: false,
     minArg: 2,
     prepare: function() {
-      const nnode = Node.prototype.prepare.call(this);
+      const nnode = this.prepareAll();
       if(nnode.args.every(arg => arg.isAtom))
         return new Atom(nnode.args.map(arg => arg.numValue()).reduce(fun));
       else
@@ -70,7 +70,7 @@ regReducer('div', '/', (a, b) => a / b);
 
 mainReg.register('min', {
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     if(nnode.args.length > 0) {
       const ins = nnode.args.map(arg => arg.evalNum());
       const min = ins.reduce((a, b) => b < a ? b : a);
@@ -97,7 +97,7 @@ mainReg.register('min', {
 
 mainReg.register('max', {
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     if(nnode.args.length > 0) {
       const ins = nnode.args.map(arg => arg.evalNum());
       const max = ins.reduce((a, b) => b > a ? b : a);
@@ -165,7 +165,7 @@ mainReg.register('pow', {
   minArg: 1,
   maxArg: 2,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     if(nnode.args.length === 1) {
       if(!nnode.src)
         throw new StreamError('needs source');
@@ -185,7 +185,7 @@ mainReg.register('mod', {
   minArg: 1,
   maxArg: 2,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     const inp = nnode.src.evalNum();
     const mod = nnode.args[0].evalNum({min: 1n});
     const base = nnode.args[1] ? nnode.args[1].evalNum() : 0n;
@@ -222,7 +222,7 @@ function regComparer(name, sign, fun) {
     source: false,
     minArg: 2,
     prepare: function() {
-      const nnode = Node.prototype.prepare.call(this);
+      const nnode = this.prepareAll();
       if(nnode.args.every(arg => arg.isAtom)) {
         const vals = nnode.args.map(arg => arg.numValue());
         let res = true;
@@ -259,7 +259,7 @@ mainReg.register(['tobase', 'tbase'], {
   source: true,
   maxArg: 1,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     let val = nnode.src.evalNum();
     const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     const digit = c => c < 10 ? String.fromCharCode(c + 48) : String.fromCharCode(c + 97 - 10);
@@ -280,7 +280,7 @@ mainReg.register(['frombase', 'fbase'], {
   source: true,
   maxArg: 1,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     const str = nnode.src.evalAtom('string');
     const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
@@ -374,7 +374,7 @@ mainReg.register('isprime', {
   source: true,
   numArg: 0,
   prepare: function() {
-    const nnode = Node.prototype.prepare.call(this);
+    const nnode = this.prepareAll();
     const val = nnode.src.evalNum();
     if(val <= 1n)
       return new Atom(false);

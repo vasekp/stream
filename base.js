@@ -107,6 +107,10 @@ export class Node {
   prepare() {
     if(!this.known)
       throw new StreamError(`symbol ${this.ident} undefined`);
+    this.prepareAll();
+  }
+
+  prepareAll() {
     const srcTemp = this.src ? this.src.prepare() : null;
     const args2 = this.args.map(arg => arg.withSrc(srcTemp).prepare());
     const src2 = this.source !== false ? srcTemp : null;
@@ -117,10 +121,7 @@ export class Node {
       return new Node(this.ident, this.token, src2, args2, this.meta);
   }
 
-  /* never called directly, convenience for register */
   prepareSrc() {
-    if(!this.known)
-      throw new StreamError(`symbol ${this.ident} undefined`);
     const src2 = this.src ? this.src.prepare() : null;
     this.checkArgs(src2, this.args);
     if(src2 === this.src)
