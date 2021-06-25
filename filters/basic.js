@@ -670,14 +670,7 @@ mainReg.register(['drop', 'droptake', 'dt'], {
 mainReg.register('over', {
   source: true,
   minArg: 1,
-  prepare: function() {
-    const args2 = this.args.map(arg => arg.prepare());
-    this.checkArgs(this.src, args2);
-    if([...this.args.keys()].every(key => args2[key] === this.args[key]))
-      return this;
-    else
-      return new Node(this.ident, this.token, this.src, args2, this.meta);
-  },
+  prepare: Node.prototype.prepareArgs,
   eval: function() {
     const body = this.src;
     const args = this.args.map(arg => arg.evalStream());
@@ -831,10 +824,10 @@ mainReg.register('assign', {
         throw new StreamError(`expected symbol, got ${arg.type} ${arg.value}`);
     }
     args2.push(body);
-    if(this.src === null && [...this.args.keys()].every(key => args2[key] === this.args[key]))
-      return this;
-    else
-      return new Node(this.ident, this.token, null, args2, this.meta);
+    return this.modify({
+      src: null,
+      args: args2
+    });
   },
   withScope: function(scope) {
     const src2 = this.src ? this.src.withScope(scope) : null;

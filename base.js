@@ -4,6 +4,25 @@ import watchdog from './watchdog.js';
 const DEFLEN = 100;
 const DEFTIME = 1000;
 
+function anyChanged(node, what) {
+  for(const prop in what) {
+    if(prop === 'args')
+      continue;
+    if(node[prop] !== what[prop])
+      return true;
+  }
+  if(what.args) {
+    if(node.args.length !== what.args.length)
+      return true;
+    return [...node.args.keys()].some(key => node.args[key] !== what.args[key]);
+  } else
+    return false;
+}
+
+function coal(a, b) {
+  return a !== undefined ? a : b;
+}
+
 export class Node {
   constructor(ident, token, src = null, args = [], meta = {}) {
     this.ident = ident;
@@ -42,18 +61,24 @@ export class Node {
     }*/
   }
 
-  withSrc(src) {
-    const src2 = this.src ? this.src.withSrc(src) : src;
-    if(src2 === this.src)
-      return this;
+  modify(what) {
+    if(anyChanged(this, what))
+      return new Node(this.ident, this.token,
+        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
-      return new Node(this.ident, this.token, src2, this.args, this.meta);
+      return this;
+  }
+
+  withSrc(src) {
+    return this.modify({
+      src: this.src ? this.src.withSrc(src) : src
+    });
   }
 
   withArgs(args) {
     if(this.args.length !== 0)
       throw new Error('already have arguments');
-    return new Node(this.ident, this.token, this.src, args, this.meta);
+    return this.modify({args});
   }
 
   withScope(scope) {
@@ -64,10 +89,8 @@ export class Node {
       if(rec)
         return new CustomNode(this.ident, this.token, rec.body, src2, args2, this.meta);
       throw new StreamError(`symbol "${this.ident}" undefined`, this);
-    } else if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
-      return this;
-    else
-      return new Node(this.ident, this.token, src2, args2, this.meta);
+    } else
+      return this.modify({src: src2, args: args2});
   }
 
   prepare() {
@@ -78,23 +101,25 @@ export class Node {
   }
 
   prepareAll() {
-    const srcTemp = this.src ? this.src.prepare() : null;
-    const args2 = this.args.map(arg => arg.withSrc(srcTemp).prepare());
-    const src2 = this.source !== false ? srcTemp : null;
+    const src2 = this.src ? this.src.prepare() : null;
+    const args2 = this.args.map(arg => arg.withSrc(src2).prepare());
     this.checkArgs(src2, args2);
-    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
-      return this;
-    else
-      return new Node(this.ident, this.token, src2, args2, this.meta);
+    return this.modify({
+      src: this.source !== false ? src2 : null,
+      args: args2
+    });
   }
 
   prepareSrc() {
     const src2 = this.src ? this.src.prepare() : null;
     this.checkArgs(src2, this.args);
-    if(src2 === this.src)
-      return this;
-    else
-      return new Node(this.ident, this.token, src2, this.args, this.meta);
+    return this.modify({src: src2});
+  }
+
+  prepareArgs() {
+    const args2 = this.args.map(arg => arg.prepare());
+    this.checkArgs(this.src, args2);
+    return this.modify({args: args2});
   }
 
   checkArgs(src, args) {
@@ -198,11 +223,7 @@ export class Atom extends Node {
     this.type = typeof val === 'bigint' ? 'number' : typeof val; // displayed to user
   }
 
-  withSrc() {
-    return this;
-  }
-
-  withArgs() {
+  modify() {
     return this;
   }
 
@@ -252,22 +273,16 @@ export class Block extends Node {
     this.body = body;
   }
 
+  modify(what) {
+    if(anyChanged(this, what))
+      return new Block(coal(what.body, this.body), this.token,
+        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
+    else
+      return this;
+  }
+
   prepare() {
     return this.body.withScope({block: this}).prepare();
-  }
-
-  withSrc(src) {
-    const src2 = this.src ? this.src.withSrc(src) : src;
-    if(src2 === this.src)
-      return this;
-    else
-      return new Block(this.body, this.token, src, this.args, this.meta);
-  }
-
-  withArgs(args) {
-    if(this.args.length !== 0)
-      throw new Error('already have arguments');
-    return new Block(this.body, this.token, this.src, args, this.meta);
   }
 
   withScope(scope) {
@@ -275,7 +290,12 @@ export class Block extends Node {
     const args2 = this.args.map(arg => arg.withScope(scope));
     const scope2 = {...scope};
     delete scope2.block;
-    return new Block(this.body.withScope(scope2), this.token, src2, args2, this.meta);
+    const body2 = this.body.withScope(scope2);
+    return this.modify({
+      src: src2,
+      args: args2,
+      body: body2
+    });
   }
 }
 
@@ -283,6 +303,14 @@ export class CustomNode extends Node {
   constructor(ident, token, body, src = null, args = [], meta = {}) {
     super(ident, token, src, args, meta);
     this.body = body;
+  }
+
+  modify(what) {
+    if(anyChanged(this, what))
+      return new CustomNode(this.ident, this.token, coal(what.body, this.body),
+        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
+    else
+      return this;
   }
 
   prepare() {
@@ -307,29 +335,6 @@ export class CustomNode extends Node {
       else
         throw e;
     }
-  }
-
-  withSrc(src) {
-    const src2 = this.src ? this.src.withSrc(src) : src;
-    if(src2 === this.src)
-      return this;
-    else
-      return new CustomNode(this.ident, this.token, this.body, src, this.args, this.meta);
-  }
-
-  withArgs(args) {
-    if(this.args.length !== 0)
-      throw new Error('already have arguments');
-    return new CustomNode(this.ident, this.token, this.body, this.src, args, this.meta);
-  }
-
-  withScope(scope) {
-    const src2 = this.src ? this.src.withScope(scope) : null;
-    const args2 = this.args.map(arg => arg.withScope(scope));
-    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
-      return this;
-    else
-      return new CustomNode(this.ident, this.token, this.body, src2, args2, this.meta);
   }
 }
 
