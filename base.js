@@ -2,9 +2,21 @@ const DEFLEN = 100;
 const DEFTIME = 1000;
 
 export class StreamError extends Error {
-  constructor(msg) {
+  constructor(msg, node) {
     super();
     this.msg = msg;
+    if(node)
+      this.withNode(node);
+  }
+
+  withNode(node) {
+    if(this.node)
+      return this;
+    this.node = node;
+    this.pos = node.token.pos;
+    this.len = node.token.value.length;
+    this.desc = node.desc();
+    return this;
   }
 }
 
@@ -63,9 +75,10 @@ export class Node {
           watchdog.tick();
           return pFn.call(this);
         } catch(e) {
-          if(e instanceof StreamError && !e.node)
-            e.node = this;
-          throw e;
+          if(e instanceof StreamError)
+            throw e.withNode(this);
+          else
+            throw e;
         }
       };
     }
@@ -102,7 +115,7 @@ export class Node {
       const rec = scope.register.find(this.ident);
       if(rec)
         return new CustomNode(this.ident, this.token, rec.body, src2, args2, this.meta).prepare();
-      throw new StreamError(`symbol "${this.ident}" undefined`);
+      throw new StreamError(`symbol "${this.ident}" undefined`, this);
     } else if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
     else
@@ -366,9 +379,10 @@ export class Stream {
     try {
       return this.iter.next();
     } catch(e) {
-      if(e instanceof StreamError && !e.node)
-        e.node = this.node;
-      throw e;
+      if(e instanceof StreamError)
+        throw e.withNode(this.node);
+      else
+        throw e;
     }
   }
 

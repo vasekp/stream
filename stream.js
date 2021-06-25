@@ -23,11 +23,13 @@ repl.start({eval: str => {
         console.error(' '.repeat(e.pos) + '^'.repeat(e.len));
       console.error(`${e.name}: ${e.msg}`);
     } else if(e instanceof StreamError) {
-      if(e.node) {
+      if(e.len) {
         console.error(str);
-        console.error(' '.repeat(e.node.token.pos) + '^');
-        console.error(`${e.node.desc()}: ${e.msg}`);
-      } else
+        console.error(' '.repeat(e.pos) + '^'.repeat(e.len));
+      }
+      if(e.desc)
+        console.error(`${e.desc}: ${e.msg}`);
+      else
         console.error(e.msg);
     } else if(e instanceof TimeoutError) {
       console.error(`Timeout`);
