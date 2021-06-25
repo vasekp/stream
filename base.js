@@ -1,66 +1,8 @@
+import {StreamError} from './errors.js';
+import watchdog from './watchdog.js';
+
 const DEFLEN = 100;
 const DEFTIME = 1000;
-
-export class StreamError extends Error {
-  constructor(msg, node) {
-    super();
-    this.msg = msg;
-    if(node)
-      this.withNode(node);
-  }
-
-  withNode(node) {
-    if(this.node)
-      return this;
-    this.node = node;
-    this.pos = node.token.pos;
-    this.len = node.token.value.length;
-    this.desc = node.desc();
-    return this;
-  }
-
-  withToken(token) {
-    this.pos = token.pos;
-    this.len = token.value.length;
-    return this;
-  }
-}
-
-export class TimeoutError extends Error {
-  constructor(count) {
-    super();
-    this.count = count;
-  }
-}
-
-export const watchdog = (function() {
-  let timeEnd;
-  let counter = 0;
-
-  return {
-    start: function(limit) {
-      if(!timeEnd) {
-        timeEnd = Date.now() + limit;
-        counter = 0;
-      } else
-        throw new Error('Watchdog restarted without stopping');
-    },
-
-    stop: function() {
-      timeEnd = null;
-    },
-
-    tick: function() {
-      if((counter++ & 0xFFF) === 0) {
-        if(!timeEnd)
-          throw new Error('Watchdog tick() called without start()');
-        if(Date.now() > timeEnd) {
-          throw new TimeoutError(counter);
-        }
-      }
-    }
-  };
-})();
 
 export class Node {
   constructor(ident, token, src = null, args = [], meta = {}) {

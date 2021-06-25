@@ -1,4 +1,5 @@
-import {Node, Atom, Block, Stream, StreamError, checks, mainReg} from '../base.js';
+import {StreamError} from '../errors.js';
+import {Node, Atom, Block, Stream, checks, mainReg} from '../base.js';
 
 mainReg.register(['iota', 'seq'], {
   source: false,

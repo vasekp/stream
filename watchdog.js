@@ -1,0 +1,28 @@
+import {TimeoutError} from './errors.js';
+
+let timeEnd;
+let counter = 0;
+
+export default {
+  start(limit) {
+    if(!timeEnd) {
+      timeEnd = Date.now() + limit;
+      counter = 0;
+    } else
+      throw new Error('Watchdog restarted without stopping');
+  },
+
+  stop() {
+    timeEnd = null;
+  },
+
+  tick() {
+    if((counter++ & 0xFFF) === 0) {
+      if(!timeEnd)
+        throw new Error('Watchdog tick() called without start()');
+      if(Date.now() > timeEnd) {
+        throw new TimeoutError(counter);
+      }
+    }
+  }
+};

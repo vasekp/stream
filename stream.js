@@ -1,8 +1,9 @@
 import './filters/basic.js';
 import './filters/arith.js';
 import './filters/string.js';
-import {parse, ParseError} from './parser.js';
-import {History, Register, StreamError, TimeoutError, mainReg} from './base.js';
+import {StreamError, TimeoutError, ParseError} from './errors.js';
+import {parse} from './parser.js';
+import {History, Register, mainReg} from './base.js';
 
 import repl from 'repl';
 
