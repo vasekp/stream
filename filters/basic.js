@@ -1,6 +1,6 @@
 import {Node, Atom, Block, Stream, StreamError, checks, mainReg} from '../base.js';
 
-mainReg.register(['iota', 'seq', 'I'], {
+mainReg.register(['iota', 'seq'], {
   source: false,
   numArg: 0,
   eval: function() {
@@ -719,7 +719,7 @@ mainReg.register('if', {
     this.checkArgs(this.src, this.args);
     const src2 = this.src?.prepare();
     const val = this.args[0].withSrc(src2).prepare().evalAtom('boolean');
-    return this.args[val ? 1 : 2].withSrc(src2).prepare();//.eval();
+    return this.args[val ? 1 : 2].withSrc(src2).prepare();
   }
 });
 
