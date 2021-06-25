@@ -2,16 +2,17 @@ import './filters/basic.js';
 import './filters/arith.js';
 import './filters/string.js';
 import {parse, ParseError} from './parser.js';
-import {History, StreamError, TimeoutError} from './base.js';
+import {History, Register, StreamError, TimeoutError, mainReg} from './base.js';
 
 import repl from 'repl';
 
 const history = new History();
+const userReg = new Register(mainReg);
 
 repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
-    const node = parse(str).withScope({history}).timeConstr().prepare();
+    const node = parse(str).withScope({history, register: userReg}).timeConstr().prepare();
     const out = node.timeConstr().writeout();
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {

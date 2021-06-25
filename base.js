@@ -98,16 +98,22 @@ export class Node {
   withScope(scope) {
     const src2 = this.src ? this.src.withScope(scope) : null;
     const args2 = this.args.map(arg => arg.withScope(scope));
-    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+    if(scope.register && !this.known) {
+      const rec = scope.register.find(this.ident);
+      if(rec)
+        return new CustomNode(this.ident, this.token, rec.body, src2, args2, this.meta).prepare();
+      throw new StreamError(`symbol "${this.ident}" undefined`);
+    } else if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
     else
       return new Node(this.ident, this.token, src2, args2, this.meta);
   }
 
   prepare() {
-    if(!this.known)
-      throw new StreamError(`symbol ${this.ident} undefined`);
-    return this.prepareAll();
+    if(this.known)
+      return this.prepareAll();
+    else
+      throw new StreamError(`symbol "${this.ident}" undefined`);
   }
 
   prepareAll() {
@@ -313,6 +319,41 @@ export class Block extends Node {
   }
 }
 
+export class CustomNode extends Node {
+  constructor(ident, token, body, src = null, args = [], meta = {}) {
+    super(ident, token, src, args, meta);
+    this.body = body;
+  }
+
+  prepare() {
+    const nnode = this.prepareAll();
+    return this.body.withScope({block: nnode}).prepare();
+  }
+
+  withSrc(src) {
+    const src2 = this.src ? this.src.withSrc(src) : src;
+    if(src2 === this.src)
+      return this;
+    else
+      return new CustomNode(this.ident, this.token, this.body, src, this.args, this.meta);
+  }
+
+  withArgs(args) {
+    if(this.args.length !== 0)
+      throw new Error('already have arguments');
+    return new CustomNode(this.ident, this.token, this.body, this.src, args, this.meta);
+  }
+
+  withScope(scope) {
+    const src2 = this.src ? this.src.withScope(scope) : null;
+    const args2 = this.args.map(arg => arg.withScope(scope));
+    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+      return this;
+    else
+      return new CustomNode(this.ident, this.token, this.body, src2, args2, this.meta);
+  }
+}
+
 export class Stream {
   constructor(node, iter, opts) {
     this.isAtom = false;
@@ -359,8 +400,6 @@ export class Register {
     ident = ident.toLowerCase();
     if(mainReg.includes(ident))
       throw new StreamError(`trying to overwrite base symbol ${ident}`);
-    else if(this.includes(ident))
-      throw new StreamError(`duplicate definition of ${ident}`);
     else
       this._map[ident] = filter;
   }

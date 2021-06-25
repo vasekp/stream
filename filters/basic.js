@@ -808,7 +808,63 @@ mainReg.register('equal', {
       ret += this.args.map(n => n.desc()).join('=');
       ret += ')';
     } else
-      ret += name;
+      ret += this.ident;
+    return ret;
+  }
+});
+
+mainReg.register('assign', {
+  source: false,
+  minArg: 2,
+  prepare: function() {
+    this.checkArgs(this.src, this.args);
+    const args2 = this.args.slice();
+    const body = args2.pop().withSrc(this.src);
+    for(const arg of args2) {
+      if(!arg.bare)
+        throw new StreamError(`expected symbol, got ${arg.desc()}`);
+      if(arg instanceof Atom)
+        throw new StreamError(`expected symbol, got ${arg.type} ${arg.value}`);
+    }
+    args2.push(body);
+    if(this.src === null && [...this.args.keys()].every(key => args2[key] === this.args[key]))
+      return this;
+    else
+      return new Node(this.ident, this.token, null, args2, this.meta);
+  },
+  withScope: function(scope) {
+    const src2 = this.src ? this.src.withScope(scope) : null;
+    const args2 = this.args.slice();
+    args2.push(args2.pop().withScope(scope));
+    const nnode = new Node(this.ident, this.token, src2, args2, this.meta);
+    if(scope.register)
+      nnode.meta._register = scope.register;
+    return nnode;
+  },
+  eval: function() {
+    const args = this.args.slice();
+    const body = args.pop();
+    const idents = args.map(arg => arg.ident);
+    const reg = this.meta._register;
+    if(!reg)
+      throw new StreamError('out of scope');
+    for(const ident of idents)
+      reg.register(ident, {body});
+    return new Stream(this,
+      idents.map(ident => new Atom(ident)).values(),
+      {len: BigInt(idents.length)}
+    );
+  },
+  desc: function() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.desc() + '.';
+    if(this.args.length > 0) {
+      ret += '(';
+      ret += this.args.map(n => n.desc()).join('=');
+      ret += ')';
+    } else
+      ret += this.ident;
     return ret;
   }
 });
