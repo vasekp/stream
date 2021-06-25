@@ -107,7 +107,7 @@ export class Node {
   prepare() {
     if(!this.known)
       throw new StreamError(`symbol ${this.ident} undefined`);
-    this.prepareAll();
+    return this.prepareAll();
   }
 
   prepareAll() {
