@@ -120,7 +120,7 @@ export class Node {
     if(scope.register && !this.known) {
       const rec = scope.register.find(this.ident);
       if(rec)
-        return new CustomNode(this.ident, this.token, rec.body, src2, args2, this.meta).prepare();
+        return new CustomNode(this.ident, this.token, rec.body, src2, args2, this.meta);
       throw new StreamError(`symbol "${this.ident}" undefined`, this);
     } else if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
       return this;
@@ -331,10 +331,9 @@ export class Block extends Node {
   withScope(scope) {
     const src2 = this.src ? this.src.withScope(scope) : null;
     const args2 = this.args.map(arg => arg.withScope(scope));
-    if(src2 === this.src && [...this.args.keys()].every(key => args2[key] === this.args[key]))
-      return this;
-    else
-      return new Block(this.body, this.token, src2, args2, this.meta);
+    const scope2 = {...scope};
+    delete scope2.block;
+    return new Block(this.body.withScope(scope2), this.token, src2, args2, this.meta);
   }
 }
 
