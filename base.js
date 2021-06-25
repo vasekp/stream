@@ -20,7 +20,7 @@ export const watchdog = (function() {
   let counter = 0;
 
   return {
-    start: function(limit = DEFTIME) {
+    start: function(limit) {
       if(!timeEnd) {
         timeEnd = Date.now() + limit;
         counter = 0;
@@ -58,7 +58,7 @@ export class Node {
     }
     for(const fn of ['eval', 'prepare']) {
       const pFn = this[fn];
-      this[fn] = () => {
+      this[fn] = function() {
         try {
           watchdog.tick();
           return pFn.call(this);
@@ -127,15 +127,6 @@ export class Node {
       return this;
     else
       return new Node(this.ident, this.token, src2, this.args, this.meta);
-  }
-
-  prepareT(limit) {
-    try {
-      watchdog.start(limit);
-      return this.prepare();
-    } finally {
-      watchdog.stop();
-    }
   }
 
   checkArgs(src, args) {
@@ -215,13 +206,19 @@ export class Node {
     }
   }
 
-  writeoutT(maxLen, limit) {
-    try {
-      watchdog.start(limit);
-      return this.writeout(maxLen);
-    } finally {
-      watchdog.stop();
+  timeConstr(limit = DEFTIME) {
+    const ret = {};
+    for(const fn of ['eval', 'prepare', 'writeout']) {
+      ret[fn] = (...args) => {
+        try {
+          watchdog.start(limit);
+          return this[fn](...args);
+        } finally {
+          watchdog.stop();
+        }
+      }
     }
+    return ret;
   }
 }
 

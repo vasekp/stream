@@ -11,8 +11,8 @@ const history = new History();
 repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
-    const node = parse(str).withScope({history}).prepareT();
-    const out = node.writeoutT();
+    const node = parse(str).withScope({history}).timeConstr().prepare();
+    const out = node.timeConstr().writeout();
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {
     if(e instanceof ParseError) {
