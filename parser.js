@@ -346,11 +346,13 @@ function parse0(iter, open, close, array) {
       case tc.close:
         if(s.value !== close)
           throw s.value
-            ? new ParseError(`unexpected ${s.value}`, s)
+            ? new ParseError(`unexpected "${s.value}"`, s)
             : new ParseError(`unfinished expression`, open, s);
         if(state === ss.base) {
           if(!array)
             throw new ParseError(`empty input not allowed here`, open, s);
+          else if(ret.length !== 0)
+            throw new ParseError(`"${s.value}" can't appear here`, s);
           else
             return [];
         } else if(state === ss.oper)
