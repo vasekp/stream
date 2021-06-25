@@ -12,7 +12,12 @@ const userReg = new Register(mainReg);
 repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
-    const node = parse(str).withScope({history, register: userReg}).timeConstr().prepare();
+    let node = parse(str);
+    if(node.ident === 'equal')
+      node = node.toAssign();
+    node = node
+      .withScope({history, register: userReg})
+      .timeConstr().prepare();
     const out = node.timeConstr().writeout();
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {

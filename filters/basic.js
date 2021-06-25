@@ -810,6 +810,9 @@ mainReg.register('equal', {
     } else
       ret += this.ident;
     return ret;
+  },
+  toAssign: function() {
+    return new Node('assign', this.token, this.src, this.args, this.meta);
   }
 });
 
