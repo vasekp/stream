@@ -1,10 +1,20 @@
 import {StreamError} from './errors.js';
 import watchdog from './watchdog.js';
+import Enum from './enum.js';
 
 const DEFLEN = 100;
 const DEFTIME = 1000;
 
 export const debug = globalThis.process?.argv?.includes('debug');
+
+export const types = Enum.fromObj({
+  N: 'number',
+  S: 'string',
+  B: 'boolean',
+  stream: 'stream',
+  symbol: 'symbol',
+  expr: 'expression'
+});
 
 function anyChanged(node, what) {
   for(const prop in what) {
@@ -64,7 +74,7 @@ export class Node extends Base {
     this.args = args;
     this.meta = meta;
     this.bare = this.src === null && this.args.length === 0;
-    this.type = this.bare ? 'symbol' : '';
+    this.type = this.bare ? types.symbol : types.expr;
     const rec = mainReg.find(this.ident);
     if(rec) {
       this.known = true;
@@ -160,7 +170,7 @@ export class Node extends Base {
   }
 
   evalStream(opts = {}) {
-    const r = this.eval().checkType('stream');
+    const r = this.eval().checkType(types.stream);
     if(opts.finite && r.len === null)
       throw new StreamError('infinite stream');
     return r;
@@ -171,7 +181,7 @@ export class Node extends Base {
   }
 
   evalNum(opts = {}) {
-    return checkBounds(this.evalAtom('number'), opts);
+    return checkBounds(this.evalAtom(types.N), opts);
   }
 
   toString() {
@@ -250,11 +260,11 @@ export class Atom extends Node {
   }
 
   toString() {
-    switch(typeof this.value) {
-      case 'bigint':
-      case 'boolean':
+    switch(this.type) {
+      case types.N:
+      case types.B:
         return this.value.toString();
-      case 'string':
+      case types.S:
         return `"${this.value.replace(/"|"|\\/g, '\\$&')}"`; // " included once confuses Vim
       default:
         throw new Error(`unknown atom type ${typeof this.value}`);
@@ -262,7 +272,7 @@ export class Atom extends Node {
   }
 
   numValue(opts = {}) {
-    return checkBounds(this.checkType('number').value, opts);
+    return checkBounds(this.checkType(types.N).value, opts);
   }
 }
 
@@ -327,7 +337,7 @@ export class Stream extends Base {
     this.isAtom = false;
     this.node = node;
     this.iter = iter;
-    this.type = 'stream';
+    this.type = types.stream;
     Object.assign(this, opts);
   }
 

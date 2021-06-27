@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, mainReg} from '../base.js';
+import {Node, Atom, Block, Stream, types, mainReg} from '../base.js';
 
 mainReg.register(['iota', 'seq'], {
   reqSource: false,
@@ -164,7 +164,7 @@ mainReg.register('foreach', {
   },
   eval() {
     const sIn = this.src.evalStream();
-    const body = this.args[0];
+    const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
       (function*() {
         for(;;) {
@@ -507,7 +507,7 @@ mainReg.register('in', {
       ret += '##';
     else if(this.args.length === 1
         && this.args[0].isAtom
-        && this.args[0].type === 'number'
+        && this.args[0].type === types.N
         && this.args[0].value > 0n)
       ret += '#' + this.args[0].value;
     else {
@@ -528,7 +528,7 @@ mainReg.register('nest', {
   },
   eval() {
     let curr = this.src;
-    const body = this.args[0];
+    const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
       (function*() {
         for(;;) {
@@ -552,8 +552,10 @@ mainReg.register('reduce', {
   },
   eval() {
     const sIn = this.src.evalStream();
-    const bodyMem = this.args[0];
-    const bodyOut = this.args.length === 3 ? this.args[1] : bodyMem;
+    const bodyMem = this.args[0].checkType([types.symbol, types.expr]);;
+    const bodyOut = this.args.length === 3
+      ? this.args[1].checkType([types.symbol, types.expr])
+      : bodyMem;
     let curr;
     if(this.args.length > 1)
       curr = this.args[this.args.length - 1].prepare({src: this.src});
@@ -592,7 +594,7 @@ mainReg.register('recur', {
   },
   eval() {
     const sIn = this.src.evalStream({finite: true});
-    const body = this.args[0].checkType('stream');
+    const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
       (function*() {
         let prev = [...sIn].reverse();
@@ -691,7 +693,7 @@ mainReg.register('over', {
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
-    const body = this.src;
+    const body = this.src.checkType([types.symbol, types.expr]);
     const args = this.args.map(arg => arg.evalStream());
     const lens = args.map(arg => arg.len);
     const len = lens.some(len => len === undefined) ? undefined
@@ -850,7 +852,7 @@ mainReg.register('assign', {
     const args = this.args.slice();
     if(args.length) {
       const body = args.pop().prepare({...scope, partial: true, expand: true});
-      args.forEach(arg => arg.checkType('symbol'));
+      args.forEach(arg => arg.checkType(types.symbol));
       args.forEach(arg => console.log(arg.desc()));
       args.push(body);
     }
@@ -896,12 +898,12 @@ const strCompare = Intl.Collator().compare;
 function usort(arr, fn = x => x) {
   if(arr.length === 0)
     return arr;
-  const first = fn(arr[0]).checkType(['number', 'string']);
-  if(first.type === 'number') {
-    arr.forEach(a => fn(a).checkType('number'));
+  const first = fn(arr[0]).checkType([types.N, types.S]);
+  if(first.type === types.N) {
+    arr.forEach(a => fn(a).checkType(types.N));
     arr.sort((a, b) => numCompare(fn(a).value, fn(b).value));
-  } else if(first.type === 'string') {
-    arr.forEach(a => fn(a).checkType('string'));
+  } else if(first.type === types.S) {
+    arr.forEach(a => fn(a).checkType(types.S));
     arr.sort((a, b) => strCompare(fn(a).value, fn(b).value));
   }
 }
@@ -965,7 +967,7 @@ mainReg.register('history', {
       ret += '$';
     else if(this.args.length === 1
         && this.args[0].isAtom
-        && this.args[0].type === 'number'
+        && this.args[0].type === types.N
         && this.args[0].value > 0n)
       ret += '$' + this.args[0].value;
     else {

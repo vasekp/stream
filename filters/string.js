@@ -1,16 +1,14 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, mainReg} from '../base.js';
-
-const S = 'string';
+import {Node, Atom, Block, Stream, types, mainReg} from '../base.js';
 
 mainReg.register('split', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const str = this.src.evalAtom(S);
+    const str = this.src.evalAtom(types.S);
     if(this.args[0]) {
-      const ev = this.args[0].eval().checkType(['number', 'string']);
-      if(ev.type === S) {
+      const ev = this.args[0].eval().checkType([types.N, types.S]);
+      if(ev.type === types.S) {
         const sep = ev.value;
         const split = str.split(sep);
         return new Stream(this,
@@ -20,7 +18,7 @@ mainReg.register('split', {
           })(),
           {len: BigInt(split.length)}
         );
-      } else if(ev.type === 'number') {
+      } else if(ev.type === types.N) {
         const l = ev.value;
         const re = new RegExp(`.{1,${l}}`, 'ug');
         const split = [...str.match(re)];
@@ -48,13 +46,13 @@ mainReg.register('split', {
 mainReg.register('cat', {
   eval() {
     if(this.args.length > 1) {
-      const strs = this.args.map(arg => arg.evalAtom(S));
+      const strs = this.args.map(arg => arg.evalAtom(types.S));
       return new Atom(strs.join(''));
     } else {
       if(!this.src)
         throw new StreamError('requires source');
-      const strs = [...this.src.evalStream({finite: true})].map(a => a.evalAtom(S));
-      const sep = this.args[0] ? this.args[0].evalAtom(S) : '';
+      const strs = [...this.src.evalStream({finite: true})].map(a => a.evalAtom(types.S));
+      const sep = this.args[0] ? this.args[0].evalAtom(types.S) : '';
       return new Atom(strs.join(sep));
     }
   }
@@ -67,9 +65,9 @@ mainReg.register('ord', {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
-    const c = nnode.src.evalAtom(S);
+    const c = nnode.src.evalAtom(types.S);
     if(nnode.args[0]) {
-      const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(S));
+      const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(types.S));
       const ix = abc.indexOf(c);
       if(ix < 0)
         throw new StreamError(`character "${c}" not in list`);
@@ -137,8 +135,8 @@ mainReg.register('chars', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(S);
-    const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(S));
+    const str = this.src.evalAtom(types.S);
+    const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
     return new Stream(this,
       (function*() {
         let ix = 0;
@@ -165,8 +163,8 @@ mainReg.register('ords', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(S);
-    const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(S));
+    const str = this.src.evalAtom(types.S);
+    const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
     return new Stream(this,
       (function*() {
         let ix = 0;
@@ -197,7 +195,7 @@ mainReg.register('lcase', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
-    const str = this.prepareAll(scope).src.evalAtom(S);
+    const str = this.prepareAll(scope).src.evalAtom(types.S);
     return new Atom(str.toLowerCase());
   }
 });
@@ -206,7 +204,7 @@ mainReg.register('ucase', {
   reqSource: true,
   numArg: 0,
   prepare() {
-    const str = this.prepareAll(scope).src.evalAtom(S);
+    const str = this.prepareAll(scope).src.evalAtom(types.S);
     return new Atom(str.toUpperCase());
   }
 });
