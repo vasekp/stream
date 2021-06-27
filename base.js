@@ -44,6 +44,10 @@ export class Node {
       this[fn] = function(...args) {
         try {
           watchdog.tick();
+          if(debug && !(this instanceof Atom)) {
+            const detail = fn === 'prepare' ? `{${Object.keys(args[0]).join(',')}}` : '';
+            console.log(`${fn} ${this.desc()} ${detail}`);
+          }
           return pFn.call(this, ...args);
         } catch(e) {
           if(e instanceof StreamError)
@@ -54,13 +58,15 @@ export class Node {
       };
     }
     if(debug) {
-      const pPrep = this.prepare;
-      this.prepare = scope => {
-        const nnode = pPrep.call(this, scope);
-        if(nnode !== this)
-          console.log(`${this.desc()} => ${nnode.desc()}`);
-        return nnode;
-      };
+      for(const fn of ['prepare', 'modify']) {
+        const pFn = this[fn];
+        this[fn] = scope => {
+          const nnode = pFn.call(this, scope);
+          if(nnode !== this)
+            console.log(`${fn} ${this.desc()} => ${nnode.desc()}`);
+          return nnode;
+        };
+      }
     }
   }
 
