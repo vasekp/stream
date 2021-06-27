@@ -521,7 +521,7 @@ mainReg.register(['isnumber', 'isnum'], {
   }
 });
 
-function random0(ceil) {
+/*function random0(ceil) {
   return BigInt(Math.floor(Math.random() * Number(ceil)));
 }
 
@@ -578,4 +578,4 @@ mainReg.register(['random', 'rnd'], {
       return vals[ix].eval();
     }
   }
-});
+});*/
