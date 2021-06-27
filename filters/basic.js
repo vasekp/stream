@@ -843,33 +843,26 @@ mainReg.register('equal', {
   }
 });
 
-/*mainReg.register('assign', {
+mainReg.register('assign', {
   source: false,
   minArg: 2,
-  prepare: function() {
-    this.checkArgs(this.src, this.args);
-    const args2 = this.args.slice();
-    const body = args2.pop().withSrc(this.src);
-    for(const arg of args2) {
-      if(!arg.bare)
-        throw new StreamError(`expected symbol, got ${arg.desc()}`);
-      if(arg instanceof Atom)
-        throw new StreamError(`expected symbol, got ${arg.type} ${arg.value}`);
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.slice();
+    if(args.length) {
+      const body = args.pop().prepare({...scope, partial: true, expand: true});
+      for(const arg of args) {
+        if(!arg.bare)
+          throw new StreamError(`expected symbol, got ${arg.desc()}`);
+        if(arg instanceof Atom)
+          throw new StreamError(`expected symbol, got ${arg.type} ${arg.value}`);
+      }
+      args.push(body);
     }
-    args2.push(body);
-    return this.modify({
-      src: null,
-      args: args2
-    });
-  },
-  withScope: function(scope) {
-    const src2 = this.src ? this.src.withScope(scope) : null;
-    const args2 = this.args.slice();
-    args2.push(args2.pop().withScope(scope));
-    const nnode = new Node(this.ident, this.token, src2, args2, this.meta);
+    const mod = {src: null, args};
     if(scope.register)
-      nnode.meta._register = scope.register;
-    return nnode;
+      mod.meta = {...this.meta, _register: scope.register};
+    return this.modify(mod).check(scope.partial);
   },
   eval: function() {
     const args = this.args.slice();
@@ -897,7 +890,7 @@ mainReg.register('equal', {
       ret += this.ident;
     return ret;
   }
-});*/
+});
 
 function numCompare(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;

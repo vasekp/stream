@@ -63,7 +63,7 @@ export class Node {
         this[fn] = scope => {
           const nnode = pFn.call(this, scope);
           if(nnode !== this)
-            console.log(`${fn} ${this.desc()} => ${nnode.desc()}`);
+            console.log(`${fn} ${this.desc()} {${Object.keys(scope).join(',')}} => ${nnode.desc()}`);
           return nnode;
         };
       }
@@ -72,10 +72,16 @@ export class Node {
 
   modify(what) {
     if(anyChanged(this, what))
-      return new Node(this.ident, this.token,
+      return new Node(this.ident, coal(what.token, this.token),
         coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
+  }
+
+  deepModify(what) {
+    const src = this.src?.deepModify(what);
+    const args = this.args.map(arg => arg.deepModify(what));
+    return this.modify({...what, src, args});
   }
 
   prepare(scope) {
@@ -84,7 +90,7 @@ export class Node {
     else if(scope.register) {
       const rec = scope.register.find(this.ident);
       if(rec)
-        return new CustomNode(this.ident, this.token, rec.body.prepare({token: this.token, partial: true}),
+        return new CustomNode(this.ident, this.token, rec.body,
           this.src, this.args, this.meta).prepare(scope);
     } // !scope.register OR record not found
     throw new StreamError(`symbol "${this.ident}" undefined`);
@@ -257,7 +263,7 @@ export class Block extends Node {
 
   modify(what) {
     if(anyChanged(this, what))
-      return new Block(this.ident, this.token, coal(what.body, this.body),
+      return new Block(this.ident, coal(what.token, this.token), coal(what.body, this.body),
         coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
@@ -266,7 +272,7 @@ export class Block extends Node {
   prepare(scope) {
     const pnode = this.prepareAll(scope);
     const pbody = this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args}});
-    return scope.partial ? pnode.modify({body: pbody}) : pbody;
+    return scope.partial && !scope.expand ? pnode.modify({body: pbody}) : pbody;
   }
 
   apply(args) {
@@ -288,12 +294,12 @@ export class Block extends Node {
 
 export class CustomNode extends Block {
   constructor(ident, token, body, src = null, args = [], meta = {}) {
-    super(ident, token, body, src, args, meta);
+    super(ident, token, body.deepModify({token}), src, args, meta);
   }
 
   modify(what) {
     if(anyChanged(this, what))
-      return new CustomNode(this.ident, this.token, coal(what.body, this.body),
+      return new CustomNode(this.ident, coal(what.token, this.token), coal(what.body, this.body),
         coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
