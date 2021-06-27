@@ -219,7 +219,7 @@ class Stack {
       const entry = this._stack.shift();
       switch(entry.token.value) {
         case '.':
-          term.src = entry.terms[0];
+          term = term.modify({src: entry.terms[0]});
           break;
         case ':':
           term = new Node('foreach', entry.token, entry.terms[0], [term]);
