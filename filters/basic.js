@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, checks, mainReg} from '../base.js';
+import {Node, Atom, Block, Stream, mainReg} from '../base.js';
 
 mainReg.register(['iota', 'seq'], {
   reqSource: false,
@@ -304,7 +304,6 @@ mainReg.register(['group', 'g'], {
     return new Stream(this,
       (function*() {
         for(const len of lFun) {
-          checks.bounds(len, {min: 0n});
           const r = [];
           for(let i = 0n; i < len; i++) {
             const {value, done} = sIn.next();
@@ -593,7 +592,7 @@ mainReg.register('recur', {
   },
   eval() {
     const sIn = this.src.evalStream({finite: true});
-    const body = checks.stream(this.args[0]);
+    const body = this.args[0].checkType('stream');
     return new Stream(this,
       (function*() {
         let prev = [...sIn].reverse();
@@ -851,12 +850,8 @@ mainReg.register('assign', {
     const args = this.args.slice();
     if(args.length) {
       const body = args.pop().prepare({...scope, partial: true, expand: true});
-      for(const arg of args) {
-        if(!arg.bare)
-          throw new StreamError(`expected symbol, got ${arg.desc()}`);
-        if(arg instanceof Atom)
-          throw new StreamError(`expected symbol, got ${arg.desc()}`);
-      }
+      args.forEach(arg => arg.checkType('symbol'));
+      args.forEach(arg => console.log(arg.desc()));
       args.push(body);
     }
     const mod = {src: null, args};
@@ -901,17 +896,14 @@ const strCompare = Intl.Collator().compare;
 function usort(arr, fn = x => x) {
   if(arr.length === 0)
     return arr;
-  const first = fn(arr[0]);
-  if(!first.isAtom)
-    throw new StreamError(`expected number or string, got ${first.desc()}`);
+  const first = fn(arr[0]).checkType(['number', 'string']);
   if(first.type === 'number') {
-    arr.forEach(a => checks.num(fn(a)));
+    arr.forEach(a => fn(a).checkType('number'));
     arr.sort((a, b) => numCompare(fn(a).value, fn(b).value));
   } else if(first.type === 'string') {
-    arr.forEach(a => checks.atom(fn(a), 'string'));
+    arr.forEach(a => fn(a).checkType('string'));
     arr.sort((a, b) => strCompare(fn(a).value, fn(b).value));
-  } else
-    throw new StreamError(`expected number or string, got ${first.desc()}`);
+  }
 }
 
 mainReg.register('sort', {

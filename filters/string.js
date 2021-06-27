@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, checks, mainReg} from '../base.js';
+import {Node, Atom, Block, Stream, mainReg} from '../base.js';
 
 const S = 'string';
 
@@ -9,9 +9,7 @@ mainReg.register('split', {
   eval() {
     const str = this.src.evalAtom(S);
     if(this.args[0]) {
-      const ev = this.args[0].eval();
-      if(!ev.isAtom)
-        throw new StreamError(`expected number or string, got ${first.desc()}`);
+      const ev = this.args[0].eval().checkType(['number', 'string']);
       if(ev.type === S) {
         const sep = ev.value;
         const split = str.split(sep);
@@ -33,8 +31,7 @@ mainReg.register('split', {
           })(),
           {len: BigInt(split.length)}
         );
-      } else
-        throw new StreamError(`expected number or string, got ${first.desc()}`);
+      }
     } else {
       const chars = [...str];
       return new Stream(this,

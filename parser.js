@@ -318,7 +318,8 @@ function parse0(iter, open, close, array) {
               throw new Error(`internal parser error: tc.open "${s.value}"`);
           }
         } else if(state === ss.sym && s.value === '(') {
-          term.args = parse0(iter, s, ')', true);
+          const args = parse0(iter, s, ')', true);
+          term = term.modify({args});
           state = ss.term;
         } else if(s.value === '{' && state === ss.oper) {
           const body = parse0(iter, s, '}', false);

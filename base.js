@@ -4,6 +4,8 @@ import watchdog from './watchdog.js';
 const DEFLEN = 100;
 const DEFTIME = 1000;
 
+export const debug = globalThis.process?.argv?.includes('debug');
+
 function anyChanged(node, what) {
   for(const prop in what) {
     if(prop === 'args')
@@ -25,11 +27,31 @@ function coal(a, b) {
   return a !== undefined ? a : b;
 }
 
-export const debug = globalThis.process?.argv?.includes('debug');
+function checkBounds(value, opts = {}) {
+  if(opts.min !== undefined && value < opts.min)
+    throw new StreamError(`expected ${
+      opts.min === 0n ? 'nonnegative'
+      : opts.min === 1n ? 'positive'
+      : `≥ ${opts.min}`}, got ${value}`);
+  if(opts.max !== undefined && value > opts.max)
+    throw new StreamError(`value ${value} exceeds maximum ${opts.max}`);
+  return value;
+}
 
 class Base {
   desc() {
     return this.type ? `${this.type} ${this.toString()}` : this.toString();
+  }
+
+  checkType(type) {
+    if(type instanceof Array) {
+      if(!type.includes(this.type))
+        throw new StreamError(`expected ${type.join(' or ')}, got ${this.desc()}`);
+    } else
+      if(this.type !== type)
+        throw new StreamError(`expected ${type}, got ${this.desc()}`);
+    // else
+    return this;
   }
 }
 
@@ -41,6 +63,8 @@ export class Node extends Base {
     this.src = src;
     this.args = args;
     this.meta = meta;
+    this.bare = this.src === null && this.args.length === 0;
+    this.type = this.bare ? 'symbol' : '';
     const rec = mainReg.find(this.ident);
     if(rec) {
       this.known = true;
@@ -136,20 +160,18 @@ export class Node extends Base {
   }
 
   evalStream(opts = {}) {
-    const r = this.eval();
-    if(r.isAtom)
-      throw new StreamError(`expected stream, got ${r.desc()}`);
+    const r = this.eval().checkType('stream');
     if(opts.finite && r.len === null)
       throw new StreamError('infinite stream');
     return r;
   }
 
   evalAtom(type) {
-    return this.eval().asAtom(type);
+    return this.eval().checkType(type).value;
   }
 
   evalNum(opts = {}) {
-    return checks.bounds(this.evalAtom('number'), opts);
+    return checkBounds(this.evalAtom('number'), opts);
   }
 
   toString() {
@@ -160,10 +182,6 @@ export class Node extends Base {
     if(this.args.length)
       ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     return ret;
-  }
-
-  get bare() {
-    return this.src === null && this.args.length === 0;
   }
 
   writeout(maxLen = DEFLEN) {
@@ -243,19 +261,8 @@ export class Atom extends Node {
     }
   }
 
-  asAtom(type) {
-    return this.getTyped(type);
-  }
-
-  getTyped(type) {
-    if(this.type === type)
-      return this.value;
-    else
-      throw new StreamError(`expected ${type}, got ${this.desc()}`);
-  }
-
   numValue(opts = {}) {
-    return checks.bounds(this.getTyped('number'), opts);
+    return checkBounds(this.checkType('number').value, opts);
   }
 }
 
@@ -344,10 +351,6 @@ export class Stream extends Base {
       this.next();
   }
 
-  asAtom(type) {
-    throw new StreamError(`expected ${type}, got ${this.desc()}`);
-  }
-
   toString() {
     return this.node.toString();
   }
@@ -410,35 +413,5 @@ export class History {
       return null;
     else
       return this._hist[this._hist.length - 1];
-  }
-};
-
-export const checks = {
-  bounds(value, opts = {}) {
-    if(opts.min !== undefined && value < opts.min)
-      throw new StreamError(`expected ${
-        opts.min === 0n ? 'nonnegative'
-        : opts.min === 1n ? 'positive'
-        : `≥ ${opts.min}`}, got ${value}`);
-    if(opts.max !== undefined && value > opts.max)
-      throw new StreamError(`value ${value} exceeds maximum ${opts.max}`);
-    return value;
-  },
-  atom(r, type) {
-    if(!r.isAtom)
-      throw new StreamError(`expected ${type}, got ${r.desc()}`);
-    if(r.type !== type)
-      throw new StreamError(`expected ${type}, got ${r.desc()}`);
-    return r;
-  },
-  num(r, opts = {}) {
-    checks.atom(r, 'number');
-    checks.bounds(r.value, opts);
-    return r;
-  },
-  stream(r) {
-    if(r.isAtom)
-      throw new StreamError(`expected stream, got ${r.desc()}`);
-    return r;
   }
 };
