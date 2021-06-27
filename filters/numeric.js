@@ -270,7 +270,7 @@ mainReg.register(['every', 'each', 'all'], {
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -288,7 +288,7 @@ mainReg.register('some', {
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {

@@ -352,7 +352,7 @@ mainReg.register('nest', {
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -376,7 +376,7 @@ mainReg.register('reduce', {
   maxArg: 3,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -406,7 +406,7 @@ mainReg.register('recur', {
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -464,7 +464,7 @@ mainReg.register('if', {
   numArg: 3,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     const pnode = this.modify({src, args}).check(scope.partial);
     if(scope.partial)
       return pnode;
@@ -480,7 +480,7 @@ mainReg.register(['select', 'sel'], {
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -502,7 +502,7 @@ mainReg.register('while', {
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -545,7 +545,7 @@ mainReg.register('sort', {
   maxArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {

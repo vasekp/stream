@@ -139,7 +139,7 @@ export class Node extends Base {
 
   prepareAll(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src}));
+    const args = this.args.map(arg => arg.prepare({...scope, src}));
     return this.modify({src: !scope.partial && this.reqSource === false ? null : src, args}).check(scope.partial);
   }
 

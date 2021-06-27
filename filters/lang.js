@@ -25,7 +25,7 @@ mainReg.register('foreach', {
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -251,7 +251,7 @@ mainReg.register('over', {
   minArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare({...scope, partial: true}) : scope.src;
-    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src}));
+    const args = this.args.map(arg => arg.prepare({...scope, src}));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
