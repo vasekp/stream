@@ -97,12 +97,9 @@ export class Node {
   }
 
   prepareAll(scope) {
-    const src2 = this.src ? this.src.prepare(scope) : scope.src;
-    const args2 = (scope.args || this.args).map(arg => arg.prepare({...scope, src: src2}));
-    return this.modify({
-      src: this.source !== false ? src2 : null,
-      args: args2
-    }).check(scope.partial);
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src}));
+    return this.modify({src: !scope.partial && this.source === false ? null : src, args}).check(scope.partial);
   }
 
   apply(args) {

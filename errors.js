@@ -15,12 +15,6 @@ export class StreamError extends Error {
     this.desc = node.desc();
     return this;
   }
-
-  withToken(token) {
-    this.pos = token.pos;
-    this.len = token.value.length;
-    return this;
-  }
 }
 
 export class TimeoutError extends Error {
