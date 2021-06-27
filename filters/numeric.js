@@ -341,15 +341,16 @@ regComparer('gt', '>', (a, b) => a > b);
 regComparer('le', '<=', (a, b) => a <= b);
 regComparer('ge', '>=', (a, b) => a >= b);
 
-mainReg.register(['tobase', 'tbase'], {
+mainReg.register(['tobase', 'tbase', 'tb'], {
   reqSource: true,
-  maxArg: 1,
+  maxArg: 2,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
     let val = nnode.src.evalNum();
     const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    const minl = nnode.args[1] ? Number(nnode.args[1].evalNum({min: 1n})) : 0;
     const digit = c => c < 10 ? String.fromCharCode(c + 48) : String.fromCharCode(c + 97 - 10);
     let ret = val < 0 ? '-' : val > 0 ? '' : '0';
     if(val < 0)
@@ -360,13 +361,13 @@ mainReg.register(['tobase', 'tbase'], {
       val /= base;
     }
     ret += digits.reverse().map(d => digit(Number(d))).join('');
-    return new Atom(ret);
+    return new Atom(ret.padStart(minl, '0'));
   }
 });
 
-mainReg.register(['frombase', 'fbase'], {
+mainReg.register(['frombase', 'fbase', 'fb'], {
   reqSource: true,
-  maxArg: 1,
+  maxArg: 2,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
@@ -393,15 +394,18 @@ mainReg.register(['frombase', 'fbase'], {
 
 mainReg.register(['todigits', 'tdig'], {
   reqSource: true,
-  maxArg: 1,
+  maxArg: 2,
   eval() {
     let val = this.src.evalNum({min: 0n});
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    const minl = this.args[1] ? Number(this.args[1].evalNum({min: 1n})) : 0;
     const digits = [];
     while(val) {
       digits.push(val % base);
       val /= base;
     }
+    while(digits.length < minl)
+      digits.push(0);
     return new Stream(this,
       digits.reverse().map(d => new Atom(d)).values(),
       {len: BigInt(digits.length)}
