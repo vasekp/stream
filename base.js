@@ -99,7 +99,7 @@ export class Node {
   prepareAll(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src}));
-    return this.modify({src: !scope.partial && this.source === false ? null : src, args}).check(scope.partial);
+    return this.modify({src: !scope.partial && this.reqSource === false ? null : src, args}).check(scope.partial);
   }
 
   apply(args) {
@@ -111,7 +111,7 @@ export class Node {
   check(skipCheck = false) {
     if(skipCheck)
       return this;
-    if(this.source && !this.src)
+    if(this.reqSource && !this.src)
       throw new StreamError(`requires source`);
     if(this.numArg === 0 && this.args.length > 0)
       throw new StreamError(`does not allow arguments`);

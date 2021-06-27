@@ -2,7 +2,7 @@ import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, checks, mainReg} from '../base.js';
 
 mainReg.register(['iota', 'seq'], {
-  source: false,
+  reqSource: false,
   numArg: 0,
   eval() {
     let i = 1n;
@@ -17,7 +17,7 @@ mainReg.register(['iota', 'seq'], {
 });
 
 mainReg.register(['range', 'ran', 'r'], {
-  source: false,
+  reqSource: false,
   minArg: 1,
   maxArg: 3,
   eval() {
@@ -44,7 +44,7 @@ mainReg.register(['range', 'ran', 'r'], {
 });
 
 mainReg.register(['length', 'len'], {
-  source: true,
+  reqSource: true,
   numArg: 0,
   eval() {
     const sIn = this.src.evalStream({finite: true});
@@ -61,7 +61,7 @@ mainReg.register(['length', 'len'], {
 });
 
 mainReg.register('first', {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     const sIn = this.src.evalStream();
@@ -93,7 +93,7 @@ mainReg.register('first', {
 });
 
 mainReg.register('last', {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     const sIn = this.src.evalStream({finite: true});
@@ -136,7 +136,7 @@ mainReg.register('last', {
 });
 
 mainReg.register('array', {
-  source: false,
+  reqSource: false,
   eval() {
     return new Stream(this,
       this.args.values(),
@@ -155,7 +155,7 @@ mainReg.register('array', {
 });
 
 mainReg.register('foreach', {
-  source: true,
+  reqSource: true,
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -193,7 +193,7 @@ mainReg.register('foreach', {
 });
 
 mainReg.register('id', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   prepare(scope) {
     const pnode = this.prepareAll(scope);
@@ -212,7 +212,7 @@ mainReg.register('id', {
 });
 
 mainReg.register(['repeat', 'rep'], {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     const src = this.src;
@@ -239,7 +239,7 @@ mainReg.register(['repeat', 'rep'], {
 });
 
 mainReg.register(['cycle', 'cc'], {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     const src = this.src;
@@ -273,7 +273,7 @@ mainReg.register(['cycle', 'cc'], {
 });
 
 mainReg.register(['group', 'g'], {
-  source: true,
+  reqSource: true,
   minArg: 1,
   eval() {
     const sIn = this.src.evalStream();
@@ -325,7 +325,7 @@ mainReg.register(['group', 'g'], {
 });
 
 mainReg.register(['flatten', 'fl'], {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     const depth = this.args[0] ? this.args[0].evalNum() : null;
@@ -351,7 +351,7 @@ mainReg.register(['flatten', 'fl'], {
 });
 
 mainReg.register('join', {
-  source: false,
+  reqSource: false,
   eval() {
     const args = this.args.map(arg => arg.eval());
     const lens = args.map(arg => arg.isAtom ? 1n : arg.len);
@@ -385,7 +385,7 @@ mainReg.register('join', {
 });
 
 mainReg.register('zip', {
-  source: false,
+  reqSource: false,
   eval() {
     const args = this.args.map(arg => arg.evalStream());
     const lens = args.map(arg => arg.len);
@@ -437,7 +437,7 @@ function part(sIn, iter) {
 }
 
 mainReg.register('part', {
-  source: true,
+  reqSource: true,
   minArg: 1,
   eval() {
     const sIn = this.src.evalStream();
@@ -520,7 +520,7 @@ mainReg.register('in', {
 });
 
 mainReg.register('nest', {
-  source: true,
+  reqSource: true,
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -543,7 +543,7 @@ mainReg.register('nest', {
 });
 
 mainReg.register('reduce', {
-  source: true,
+  reqSource: true,
   minArg: 1,
   maxArg: 3,
   prepare(scope) {
@@ -584,7 +584,7 @@ mainReg.register('reduce', {
 });
 
 mainReg.register('recur', {
-  source: true,
+  reqSource: true,
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -610,7 +610,7 @@ mainReg.register('recur', {
 });
 
 mainReg.register(['reverse', 'rev'], {
-  source: true,
+  reqSource: true,
   numArg: 0,
   eval() {
     const sIn = this.src.evalStream({finite: true});
@@ -643,7 +643,7 @@ function takedrop(sIn, iter) {
 }
 
 mainReg.register(['take', 'takedrop', 'td'], {
-  source: true,
+  reqSource: true,
   minArg: 1,
   eval() {
     const sIn = this.src.evalStream();
@@ -663,7 +663,7 @@ mainReg.register(['take', 'takedrop', 'td'], {
 });
 
 mainReg.register(['drop', 'droptake', 'dt'], {
-  source: true,
+  reqSource: true,
   minArg: 1,
   eval() {
     const sIn = this.src.evalStream();
@@ -684,7 +684,7 @@ mainReg.register(['drop', 'droptake', 'dt'], {
 });
 
 mainReg.register('over', {
-  source: true,
+  reqSource: true,
   minArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare({...scope, partial: true}) : scope.src;
@@ -743,7 +743,7 @@ mainReg.register('if', {
 });
 
 mainReg.register(['select', 'sel'], {
-  source: true,
+  reqSource: true,
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -765,7 +765,7 @@ mainReg.register(['select', 'sel'], {
 });
 
 mainReg.register('while', {
-  source: true,
+  reqSource: true,
   numArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -814,7 +814,7 @@ function eq(args) {
 }
 
 mainReg.register('equal', {
-  source: false,
+  reqSource: false,
   minArg: 2,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -844,7 +844,7 @@ mainReg.register('equal', {
 });
 
 mainReg.register('assign', {
-  source: false,
+  reqSource: false,
   minArg: 2,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -915,7 +915,7 @@ function usort(arr, fn = x => x) {
 }
 
 mainReg.register('sort', {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -944,7 +944,7 @@ mainReg.register('sort', {
 });
 
 mainReg.register('history', {
-  source: false,
+  reqSource: false,
   maxArg: 1,
   prepare(scope) {
     if(scope.history) {

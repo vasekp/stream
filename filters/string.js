@@ -4,7 +4,7 @@ import {Node, Atom, Block, Stream, checks, mainReg} from '../base.js';
 const S = 'string';
 
 mainReg.register('split', {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     const str = this.src.evalAtom(S);
@@ -64,7 +64,7 @@ mainReg.register('cat', {
 });
 
 mainReg.register('ord', {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -88,7 +88,7 @@ mainReg.register('ord', {
 });
 
 mainReg.register('chr', {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -111,7 +111,7 @@ mainReg.register('chr', {
 });
 
 mainReg.register('chrm', {
-  source: true,
+  reqSource: true,
   numArg: 1,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -137,7 +137,7 @@ mainReg.register('chrm', {
 });
 
 mainReg.register('chars', {
-  source: true,
+  reqSource: true,
   numArg: 1,
   eval() {
     const str = this.src.evalAtom(S);
@@ -165,7 +165,7 @@ mainReg.register('chars', {
 });
 
 mainReg.register('ords', {
-  source: true,
+  reqSource: true,
   numArg: 1,
   eval() {
     const str = this.src.evalAtom(S);
@@ -197,7 +197,7 @@ mainReg.register('ords', {
 });
 
 mainReg.register('lcase', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   prepare(scope) {
     const str = this.prepareAll(scope).src.evalAtom(S);
@@ -206,7 +206,7 @@ mainReg.register('lcase', {
 });
 
 mainReg.register('ucase', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   prepare() {
     const str = this.prepareAll(scope).src.evalAtom(S);
@@ -215,7 +215,7 @@ mainReg.register('ucase', {
 });
 
 mainReg.register('abc', {
-  source: false,
+  reqSource: false,
   numArg: 0,
   eval() {
     const ucase = this.ident === 'ABC';

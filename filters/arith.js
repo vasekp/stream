@@ -4,7 +4,7 @@ import watchdog from '../watchdog.js';
 
 function regReducer(name, sign, fun) {
   mainReg.register(name, {
-    source: false,
+    reqSource: false,
     minArg: 2,
     prepare(scope) {
       const nnode = this.prepareAll(scope);
@@ -129,7 +129,7 @@ mainReg.register('max', {
 });
 
 mainReg.register(['total', 'tot'], {
-  source: true,
+  reqSource: true,
   numArg: 0,
   eval() {
     const str = this.src.evalStream({finite: true});
@@ -141,7 +141,7 @@ mainReg.register(['total', 'tot'], {
 });
 
 mainReg.register('diff', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   eval() {
     const sIn = this.src.evalStream();
@@ -205,7 +205,7 @@ mainReg.register('pow', {
 });
 
 mainReg.register('mod', {
-  source: true,
+  reqSource: true,
   minArg: 1,
   maxArg: 2,
   prepare(scope) {
@@ -222,7 +222,7 @@ mainReg.register('mod', {
 });
 
 mainReg.register('odd', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -234,7 +234,7 @@ mainReg.register('odd', {
 });
 
 mainReg.register('even', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -247,7 +247,7 @@ mainReg.register('even', {
 
 function regComparer(name, sign, fun) {
   mainReg.register(name, {
-    source: false,
+    reqSource: false,
     minArg: 2,
     prepare(scope) {
       const nnode = this.prepareAll(scope);
@@ -286,7 +286,7 @@ regComparer('le', '<=', (a, b) => a <= b);
 regComparer('ge', '>=', (a, b) => a >= b);
 
 mainReg.register(['tobase', 'tbase'], {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -309,7 +309,7 @@ mainReg.register(['tobase', 'tbase'], {
 });
 
 mainReg.register(['frombase', 'fbase'], {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -336,7 +336,7 @@ mainReg.register(['frombase', 'fbase'], {
 });
 
 mainReg.register(['todigits', 'tdig'], {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     let val = this.src.evalNum({min: 0n});
@@ -354,7 +354,7 @@ mainReg.register(['todigits', 'tdig'], {
 });
 
 mainReg.register(['fromdigits', 'fdig'], {
-  source: true,
+  reqSource: true,
   maxArg: 1,
   eval() {
     const sIn = this.src.evalStream({finite: true});
@@ -391,7 +391,7 @@ const primes = (() => {
 })();
 
 mainReg.register('primes', {
-  source: false,
+  reqSource: false,
   numArg: 0,
   eval() {
     return new Stream(this,
@@ -405,7 +405,7 @@ mainReg.register('primes', {
 });
 
 mainReg.register('isprime', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -426,7 +426,7 @@ mainReg.register('isprime', {
 });
 
 mainReg.register('factor', {
-  source: true,
+  reqSource: true,
   numArg: 0,
   eval() {
     let val = this.src.evalNum({min: 1n});
