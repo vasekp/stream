@@ -256,10 +256,13 @@ mainReg.register(['cycle', 'cc'], {
         }
       );
     } else {
+      let ev = src.evalStream();
       return new Stream(this,
         (function*() {
-          for(;;)
-            yield* src.evalStream();
+          for(;;) {
+            yield* ev;
+            ev = src.evalStream();
+          }
         })(),
         {
           len: ev.len === undefined ? undefined
