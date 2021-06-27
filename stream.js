@@ -1,5 +1,6 @@
-import './filters/basic.js';
-import './filters/arith.js';
+import './filters/lang.js';
+import './filters/streams.js';
+import './filters/numeric.js';
 import './filters/string.js';
 import {StreamError, TimeoutError, ParseError} from './errors.js';
 import {parse} from './parser.js';
