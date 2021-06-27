@@ -8,6 +8,8 @@ function anyChanged(node, what) {
   for(const prop in what) {
     if(prop === 'args')
       continue;
+    if(what[prop] === undefined)
+      continue;
     if(node[prop] !== what[prop])
       return true;
   }
@@ -37,10 +39,10 @@ export class Node {
     }
     for(const fn of ['eval', 'prepare']) {
       const pFn = this[fn];
-      this[fn] = function() {
+      this[fn] = function(...args) {
         try {
           watchdog.tick();
-          return pFn.call(this);
+          return pFn.call(this, ...args);
         } catch(e) {
           if(e instanceof StreamError)
             throw e.withNode(this);
@@ -50,15 +52,13 @@ export class Node {
       };
     }
     /* Debug: */
-    /*for(const fn of ['withSrc', 'withArgs', 'withScope', 'prepare']) {
-      const pFn = this[fn];
-      this[fn] = (...args) => {
-        const nnode = pFn.apply(this, args);
-        if(nnode !== this)
-          console.log(`${fn}: ${this.desc()} => ${nnode.desc()}`);
-        return nnode;
-      };
-    }*/
+    const pPrep = this.prepare;
+    this.prepare = scope => {
+      const nnode = pPrep.call(this, scope);
+      if(nnode !== this)
+        console.log(`${this.desc()} => ${nnode.desc()}`);
+      return nnode;
+    };
   }
 
   modify(what) {
@@ -69,70 +69,53 @@ export class Node {
       return this;
   }
 
-  withSrc(src) {
-    return this.modify({
-      src: this.src ? this.src.withSrc(src) : src
-    });
-  }
-
-  withArgs(args) {
-    if(this.args.length !== 0)
-      throw new Error('already have arguments');
-    return this.modify({args});
-  }
-
-  withScope(scope) {
-    const src2 = this.src ? this.src.withScope(scope) : null;
-    const args2 = this.args.map(arg => arg.withScope(scope));
-    if(scope.register && !this.known) {
+  prepare(scope) {
+    if(this.known)
+      return this.prepareAll(scope);
+    else if(scope.register) {
       const rec = scope.register.find(this.ident);
       if(rec)
-        return new CustomNode(this.ident, this.token, rec.body, src2, args2, this.meta);
-      throw new StreamError(`symbol "${this.ident}" undefined`, this);
-    } else
-      return this.modify({src: src2, args: args2});
+        return new CustomNode(this.ident, this.token, rec.body,
+          this.src, this.args, this.meta).prepare(scope);
+    } // !scope.register OR record not found
+    throw new StreamError(`symbol "${this.ident}" undefined`);
   }
 
-  prepare() {
-    if(this.known)
-      return this.prepareAll();
-    else
-      throw new StreamError(`symbol "${this.ident}" undefined`);
-  }
-
-  prepareAll() {
-    const src2 = this.src ? this.src.prepare() : null;
-    const args2 = this.args.map(arg => arg.withSrc(src2).prepare());
-    this.checkArgs(src2, args2);
+  prepareAll(scope) {
+    const src2 = this.src ? this.src.prepare(scope) : scope.src;
+    const args2 = (scope.args || this.args).map(arg => arg.prepare({...scope, src: src2}));
     return this.modify({
       src: this.source !== false ? src2 : null,
       args: args2
-    });
+    }).check();
   }
 
-  prepareSrc() {
-    const src2 = this.src ? this.src.prepare() : null;
-    this.checkArgs(src2, this.args);
-    return this.modify({src: src2});
+  prepareSrc(scope) {
+    const src2 = this.src ? this.src.prepare(scope) : scope.src;
+    return this.modify({src: src2}).check();
   }
 
-  prepareArgs() {
-    const args2 = this.args.map(arg => arg.prepare());
-    this.checkArgs(this.src, args2);
-    return this.modify({args: args2});
+  prepareArgs(scope) {
+    const args2 = (scope.args || this.args).map(arg => arg.prepare(scope));
+    return this.modify({args: args2}).check();
   }
 
-  checkArgs(src, args) {
-    if(this.source && !src)
+  check() {
+    if(this.source && !this.src)
       throw new StreamError(`requires source`);
-    if(this.numArg === 0 && args.length > 0)
+    if(this.numArg === 0 && this.args.length > 0)
       throw new StreamError(`does not allow arguments`);
-    if(this.numArg !== undefined && args.length !== this.numArg)
+    if(this.numArg !== undefined && this.args.length !== this.numArg)
       throw new StreamError(`exactly ${this.numArg} argument(s) required`);
-    if(this.minArg !== undefined && args.length < this.minArg)
+    if(this.minArg !== undefined && this.args.length < this.minArg)
       throw new StreamError(`at least ${this.minArg} argument(s) required`);
-    if(this.maxArg !== undefined && args.length > this.maxArg)
+    if(this.maxArg !== undefined && this.args.length > this.maxArg)
       throw new StreamError(`at most ${this.maxArg} argument(s) required`);
+    return this;
+  }
+
+  apply(args) {
+    return this.bare ? this.modify({args}).check() : this.prepare({outer: {args}});
   }
 
   eval() {
@@ -227,10 +210,6 @@ export class Atom extends Node {
     return this;
   }
 
-  withScope() {
-    return this;
-  }
-
   prepare() {
     return this;
   }
@@ -275,27 +254,15 @@ export class Block extends Node {
 
   modify(what) {
     if(anyChanged(this, what))
-      return new Block(coal(what.body, this.body), this.token,
+      return new Block(this.body, this.token,
         coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
   }
 
-  prepare() {
-    return this.body.withScope({block: this}).prepare();
-  }
-
-  withScope(scope) {
-    const src2 = this.src ? this.src.withScope(scope) : null;
-    const args2 = this.args.map(arg => arg.withScope(scope));
-    const scope2 = {...scope};
-    delete scope2.block;
-    const body2 = this.body.withScope(scope2);
-    return this.modify({
-      src: src2,
-      args: args2,
-      body: body2
-    });
+  prepare(scope) {
+    const pnode = this.prepareAll(scope);
+    return this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args}});
   }
 }
 
@@ -313,28 +280,9 @@ export class CustomNode extends Node {
       return this;
   }
 
-  prepare() {
-    const pnode = this.prepareAll();
-    try {
-      const rnode = this.body.withScope({block: pnode}).prepare();
-      const pEval = rnode.eval;
-      rnode.eval = () => {
-        try {
-          return pEval.call(rnode);
-        } catch(e) {
-          if(e instanceof StreamError)
-            throw e.withToken(this.token);
-          else
-            throw e;
-        }
-      };
-      return rnode;
-    } catch(e) {
-      if(e instanceof StreamError)
-        throw e.withToken(this.token);
-      else
-        throw e;
-    }
+  prepare(scope) {
+    const pnode = this.prepareAll(scope);
+    return this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args}});
   }
 }
 

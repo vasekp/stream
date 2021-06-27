@@ -6,8 +6,8 @@ function regReducer(name, sign, fun) {
   mainReg.register(name, {
     source: false,
     minArg: 2,
-    prepare: function() {
-      const nnode = this.prepareAll();
+    prepare: function(scope) {
+      const nnode = this.prepareAll(scope);
       if(nnode.args.every(arg => arg.isAtom))
         return new Atom(nnode.args.map(arg => arg.numValue()).reduce(fun));
       else
@@ -71,8 +71,8 @@ regReducer('times', '*', (a, b) => a * b);
 regReducer('div', '/', (a, b) => a / b);
 
 mainReg.register('min', {
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     if(nnode.args.length > 0) {
       const ins = nnode.args.map(arg => arg.evalNum());
       const min = ins.reduce((a, b) => b < a ? b : a);
@@ -98,8 +98,8 @@ mainReg.register('min', {
 });
 
 mainReg.register('max', {
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     if(nnode.args.length > 0) {
       const ins = nnode.args.map(arg => arg.evalNum());
       const max = ins.reduce((a, b) => b > a ? b : a);
@@ -166,8 +166,8 @@ mainReg.register('diff', {
 mainReg.register('pow', {
   minArg: 1,
   maxArg: 2,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     if(nnode.args.length === 1) {
       if(!nnode.src)
         throw new StreamError('needs source');
@@ -202,8 +202,8 @@ mainReg.register('mod', {
   source: true,
   minArg: 1,
   maxArg: 2,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     const inp = nnode.src.evalNum();
     const mod = nnode.args[0].evalNum({min: 1n});
     const base = nnode.args[1] ? nnode.args[1].evalNum() : 0n;
@@ -216,10 +216,8 @@ mainReg.register('mod', {
 mainReg.register('odd', {
   source: true,
   numArg: 0,
-  prepare: function() {
-    this.checkArgs(this.src, this.args);
-    const src2 = this.src.prepare();
-    const val = src2.evalNum();
+  prepare: function(scope) {
+    const val = this.prepareSrc(scope).src.evalNum();
     return new Atom((val & 1n) === 1n);
   }
 });
@@ -227,10 +225,8 @@ mainReg.register('odd', {
 mainReg.register('even', {
   source: true,
   numArg: 0,
-  prepare: function() {
-    this.checkArgs(this.src, this.args);
-    const src2 = this.src.prepare();
-    const val = src2.evalNum();
+  prepare: function(scope) {
+    const val = this.prepareSrc(scope).src.evalNum();
     return new Atom((val & 1n) === 0n);
   }
 });
@@ -239,8 +235,8 @@ function regComparer(name, sign, fun) {
   mainReg.register(name, {
     source: false,
     minArg: 2,
-    prepare: function() {
-      const nnode = this.prepareAll();
+    prepare: function(scope) {
+      const nnode = this.prepareAll(scope);
       if(nnode.args.every(arg => arg.isAtom)) {
         const vals = nnode.args.map(arg => arg.numValue());
         let res = true;
@@ -276,8 +272,8 @@ regComparer('ge', '>=', (a, b) => a >= b);
 mainReg.register(['tobase', 'tbase'], {
   source: true,
   maxArg: 1,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     let val = nnode.src.evalNum();
     const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     const digit = c => c < 10 ? String.fromCharCode(c + 48) : String.fromCharCode(c + 97 - 10);
@@ -297,8 +293,8 @@ mainReg.register(['tobase', 'tbase'], {
 mainReg.register(['frombase', 'fbase'], {
   source: true,
   maxArg: 1,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     const str = nnode.src.evalAtom('string');
     const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
@@ -345,7 +341,7 @@ mainReg.register(['fromdigits', 'fdig'], {
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     let val = 0n;
     for(const r of sIn) {
-      const digit = r.prepare().evalNum({min: 0n, max: base - 1n});
+      const digit = r.prepare(scope).evalNum({min: 0n, max: base - 1n});
       val = val * base + digit;
     }
     return new Atom(val);
@@ -391,8 +387,8 @@ mainReg.register('primes', {
 mainReg.register('isprime', {
   source: true,
   numArg: 0,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     const val = nnode.src.evalNum();
     if(val <= 1n)
       return new Atom(false);

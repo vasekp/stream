@@ -16,9 +16,7 @@ repl.start({eval: str => {
     let node = parse(str);
     if(node.ident === 'equal')
       node = node.toAssign();
-    node = node
-      .withScope({history, register: userReg})
-      .timeConstr().prepare();
+    node = node.timeConstr().prepare({history, register: userReg});
     const out = node.timeConstr().writeout();
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {

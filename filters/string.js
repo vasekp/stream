@@ -66,8 +66,8 @@ mainReg.register('cat', {
 mainReg.register('ord', {
   source: true,
   maxArg: 1,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     const c = nnode.src.evalAtom(S);
     if(nnode.args[0]) {
       const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(S));
@@ -88,8 +88,8 @@ mainReg.register('ord', {
 mainReg.register('chr', {
   source: true,
   maxArg: 1,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     if(nnode.args[0]) {
       const ix = nnode.src.evalNum({min: 1n});
       const abc = nnode.args[0].evalStream({finite: true});
@@ -109,8 +109,8 @@ mainReg.register('chr', {
 mainReg.register('chrm', {
   source: true,
   numArg: 1,
-  prepare: function() {
-    const nnode = this.prepareAll();
+  prepare: function(scope) {
+    const nnode = this.prepareAll(scope);
     let ix = nnode.src.evalNum() - 1n;
     const abc = nnode.args[0].evalStream({finite: true});
     if(typeof abc.len === 'bigint' && abc.len !== 0n) {
@@ -193,9 +193,8 @@ mainReg.register('ords', {
 mainReg.register('lcase', {
   source: true,
   numArg: 0,
-  prepare: function() {
-    this.checkArgs(this.src, this.args);
-    const str = this.src.prepare().evalAtom(S);
+  prepare: function(scope) {
+    const str = this.prepareAll(scope).src.evalAtom(S);
     return new Atom(str.toLowerCase());
   }
 });
@@ -204,8 +203,7 @@ mainReg.register('ucase', {
   source: true,
   numArg: 0,
   prepare: function() {
-    this.checkArgs(this.src, this.args);
-    const str = this.src.prepare().evalAtom(S);
+    const str = this.prepareAll(scope).src.evalAtom(S);
     return new Atom(str.toUpperCase());
   }
 });
