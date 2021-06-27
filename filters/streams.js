@@ -748,6 +748,54 @@ mainReg.register('count', {
   }
 });
 
+mainReg.register('rle', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream();
+    const token = this.token;
+    return new Stream(this,
+      (function*() {
+        let prev;
+        let count;
+        for(const curr of sIn) {
+          if(!prev) {
+            count = 1;
+          } else if(!compareStreams(curr, prev)) {
+            yield new Node('array', token, null, [prev, new Atom(count)]);
+            count = 1;
+          } else
+            count++;
+          prev = curr;
+        }
+        yield new Node('array', token, null, [prev, new Atom(count)]);
+      })()
+    );
+  }
+});
+
+mainReg.register('unrle', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream();
+    return new Stream(this,
+      (function*() {
+        for(const r of sIn) {
+          const sInner = r.evalStream();
+          const elm = sInner.next().value;
+          const count = sInner.next().value.evalNum({min: 0n});
+          const test = sInner.next().done;
+          if(!test || !elm || count === undefined)
+            throw new StreamError(`${r.toString}: not in RLE format`);
+          for(let i = 0n; i < count; i++)
+            yield elm;
+        }
+      })()
+    );
+  }
+});
+
 mainReg.register('isstream', {
   reqSource: true,
   numArg: 0,
