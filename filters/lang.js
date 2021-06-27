@@ -354,7 +354,6 @@ mainReg.register('assign', {
     if(args.length) {
       const body = args.pop().prepare({...scope, partial: true, expand: true});
       args.forEach(arg => arg.checkType(types.symbol));
-      args.forEach(arg => console.log(arg.desc()));
       args.push(body);
     }
     const mod = {src: null, args};
@@ -371,10 +370,7 @@ mainReg.register('assign', {
       throw new StreamError('out of scope');
     for(const ident of idents)
       reg.register(ident, {body});
-    return new Stream(this,
-      idents.map(ident => new Atom(ident)).values(),
-      {len: BigInt(idents.length)}
-    );
+    return new Atom(body.toString());
   },
   toString() {
     let ret = '';
