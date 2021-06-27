@@ -429,6 +429,37 @@ mainReg.register('recur', {
   }
 });
 
+mainReg.register('map2', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
+  eval() {
+    const sIn = this.src.evalStream();
+    const body = this.args[0].checkType([types.symbol, types.expr]);
+    return new Stream(this,
+      (function*() {
+        let prev;
+        for(const curr of sIn) {
+          if(!prev) {
+            prev = curr;
+            continue;
+          }
+          const val = body.apply([prev, curr]);
+          prev = curr;
+          yield val;
+        }
+      })(),
+      {
+        len: typeof sIn.len === 'bigint' && sIn.len > 0n ? sIn.len - 1n : sIn.len
+      }
+    );
+  }
+});
+
 mainReg.register('if', {
   numArg: 3,
   prepare(scope) {
