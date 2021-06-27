@@ -11,7 +11,7 @@ mainReg.register('split', {
     if(this.args[0]) {
       const ev = this.args[0].eval();
       if(!ev.isAtom)
-        throw new StreamError(`expected number or string, got stream ${first.node.desc()}`);
+        throw new StreamError(`expected number or string, got ${first.desc()}`);
       if(ev.type === S) {
         const sep = ev.value;
         const split = str.split(sep);
@@ -34,7 +34,7 @@ mainReg.register('split', {
           {len: BigInt(split.length)}
         );
       } else
-        throw new StreamError(`expected number or string, got ${first.type} ${first.value}`);
+        throw new StreamError(`expected number or string, got ${first.desc()}`);
     } else {
       const chars = [...str];
       return new Stream(this,

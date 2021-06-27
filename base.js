@@ -27,8 +27,15 @@ function coal(a, b) {
 
 export const debug = globalThis.process?.argv?.includes('debug');
 
-export class Node {
+class Base {
+  desc() {
+    return this.type ? `${this.type} ${this.toString()}` : this.toString();
+  }
+}
+
+export class Node extends Base {
   constructor(ident, token, src = null, args = [], meta = {}) {
+    super();
     this.ident = ident;
     this.token = token;
     this.src = src;
@@ -46,7 +53,7 @@ export class Node {
           watchdog.tick();
           if(debug && !(this instanceof Atom)) {
             const detail = fn === 'prepare' ? `{${Object.keys(args[0]).join(',')}}` : '';
-            console.log(`${fn} ${this.desc()} ${detail}`);
+            console.log(`${fn} ${this.toString()} ${detail}`);
           }
           return pFn.call(this, ...args);
         } catch(e) {
@@ -63,7 +70,7 @@ export class Node {
         this[fn] = scope => {
           const nnode = pFn.call(this, scope);
           if(nnode !== this)
-            console.log(`${fn} ${this.desc()} {${Object.keys(scope).join(',')}} => ${nnode.desc()}`);
+            console.log(`${fn} ${this.toString()} {${Object.keys(scope).join(',')}} => ${nnode.toString()}`);
           return nnode;
         };
       }
@@ -104,7 +111,7 @@ export class Node {
 
   apply(args) {
     if(debug)
-      console.log(`apply ${this.desc()} (bare = ${this.bare}) [${args.map(arg => arg.desc()).join(',')}]`);
+      console.log(`apply ${this.toString()} (bare = ${this.bare}) [${args.map(arg => arg.toString()).join(',')}]`);
     return this.bare ? this.modify({args}).prepare({}) : this.prepare({outer: {args}});
   }
 
@@ -125,13 +132,13 @@ export class Node {
   }
 
   eval() {
-    throw new Error(`Node.prototype.eval() (${this.desc()})`);
+    throw new Error(`Node.prototype.eval() (${this.toString()})`);
   }
 
   evalStream(opts = {}) {
     const r = this.eval();
     if(r.isAtom)
-      throw new StreamError(`expected stream, got ${r.type} ${r.desc()}`);
+      throw new StreamError(`expected stream, got ${r.desc()}`);
     if(opts.finite && r.len === null)
       throw new StreamError('infinite stream');
     return r;
@@ -145,13 +152,13 @@ export class Node {
     return checks.bounds(this.evalAtom('number'), opts);
   }
 
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     ret += this.ident;
     if(this.args.length)
-      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     return ret;
   }
 
@@ -174,7 +181,7 @@ export class Node {
   *writeout_gen() {
     const str = this.eval();
     if(str.isAtom)
-      yield str.desc();
+      yield str.toString();
     else {
       yield '[';
       let first = true;
@@ -224,7 +231,7 @@ export class Atom extends Node {
     return this;
   }
 
-  desc() {
+  toString() {
     switch(typeof this.value) {
       case 'bigint':
       case 'boolean':
@@ -244,7 +251,7 @@ export class Atom extends Node {
     if(this.type === type)
       return this.value;
     else
-      throw new StreamError(`expected ${type}, got ${this.type} ${this.desc()}`);
+      throw new StreamError(`expected ${type}, got ${this.desc()}`);
   }
 
   numValue(opts = {}) {
@@ -278,13 +285,13 @@ export class Block extends Node {
     return this.modify({args}).prepare({});
   }
 
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
-    ret += `{${this.body.desc()}}`;
+      ret = this.src.toString() + '.';
+    ret += `{${this.body.toString()}}`;
     if(this.args.length)
-      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     return ret;
   }
 }
@@ -302,16 +309,18 @@ export class CustomNode extends Block {
       return this;
   }
 
-  desc() {
-    return Node.prototype.desc.call(this);
+  toString() {
+    return Node.prototype.toString.call(this);
   }
 }
 
-export class Stream {
+export class Stream extends Base {
   constructor(node, iter, opts) {
+    super();
     this.isAtom = false;
     this.node = node;
     this.iter = iter;
+    this.type = 'stream';
     Object.assign(this, opts);
   }
 
@@ -336,7 +345,11 @@ export class Stream {
   }
 
   asAtom(type) {
-    throw new StreamError(`expected ${type}, got stream ${this.node.desc()}`);
+    throw new StreamError(`expected ${type}, got ${this.desc()}`);
+  }
+
+  toString() {
+    return this.node.toString();
   }
 }
 
@@ -413,9 +426,9 @@ export const checks = {
   },
   atom(r, type) {
     if(!r.isAtom)
-      throw new StreamError(`expected ${type}, got stream ${r.node.desc()}`);
+      throw new StreamError(`expected ${type}, got ${r.desc()}`);
     if(r.type !== type)
-      throw new StreamError(`expected ${type}, got ${r.type} ${r.value}`);
+      throw new StreamError(`expected ${type}, got ${r.desc()}`);
     return r;
   },
   num(r, opts = {}) {
@@ -425,7 +438,7 @@ export const checks = {
   },
   stream(r) {
     if(r.isAtom)
-      throw new StreamError(`expected stream, got ${r.type} ${r.desc()}`);
+      throw new StreamError(`expected stream, got ${r.desc()}`);
     return r;
   }
 };

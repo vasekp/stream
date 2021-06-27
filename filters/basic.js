@@ -143,12 +143,12 @@ mainReg.register('array', {
       {len: BigInt(this.args.length)}
     );
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     ret += '[';
-    ret += this.args.map(n => n.desc()).join(',');
+    ret += this.args.map(n => n.toString()).join(',');
     ret += ']';
     return ret;
   }
@@ -181,13 +181,13 @@ mainReg.register('foreach', {
       }
     );
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + ':';
+      ret = this.src.toString() + ':';
     else
       ret = 'foreach';
-    ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+    ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     return ret;
   }
 });
@@ -202,10 +202,10 @@ mainReg.register('id', {
   eval() {
     throw new StreamError('out of scope');
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     ret += '#';
     return ret;
   }
@@ -370,13 +370,13 @@ mainReg.register('join', {
       {len}
     );
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     if(this.args.length > 0) {
       ret += '(';
-      ret += this.args.map(n => n.desc()).join('~');
+      ret += this.args.map(n => n.toString()).join('~');
       ret += ')';
     } else
       ret += 'join()';
@@ -406,13 +406,13 @@ mainReg.register('zip', {
       {len}
     );
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     if(this.args.length > 0) {
       ret += '(';
-      ret += this.args.map(n => n.desc()).join('%');
+      ret += this.args.map(n => n.toString()).join('%');
       ret += ')';
     } else
       ret += 'zip()';
@@ -467,14 +467,14 @@ mainReg.register('part', {
       }
     );
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src) {
-      ret = this.src.desc();
-      ret += '[' + this.args.map(a => a.desc()).join(',') + ']';
+      ret = this.src.toString();
+      ret += '[' + this.args.map(a => a.toString()).join(',') + ']';
     } else {
       ret = 'part';
-      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     }
     return ret;
   }
@@ -500,10 +500,10 @@ mainReg.register('in', {
   eval() {
     throw new StreamError('out of scope');
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     if(this.args.length === 0)
       ret += '##';
     else if(this.args.length === 1
@@ -513,7 +513,7 @@ mainReg.register('in', {
       ret += '#' + this.args[0].value;
     else {
       ret = 'in';
-      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     }
     return ret;
   }
@@ -711,17 +711,17 @@ mainReg.register('over', {
       {len}
     );
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src && this.args.length === 1)
-      ret = this.src.desc() + '@'
+      ret = this.src.toString() + '@'
     else {
       if(this.src)
-        ret = this.src.desc() + '.';
+        ret = this.src.toString() + '.';
       ret += this.ident;
     }
     ret += '(';
-    ret += this.args.map(n => n.desc()).join(',');
+    ret += this.args.map(n => n.toString()).join(',');
     ret += ')';
     return ret;
   }
@@ -826,13 +826,13 @@ mainReg.register('equal', {
   eval() {
     return new Atom(eq(this.args));
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     if(this.args.length > 0) {
       ret += '(';
-      ret += this.args.map(n => n.desc()).join('=');
+      ret += this.args.map(n => n.toString()).join('=');
       ret += ')';
     } else
       ret += this.ident;
@@ -855,7 +855,7 @@ mainReg.register('assign', {
         if(!arg.bare)
           throw new StreamError(`expected symbol, got ${arg.desc()}`);
         if(arg instanceof Atom)
-          throw new StreamError(`expected symbol, got ${arg.type} ${arg.value}`);
+          throw new StreamError(`expected symbol, got ${arg.desc()}`);
       }
       args.push(body);
     }
@@ -878,13 +878,13 @@ mainReg.register('assign', {
       {len: BigInt(idents.length)}
     );
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     if(this.args.length > 0) {
       ret += '(';
-      ret += this.args.map(n => n.desc()).join('=');
+      ret += this.args.map(n => n.toString()).join('=');
       ret += ')';
     } else
       ret += this.ident;
@@ -903,7 +903,7 @@ function usort(arr, fn = x => x) {
     return arr;
   const first = fn(arr[0]);
   if(!first.isAtom)
-    throw new StreamError(`expected number or string, got stream ${first.node.desc()}`);
+    throw new StreamError(`expected number or string, got ${first.desc()}`);
   if(first.type === 'number') {
     arr.forEach(a => checks.num(fn(a)));
     arr.sort((a, b) => numCompare(fn(a).value, fn(b).value));
@@ -911,7 +911,7 @@ function usort(arr, fn = x => x) {
     arr.forEach(a => checks.atom(fn(a), 'string'));
     arr.sort((a, b) => strCompare(fn(a).value, fn(b).value));
   } else
-    throw new StreamError(`expected number or string, got ${first.type} ${first.value}`);
+    throw new StreamError(`expected number or string, got ${first.desc()}`);
 }
 
 mainReg.register('sort', {
@@ -965,10 +965,10 @@ mainReg.register('history', {
     } else
       throw new StreamError('out of scope');
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     if(this.args.length === 0)
       ret += '$';
     else if(this.args.length === 1
@@ -978,7 +978,7 @@ mainReg.register('history', {
       ret += '$' + this.args[0].value;
     else {
       ret = this.ident;
-      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
     }
     return ret;
   }

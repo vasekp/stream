@@ -50,13 +50,13 @@ function regReducer(name, sign, fun) {
         );
       }
     },
-    desc() {
+    toString() {
       let ret = '';
       if(this.src)
-        ret = this.src.desc() + '.';
+        ret = this.src.toString() + '.';
       if(this.args.length > 0) {
         ret += '(';
-        ret += this.args.map(n => n.desc()).join(sign);
+        ret += this.args.map(n => n.toString()).join(sign);
         ret += ')';
       } else
         ret += name;
@@ -186,18 +186,18 @@ mainReg.register('pow', {
       return new Atom(base ** pow);
     }
   },
-  desc() {
+  toString() {
     let ret = '';
     if(this.src)
-      ret = this.src.desc() + '.';
+      ret = this.src.toString() + '.';
     if(this.args.length === 2) {
       ret += '(';
-      ret += this.args.map(n => n.desc()).join('^');
+      ret += this.args.map(n => n.toString()).join('^');
       ret += ')';
     } else {
       ret += this.ident;
       ret += '(';
-      ret += this.args.map(n => n.desc()).join(',');
+      ret += this.args.map(n => n.toString()).join(',');
       ret += ')';
     }
     return ret;
@@ -265,13 +265,13 @@ function regComparer(name, sign, fun) {
     eval() {
       throw new StreamError('comparison with stream(s)');
     },
-    desc() {
+    toString() {
       let ret = '';
       if(this.src)
-        ret = this.src.desc() + '.';
+        ret = this.src.toString() + '.';
       if(this.args.length > 0) {
         ret += '(';
-        ret += this.args.map(n => n.desc()).join(sign);
+        ret += this.args.map(n => n.toString()).join(sign);
         ret += ')';
       } else
         ret += name;
