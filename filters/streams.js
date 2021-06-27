@@ -388,27 +388,15 @@ mainReg.register('reduce', {
     let curr;
     if(this.args.length > 1)
       curr = this.args[this.args.length - 1].prepare({src: this.src});
-    else {
-      let done;
-      ({value: curr, done} = sIn.next());
-      if(done)
-        return;
-    }
     return new Stream(this,
       (function*() {
         for(const next of sIn) {
-          const val = bodyOut.apply([curr, next]);
+          const val = curr ? bodyOut.apply([curr, next]) : next;
           curr = bodyMem === bodyOut ? val : bodyMem.apply([curr, next]);
           yield val;
         }
       })(),
-      {
-        len: sIn.len === undefined ? undefined
-          : sIn.len === null ? null
-          : sIn.len === 0n ? 0n
-          : this.args.length > 1 ? sIn.len
-          : sIn.len - 1n
-      }
+      {len: sIn.len}
     );
   }
 });
@@ -426,7 +414,9 @@ mainReg.register('recur', {
     const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
       (function*() {
-        let prev = [...sIn].reverse();
+        let prev = [...sIn];
+        yield* prev;
+        prev = prev.reverse();
         for(;;) {
           const next = body.apply(prev);
           yield next;
