@@ -568,3 +568,15 @@ mainReg.register('sort', {
     }
   }
 });
+
+mainReg.register('isstream', {
+  reqSource: true,
+  numArg: 0,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const c = nnode.src.eval();
+    return new Atom(c.type === types.stream);
+  }
+});

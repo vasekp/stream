@@ -225,3 +225,49 @@ mainReg.register('abc', {
     );
   }
 });
+
+mainReg.register(['isstring', 'isstr'], {
+  reqSource: true,
+  numArg: 0,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const c = nnode.src.eval();
+    return new Atom(c.type === types.S);
+  }
+});
+
+mainReg.register('isdigit', {
+  reqSource: true,
+  numArg: 0,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const r = nnode.src.eval();
+    if(r.type !== types.S)
+      return new Atom(false);
+    const c = r.value;
+    return new Atom(c >= '0' && c <= '9');
+  }
+});
+
+mainReg.register('isletter', {
+  reqSource: true,
+  maxArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const r = nnode.src.eval();
+    if(r.type !== types.S)
+      return new Atom(false);
+    const c = r.value;
+    if(nnode.args[0]) {
+      const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(types.S));
+      return new Atom(abc.includes(c));
+    } else
+      return new Atom(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z');
+  }
+});
