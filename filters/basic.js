@@ -687,7 +687,7 @@ mainReg.register('over', {
   source: true,
   minArg: 1,
   prepare: function(scope) {
-    const src = this.src ? this.src.prepare({...scope, args: undefined, partial: true}) : scope.src;
+    const src = this.src ? this.src.prepare({...scope, partial: true}) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src}));
     return this.modify({src, args}).check(scope.partial);
   },

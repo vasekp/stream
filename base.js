@@ -92,7 +92,7 @@ export class Node {
 
   prepareAll(scope) {
     const src2 = this.src ? this.src.prepare(scope) : scope.src;
-    const args2 = (scope.args || this.args).map(arg => arg.prepare({...scope, src: src2, args: undefined}));
+    const args2 = (scope.args || this.args).map(arg => arg.prepare({...scope, src: src2}));
     return this.modify({
       src: this.source !== false ? src2 : null,
       args: args2
@@ -102,7 +102,7 @@ export class Node {
   apply(args) {
     if(debug)
       console.log(`apply ${this.desc()} (bare = ${this.bare}) [${args.map(arg => arg.desc()).join(',')}]`);
-    return this.bare ? this.prepare({args}) : this.prepare({outer: {args}});
+    return this.bare ? this.modify({args}).prepare({}) : this.prepare({outer: {args}});
   }
 
   check(skipCheck = false) {
@@ -272,7 +272,7 @@ export class Block extends Node {
   apply(args) {
     if(this.args.length)
       throw new StreamError(`already has arguments`);
-    return this.modify({args}).prepare({}).check();
+    return this.modify({args}).prepare({});
   }
 }
 
