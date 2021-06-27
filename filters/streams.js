@@ -196,6 +196,30 @@ mainReg.register(['drop', 'droptake', 'dt'], {
   }
 });
 
+mainReg.register(['droplast', 'dl'], {
+  reqSource: true,
+  maxArg: 1,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const num = this.args[0] ? this.args[0].evalNum({min: 1n}) : 0n;
+    let l = [];
+    return new Stream(this,
+      (function*() {
+        for(const v of sIn) {
+          l.push(v);
+          if(l.length > num)
+            yield l.shift();
+        }
+      })(),
+      {
+        len: sIn.len === undefined ? undefined
+          : sIn.len === null ? null
+          : sIn.len >= num ? sIn.len - num
+          : 0n
+      });
+  }
+});
+
 mainReg.register(['reverse', 'rev'], {
   reqSource: true,
   numArg: 0,
@@ -346,6 +370,58 @@ mainReg.register(['flatten', 'fl'], {
           }
         }
       })()
+    );
+  }
+});
+
+mainReg.register(['padleft', 'pl'], {
+  reqSource: true,
+  numArg: 2,
+  eval() {
+    const sIn = this.src.evalStream();
+    const len = this.args[0].evalNum({min: 0n});
+    const arr = [];
+    let i = 0n;
+    for(const r of sIn) {
+      arr.push(r);
+      if(++i == len)
+        break;
+    }
+    const fill = this.args[1];
+    return new Stream(this,
+      (function*() {
+        for(; i < len; i++)
+          yield fill;
+        yield* arr;
+        yield* sIn;
+      })(),
+      {
+        len: typeof sIn.len === 'bigint' && sIn.len < len ? len : sIn.len
+      }
+    );
+  }
+});
+
+mainReg.register(['padright', 'pr'], {
+  reqSource: true,
+  numArg: 2,
+  eval() {
+    const sIn = this.src.evalStream();
+    const len = this.args[0].evalNum({min: 0n});
+    const fill = this.args[1];
+    return new Stream(this,
+      (function*() {
+        let i = 0n;
+        for(const r of sIn) {
+          yield r;
+          i++;
+        }
+        for(; i < len; i++)
+          yield fill;
+      })(),
+      {
+        len: (typeof sIn.len === 'bigint' && sIn.len < len) ? len : sIn.len
+      }
     );
   }
 });
@@ -587,6 +663,88 @@ mainReg.register('uniq', {
         }
       })()
     );
+  }
+});
+
+mainReg.register('fixed', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream();
+    let prev;
+    for(const curr of sIn) {
+      if(prev && compareStreams(curr, prev))
+        return curr.eval();
+      prev = curr;
+    }
+    // not found
+    throw new StreamError('no repeated element found');
+  }
+});
+
+mainReg.register('index', {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const sIn = this.src.evalStream();
+    const ref = this.args[0];
+    let i = 0;
+    for(const r of sIn) {
+      i++;
+      if(compareStreams(r, ref))
+        return new Atom(i);
+    }
+    // not found
+    return new Atom(0);
+  }
+});
+
+mainReg.register('includes', {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const sIn = this.src.evalStream();
+    const ref = this.args[0];
+    let i = 0;
+    for(const r of sIn) {
+      i++;
+      if(compareStreams(r, ref))
+        return new Atom(true);
+    }
+    // not found
+    return new Atom(false);
+  }
+});
+
+mainReg.register('element', {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const ref = this.src;
+    const sArg = this.args[0].evalStream();
+    let i = 0;
+    for(const r of sArg) {
+      i++;
+      if(compareStreams(r, ref))
+        return new Atom(true);
+    }
+    // not found
+    return new Atom(false);
+  }
+});
+
+mainReg.register('count', {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const ref = this.args[0];
+    let count = 0;
+    for(const r of sIn) {
+      if(compareStreams(r, ref))
+        count++;
+    }
+    return new Atom(count);
   }
 });
 
