@@ -12,7 +12,7 @@ export class StreamError extends Error {
     this.node = node;
     this.pos = node.token.pos;
     this.len = node.token.value.length;
-    this.desc = node.desc();
+    this.desc = node.toString();
     return this;
   }
 }
