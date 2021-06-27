@@ -84,7 +84,7 @@ export class Node {
     else if(scope.register) {
       const rec = scope.register.find(this.ident);
       if(rec)
-        return new CustomNode(this.ident, this.token, rec.body,
+        return new CustomNode(this.ident, this.token, rec.body.prepare({token: this.token, partial: true}),
           this.src, this.args, this.meta).prepare(scope);
     } // !scope.register OR record not found
     throw new StreamError(`symbol "${this.ident}" undefined`);
@@ -250,14 +250,14 @@ export class Atom extends Node {
 }
 
 export class Block extends Node {
-  constructor(body, token, src = null, args = [], meta = {}) {
-    super(`{${body.desc()}}`, token, src, args, meta);
+  constructor(ident, token, body, src = null, args = [], meta = {}) {
+    super(ident, token, src, args, meta);
     this.body = body;
   }
 
   modify(what) {
     if(anyChanged(this, what))
-      return new Block(coal(what.body, this.body), this.token,
+      return new Block(this.ident, this.token, coal(what.body, this.body),
         coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
@@ -274,12 +274,21 @@ export class Block extends Node {
       throw new StreamError(`already has arguments`);
     return this.modify({args}).prepare({});
   }
+
+  desc() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.desc() + '.';
+    ret += `{${this.body.desc()}}`;
+    if(this.args.length)
+      ret += '(' + this.args.map(a => a.desc()).join(',') + ')';
+    return ret;
+  }
 }
 
-export class CustomNode extends Node {
+export class CustomNode extends Block {
   constructor(ident, token, body, src = null, args = [], meta = {}) {
-    super(ident, token, src, args, meta);
-    this.body = body;
+    super(ident, token, body, src, args, meta);
   }
 
   modify(what) {
@@ -290,9 +299,8 @@ export class CustomNode extends Node {
       return this;
   }
 
-  prepare(scope) {
-    const pnode = this.prepareAll(scope);
-    return this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args}});
+  desc() {
+    return Node.prototype.desc.call(this);
   }
 }
 

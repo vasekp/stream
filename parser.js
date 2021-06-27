@@ -311,7 +311,7 @@ function parse0(iter, open, close, array) {
               break;
             case '{': {
               const body = parse0(iter, s, '}', false);
-              term = new Block(body, s);
+              term = new Block('block', s, body);
               state = ss.sym;
               break; }
             default:
@@ -322,7 +322,7 @@ function parse0(iter, open, close, array) {
           state = ss.term;
         } else if(s.value === '{' && state === ss.oper) {
           const body = parse0(iter, s, '}', false);
-          term = new Block(body, s);
+          term = new Block('block', s, body);
           state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
           const args = parse0(iter, s, ']', true);
