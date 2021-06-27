@@ -17,8 +17,8 @@ repl.start({eval: str => {
     let node = parse(str);
     if(node.ident === 'equal')
       node = node.toAssign();
-    node = node.timeConstr().prepare({history, register: userReg});
-    const out = node.timeConstr().writeout();
+    node = node.timed(n => n.prepare({history, register: userReg}));
+    const out = node.timed(n => n.writeout());
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {
     if(e instanceof ParseError) {

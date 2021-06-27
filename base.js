@@ -223,19 +223,13 @@ export class Node extends Base {
     }
   }
 
-  timeConstr(limit = DEFTIME) {
-    const ret = {};
-    for(const fn of ['eval', 'prepare', 'writeout']) {
-      ret[fn] = (...args) => {
-        try {
-          watchdog.start(limit);
-          return this[fn](...args);
-        } finally {
-          watchdog.stop();
-        }
-      }
+  timed(func, limit = DEFTIME) {
+    try {
+      watchdog.start(limit);
+      return func(this);
+    } finally {
+      watchdog.stop();
     }
-    return ret;
   }
 }
 
