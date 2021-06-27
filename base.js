@@ -92,24 +92,22 @@ export class Node {
 
   prepareAll(scope) {
     const src2 = this.src ? this.src.prepare(scope) : scope.src;
-    const args2 = (scope.args || this.args).map(arg => arg.prepare({...scope, src: src2}));
+    const args2 = (scope.args || this.args).map(arg => arg.prepare({...scope, src: src2, args: undefined}));
     return this.modify({
       src: this.source !== false ? src2 : null,
       args: args2
-    }).check();
+    }).check(scope.partial);
   }
 
-  prepareSrc(scope) {
-    const src2 = this.src ? this.src.prepare(scope) : scope.src;
-    return this.modify({src: src2}).check();
+  apply(args) {
+    if(debug)
+      console.log(`apply ${this.desc()} (bare = ${this.bare}) [${args.map(arg => arg.desc()).join(',')}]`);
+    return this.bare ? this.prepare({args}) : this.prepare({outer: {args}});
   }
 
-  prepareArgs(scope) {
-    const args2 = (scope.args || this.args).map(arg => arg.prepare(scope));
-    return this.modify({args: args2}).check();
-  }
-
-  check() {
+  check(skipCheck = false) {
+    if(skipCheck)
+      return this;
     if(this.source && !this.src)
       throw new StreamError(`requires source`);
     if(this.numArg === 0 && this.args.length > 0)
@@ -123,12 +121,8 @@ export class Node {
     return this;
   }
 
-  apply(args) {
-    return this.bare ? this.modify({args}).check() : this.prepare({outer: {args}});
-  }
-
   eval() {
-    throw new Error(`Node.prototype.eval()`);
+    throw new Error(`Node.prototype.eval() (${this.desc()})`);
   }
 
   evalStream(opts = {}) {
@@ -263,7 +257,7 @@ export class Block extends Node {
 
   modify(what) {
     if(anyChanged(this, what))
-      return new Block(this.body, this.token,
+      return new Block(coal(what.body, this.body), this.token,
         coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
@@ -271,7 +265,14 @@ export class Block extends Node {
 
   prepare(scope) {
     const pnode = this.prepareAll(scope);
-    return this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args}});
+    const pbody = this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args}});
+    return scope.partial ? pnode.modify({body: pbody}) : pbody;
+  }
+
+  apply(args) {
+    if(this.args.length)
+      throw new StreamError(`already has arguments`);
+    return this.modify({args}).prepare({}).check();
   }
 }
 

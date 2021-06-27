@@ -8,7 +8,7 @@ function regReducer(name, sign, fun) {
     minArg: 2,
     prepare: function(scope) {
       const nnode = this.prepareAll(scope);
-      if(nnode.args.every(arg => arg.isAtom))
+      if(!scope.partial && nnode.args.every(arg => arg.isAtom))
         return new Atom(nnode.args.map(arg => arg.numValue()).reduce(fun));
       else
         return nnode;
@@ -73,6 +73,8 @@ regReducer('div', '/', (a, b) => a / b);
 mainReg.register('min', {
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     if(nnode.args.length > 0) {
       const ins = nnode.args.map(arg => arg.evalNum());
       const min = ins.reduce((a, b) => b < a ? b : a);
@@ -100,6 +102,8 @@ mainReg.register('min', {
 mainReg.register('max', {
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     if(nnode.args.length > 0) {
       const ins = nnode.args.map(arg => arg.evalNum());
       const max = ins.reduce((a, b) => b > a ? b : a);
@@ -168,6 +172,8 @@ mainReg.register('pow', {
   maxArg: 2,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     if(nnode.args.length === 1) {
       if(!nnode.src)
         throw new StreamError('needs source');
@@ -204,6 +210,8 @@ mainReg.register('mod', {
   maxArg: 2,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     const inp = nnode.src.evalNum();
     const mod = nnode.args[0].evalNum({min: 1n});
     const base = nnode.args[1] ? nnode.args[1].evalNum() : 0n;
@@ -217,7 +225,10 @@ mainReg.register('odd', {
   source: true,
   numArg: 0,
   prepare: function(scope) {
-    const val = this.prepareSrc(scope).src.evalNum();
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const val = nnode.src.evalNum();
     return new Atom((val & 1n) === 1n);
   }
 });
@@ -226,7 +237,10 @@ mainReg.register('even', {
   source: true,
   numArg: 0,
   prepare: function(scope) {
-    const val = this.prepareSrc(scope).src.evalNum();
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const val = nnode.src.evalNum();
     return new Atom((val & 1n) === 0n);
   }
 });
@@ -237,6 +251,8 @@ function regComparer(name, sign, fun) {
     minArg: 2,
     prepare: function(scope) {
       const nnode = this.prepareAll(scope);
+      if(scope.partial)
+        return nnode;
       if(nnode.args.every(arg => arg.isAtom)) {
         const vals = nnode.args.map(arg => arg.numValue());
         let res = true;
@@ -274,6 +290,8 @@ mainReg.register(['tobase', 'tbase'], {
   maxArg: 1,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     let val = nnode.src.evalNum();
     const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     const digit = c => c < 10 ? String.fromCharCode(c + 48) : String.fromCharCode(c + 97 - 10);
@@ -295,6 +313,8 @@ mainReg.register(['frombase', 'fbase'], {
   maxArg: 1,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     const str = nnode.src.evalAtom('string');
     const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
@@ -341,7 +361,7 @@ mainReg.register(['fromdigits', 'fdig'], {
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     let val = 0n;
     for(const r of sIn) {
-      const digit = r.prepare(scope).evalNum({min: 0n, max: base - 1n});
+      const digit = r.evalNum({min: 0n, max: base - 1n});
       val = val * base + digit;
     }
     return new Atom(val);
@@ -389,6 +409,8 @@ mainReg.register('isprime', {
   numArg: 0,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     const val = nnode.src.evalNum();
     if(val <= 1n)
       return new Atom(false);

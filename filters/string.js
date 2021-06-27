@@ -68,6 +68,8 @@ mainReg.register('ord', {
   maxArg: 1,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     const c = nnode.src.evalAtom(S);
     if(nnode.args[0]) {
       const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(S));
@@ -90,6 +92,8 @@ mainReg.register('chr', {
   maxArg: 1,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     if(nnode.args[0]) {
       const ix = nnode.src.evalNum({min: 1n});
       const abc = nnode.args[0].evalStream({finite: true});
@@ -111,6 +115,8 @@ mainReg.register('chrm', {
   numArg: 1,
   prepare: function(scope) {
     const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
     let ix = nnode.src.evalNum() - 1n;
     const abc = nnode.args[0].evalStream({finite: true});
     if(typeof abc.len === 'bigint' && abc.len !== 0n) {

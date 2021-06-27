@@ -157,7 +157,11 @@ mainReg.register('array', {
 mainReg.register('foreach', {
   source: true,
   numArg: 1,
-  prepare: Node.prototype.prepareSrc,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     const sIn = this.src.evalStream();
     const body = this.args[0];
@@ -193,7 +197,7 @@ mainReg.register('id', {
   numArg: 0,
   prepare: function(scope) {
     const pnode = this.prepareAll(scope);
-    return pnode.src;
+    return scope.partial ? pnode : pnode.src;
   },
   eval: function() {
     throw new StreamError('out of scope');
@@ -479,18 +483,22 @@ mainReg.register('part', {
 mainReg.register('in', {
   maxArg: 1,
   prepare: function(scope) {
+    this.check(scope.partial)
     if(scope.outer) {
       if(this.args[0]) {
-        const ix = this.args[0].evalNum({min: 1n, max: scope.outer.args.length});
-        return scope.outer.args[Number(ix) - 1];
+        const ix = this.args[0].evalNum({min: 1n, max: scope.partial ? undefined : scope.outer.args.length});
+        return ix <= scope.outer.args.length ? scope.outer.args[Number(ix) - 1] : this;
       } else {
         if(scope.outer.src)
           return scope.outer.src;
         else
-          throw new StreamError('outer scope has empty source');
+          return this;
       }
     } else
-      throw new StreamError('out of scope');
+      return this;
+  },
+  eval: function() {
+    throw new StreamError('out of scope');
   },
   desc: function() {
     let ret = '';
@@ -514,7 +522,11 @@ mainReg.register('in', {
 mainReg.register('nest', {
   source: true,
   numArg: 1,
-  prepare: Node.prototype.prepareSrc,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     let curr = this.src;
     const body = this.args[0];
@@ -534,7 +546,11 @@ mainReg.register('reduce', {
   source: true,
   minArg: 1,
   maxArg: 3,
-  prepare: Node.prototype.prepareSrc,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     const sIn = this.src.evalStream();
     const bodyMem = this.args[0];
@@ -570,7 +586,11 @@ mainReg.register('reduce', {
 mainReg.register('recur', {
   source: true,
   numArg: 1,
-  prepare: Node.prototype.prepareSrc,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     const sIn = this.src.evalStream({finite: true});
     const body = checks.stream(this.args[0]);
@@ -666,7 +686,11 @@ mainReg.register(['drop', 'droptake', 'dt'], {
 mainReg.register('over', {
   source: true,
   minArg: 1,
-  prepare: Node.prototype.prepareArgs,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare({...scope, args: undefined, partial: true}) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     const body = this.src;
     const args = this.args.map(arg => arg.evalStream());
@@ -706,16 +730,26 @@ mainReg.register('over', {
 mainReg.register('if', {
   numArg: 3,
   prepare: function(scope) {
-    const nnode = this.prepareSrc(scope);
-    const val = this.args[0].prepare({...scope, src: nnode.src}).evalAtom('boolean');
-    return this.args[val ? 1 : 2].prepare(scope);
-  }
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const pnode = this.modify({src, args}).check(scope.partial);
+    if(scope.partial)
+      return pnode;
+    else {
+      const val = pnode.args[0].prepare({...scope, src}).evalAtom('boolean');
+      return pnode.args[val ? 1 : 2].prepare({...scope, src});
+    }
+  },
 });
 
 mainReg.register(['select', 'sel'], {
   source: true,
   numArg: 1,
-  prepare: Node.prototype.prepareSrc,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     const sIn = this.src.evalStream();
     const cond = this.args[0];
@@ -733,7 +767,11 @@ mainReg.register(['select', 'sel'], {
 mainReg.register('while', {
   source: true,
   numArg: 1,
-  prepare: Node.prototype.prepareSrc,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     const sIn = this.src.evalStream();
     const cond = this.args[0];
@@ -886,7 +924,11 @@ function usort(arr, fn = x => x) {
 mainReg.register('sort', {
   source: true,
   maxArg: 1,
-  prepare: Node.prototype.prepareSrc,
+  prepare: function(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
   eval: function() {
     const sIn = this.src.evalStream({finite: true});
     if(this.args[0]) {
