@@ -345,6 +345,33 @@ mainReg.register('equal', {
   }
 });
 
+mainReg.register('ineq', {
+  reqSource: false,
+  numArg: 2,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(nnode.args.every(arg => arg.isAtom))
+      return new Atom(!eq(nnode.args));
+    else
+      return nnode;
+  },
+  eval() {
+    return new Atom(!eq(this.args));
+  },
+  toString() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.toString() + '.';
+    if(this.args.length > 0) {
+      ret += '(';
+      ret += this.args.map(n => n.toString()).join('<>');
+      ret += ')';
+    } else
+      ret += this.ident;
+    return ret;
+  }
+});
+
 mainReg.register('assign', {
   reqSource: false,
   minArg: 2,

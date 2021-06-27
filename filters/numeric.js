@@ -1,15 +1,15 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, mainReg} from '../base.js';
+import {Node, Atom, Stream, types, mainReg} from '../base.js';
 import watchdog from '../watchdog.js';
 
-function regReducer(name, sign, fun) {
+function regReducer(name, sign, fun, type = types.N) {
   mainReg.register(name, {
     reqSource: false,
     minArg: 2,
     prepare(scope) {
       const nnode = this.prepareAll(scope);
       if(!scope.partial && nnode.args.every(arg => arg.isAtom))
-        return new Atom(nnode.args.map(arg => arg.numValue()).reduce(fun));
+        return new Atom(nnode.args.map(arg => arg.checkType(type).value).reduce(fun));
       else
         return nnode;
     },
@@ -17,7 +17,7 @@ function regReducer(name, sign, fun) {
       const is = this.args
         .map(arg => arg.eval());
       if(is.every(i => i.isAtom))
-        return new Atom(is.map(a => a.numValue()).reduce(fun));
+        return new Atom(is.map(a => a.checkType(type).value).reduce(fun));
       else {
         const lens = is.filter(i => !i.isAtom).map(i => i.len);
         const len = lens.some(len => len === undefined) ? undefined
@@ -34,7 +34,7 @@ function regReducer(name, sign, fun) {
                   const {value: r, done} = i.next();
                   if(done)
                     return;
-                  vs.push(r.evalNum());
+                  vs.push(r.evalAtom(type));
                 }
               yield new Atom(vs.reduce(fun));
             }
@@ -69,6 +69,8 @@ regReducer('plus', '+', (a, b) => a + b);
 regReducer('minus', '-', (a, b) => a - b);
 regReducer('times', '*', (a, b) => a * b);
 regReducer('div', '/', (a, b) => a / b);
+regReducer('and', '&', (a, b) => a && b, types.B);
+regReducer('or', '|', (a, b) => a || b, types.B);
 
 mainReg.register('min', {
   prepare(scope) {
@@ -242,6 +244,60 @@ mainReg.register('even', {
       return nnode;
     const val = nnode.src.evalNum();
     return new Atom((val & 1n) === 0n);
+  }
+});
+
+mainReg.register('not', {
+  maxArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    if(nnode.args[0]) {
+      const val = nnode.args[0].evalAtom(types.B);
+      return new Atom(!val);
+    } else {
+      if(!nnode.src)
+        throw new StreamError('requires source');
+      const val = nnode.src.evalAtom(types.B);
+      return new Atom(!val);
+    }
+  }
+});
+
+mainReg.register(['every', 'each', 'all'], {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const cond = this.args[0];
+    for(const value of sIn)
+      if(!cond.prepare({src: value}).evalAtom('boolean'))
+        return new Atom(false);
+    return new Atom(true);
+  }
+});
+
+mainReg.register('some', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const cond = this.args[0];
+    for(const value of sIn)
+      if(cond.prepare({src: value}).evalAtom('boolean'))
+        return new Atom(true);
+    return new Atom(false);
   }
 });
 

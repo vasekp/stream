@@ -6,21 +6,24 @@ const cc = Enum.fromArray(['digit', 'alpha']);
 const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'spec']);
 
 const priority = Enum.fromObj({
-  ':': 8,
-  '.': 8,
-  '@': 8,
-  '^': 7,
-  '*': 6,
-  '/': 6,
-  '+': 5,
-  '-': 5,
-  '~': 4,
-  '%': 3,
-  '>': 2,
-  '<': 2,
-  '>=': 2,
-  '<=': 2,
-  '=': 1
+  ':': 10,
+  '.': 10,
+  '@': 10,
+  '^': 9,
+  '*': 8,
+  '/': 8,
+  '+': 7,
+  '-': 7,
+  '~': 6,
+  '%': 5,
+  '>': 4,
+  '<': 4,
+  '>=': 4,
+  '<=': 4,
+  '<>': 4,
+  '=': 3,
+  '&': 2,
+  '|': 1
 });
 
 const operMap = Enum.fromObj({
@@ -34,8 +37,11 @@ const operMap = Enum.fromObj({
   '=': 'equal',
   '<': 'lt',
   '>': 'gt',
+  '<>': 'ineq',
   '<=': 'le',
-  '>=': 'ge'
+  '>=': 'ge',
+  '&': 'and',
+  '|': 'or'
 });
 
 function charcls(c) {
@@ -72,6 +78,8 @@ function tokcls(c) {
     case '%':
     case '~':
     case '=':
+    case '&':
+    case '|':
       return tc.oper;
     default:
       return c;
@@ -118,7 +126,7 @@ function* tokenize(str) {
       accum += c;
       state = ss.specd;
       continue;
-    } else if(state === ss.comp && cls === '=') {
+    } else if(state === ss.comp && (cls === '=' || cls === '>' || cls === '<')) {
       accum += c;
       yield {value: accum, cls: tc.oper, pos: accumStart};
       state = ss.base;
