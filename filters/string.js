@@ -6,7 +6,7 @@ const S = 'string';
 mainReg.register('split', {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     const str = this.src.evalAtom(S);
     if(this.args[0]) {
       const ev = this.args[0].eval();
@@ -49,7 +49,7 @@ mainReg.register('split', {
 });
 
 mainReg.register('cat', {
-  eval: function() {
+  eval() {
     if(this.args.length > 1) {
       const strs = this.args.map(arg => arg.evalAtom(S));
       return new Atom(strs.join(''));
@@ -66,7 +66,7 @@ mainReg.register('cat', {
 mainReg.register('ord', {
   source: true,
   maxArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -90,7 +90,7 @@ mainReg.register('ord', {
 mainReg.register('chr', {
   source: true,
   maxArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -113,7 +113,7 @@ mainReg.register('chr', {
 mainReg.register('chrm', {
   source: true,
   numArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -139,7 +139,7 @@ mainReg.register('chrm', {
 mainReg.register('chars', {
   source: true,
   numArg: 1,
-  eval: function() {
+  eval() {
     const str = this.src.evalAtom(S);
     const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(S));
     return new Stream(this,
@@ -167,7 +167,7 @@ mainReg.register('chars', {
 mainReg.register('ords', {
   source: true,
   numArg: 1,
-  eval: function() {
+  eval() {
     const str = this.src.evalAtom(S);
     const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(S));
     return new Stream(this,
@@ -199,7 +199,7 @@ mainReg.register('ords', {
 mainReg.register('lcase', {
   source: true,
   numArg: 0,
-  prepare: function(scope) {
+  prepare(scope) {
     const str = this.prepareAll(scope).src.evalAtom(S);
     return new Atom(str.toLowerCase());
   }
@@ -208,7 +208,7 @@ mainReg.register('lcase', {
 mainReg.register('ucase', {
   source: true,
   numArg: 0,
-  prepare: function() {
+  prepare() {
     const str = this.prepareAll(scope).src.evalAtom(S);
     return new Atom(str.toUpperCase());
   }
@@ -217,7 +217,7 @@ mainReg.register('ucase', {
 mainReg.register('abc', {
   source: false,
   numArg: 0,
-  eval: function() {
+  eval() {
     const ucase = this.ident === 'ABC';
     const base = ucase ? 65 : 97;
     let i = base;

@@ -6,14 +6,14 @@ function regReducer(name, sign, fun) {
   mainReg.register(name, {
     source: false,
     minArg: 2,
-    prepare: function(scope) {
+    prepare(scope) {
       const nnode = this.prepareAll(scope);
       if(!scope.partial && nnode.args.every(arg => arg.isAtom))
         return new Atom(nnode.args.map(arg => arg.numValue()).reduce(fun));
       else
         return nnode;
     },
-    eval: function() {
+    eval() {
       const is = this.args
         .map(arg => arg.eval());
       if(is.every(i => i.isAtom))
@@ -50,7 +50,7 @@ function regReducer(name, sign, fun) {
         );
       }
     },
-    desc: function() {
+    desc() {
       let ret = '';
       if(this.src)
         ret = this.src.desc() + '.';
@@ -71,7 +71,7 @@ regReducer('times', '*', (a, b) => a * b);
 regReducer('div', '/', (a, b) => a / b);
 
 mainReg.register('min', {
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -100,7 +100,7 @@ mainReg.register('min', {
 });
 
 mainReg.register('max', {
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -131,7 +131,7 @@ mainReg.register('max', {
 mainReg.register(['total', 'tot'], {
   source: true,
   numArg: 0,
-  eval: function() {
+  eval() {
     const str = this.src.evalStream({finite: true});
     let tot = 0n;
     for(const s of str)
@@ -143,7 +143,7 @@ mainReg.register(['total', 'tot'], {
 mainReg.register('diff', {
   source: true,
   numArg: 0,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     return new Stream(this,
       (function*() {
@@ -170,7 +170,7 @@ mainReg.register('diff', {
 mainReg.register('pow', {
   minArg: 1,
   maxArg: 2,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -186,7 +186,7 @@ mainReg.register('pow', {
       return new Atom(base ** pow);
     }
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -208,7 +208,7 @@ mainReg.register('mod', {
   source: true,
   minArg: 1,
   maxArg: 2,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -224,7 +224,7 @@ mainReg.register('mod', {
 mainReg.register('odd', {
   source: true,
   numArg: 0,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -236,7 +236,7 @@ mainReg.register('odd', {
 mainReg.register('even', {
   source: true,
   numArg: 0,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -249,7 +249,7 @@ function regComparer(name, sign, fun) {
   mainReg.register(name, {
     source: false,
     minArg: 2,
-    prepare: function(scope) {
+    prepare(scope) {
       const nnode = this.prepareAll(scope);
       if(scope.partial)
         return nnode;
@@ -262,10 +262,10 @@ function regComparer(name, sign, fun) {
       } else
         return nnode;
     },
-    eval: function() {
+    eval() {
       throw new StreamError('comparison with stream(s)');
     },
-    desc: function() {
+    desc() {
       let ret = '';
       if(this.src)
         ret = this.src.desc() + '.';
@@ -288,7 +288,7 @@ regComparer('ge', '>=', (a, b) => a >= b);
 mainReg.register(['tobase', 'tbase'], {
   source: true,
   maxArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -311,7 +311,7 @@ mainReg.register(['tobase', 'tbase'], {
 mainReg.register(['frombase', 'fbase'], {
   source: true,
   maxArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -338,7 +338,7 @@ mainReg.register(['frombase', 'fbase'], {
 mainReg.register(['todigits', 'tdig'], {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     let val = this.src.evalNum({min: 0n});
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     const digits = [];
@@ -356,7 +356,7 @@ mainReg.register(['todigits', 'tdig'], {
 mainReg.register(['fromdigits', 'fdig'], {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream({finite: true});
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     let val = 0n;
@@ -393,7 +393,7 @@ const primes = (() => {
 mainReg.register('primes', {
   source: false,
   numArg: 0,
-  eval: function() {
+  eval() {
     return new Stream(this,
       (function*() {
         for(const p of primes())
@@ -407,7 +407,7 @@ mainReg.register('primes', {
 mainReg.register('isprime', {
   source: true,
   numArg: 0,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
       return nnode;
@@ -428,7 +428,7 @@ mainReg.register('isprime', {
 mainReg.register('factor', {
   source: true,
   numArg: 0,
-  eval: function() {
+  eval() {
     let val = this.src.evalNum({min: 1n});
     return new Stream(this,
       (function*() {

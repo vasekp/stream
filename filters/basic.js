@@ -4,7 +4,7 @@ import {Node, Atom, Block, Stream, checks, mainReg} from '../base.js';
 mainReg.register(['iota', 'seq'], {
   source: false,
   numArg: 0,
-  eval: function() {
+  eval() {
     let i = 1n;
     return new Stream(this,
       (function*() { for(;;) yield new Atom(i++); })(),
@@ -20,7 +20,7 @@ mainReg.register(['range', 'ran', 'r'], {
   source: false,
   minArg: 1,
   maxArg: 3,
-  eval: function() {
+  eval() {
     const [min, max] = this.args[0] && this.args[1]
       ? [this.args[0].evalNum(), this.args[1].evalNum()]
       : [1n, this.args[0].evalNum()];
@@ -46,7 +46,7 @@ mainReg.register(['range', 'ran', 'r'], {
 mainReg.register(['length', 'len'], {
   source: true,
   numArg: 0,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream({finite: true});
     let len = 0n;
     if(sIn.len === undefined) {
@@ -63,7 +63,7 @@ mainReg.register(['length', 'len'], {
 mainReg.register('first', {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     if(this.args[0]) {
       const l = this.args[0].evalNum({min: 1n});
@@ -95,7 +95,7 @@ mainReg.register('first', {
 mainReg.register('last', {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream({finite: true});
     if(this.args[0]) {
       const len = this.args[0].evalNum({min: 1n});
@@ -137,13 +137,13 @@ mainReg.register('last', {
 
 mainReg.register('array', {
   source: false,
-  eval: function() {
+  eval() {
     return new Stream(this,
       this.args.values(),
       {len: BigInt(this.args.length)}
     );
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -157,12 +157,12 @@ mainReg.register('array', {
 mainReg.register('foreach', {
   source: true,
   numArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     const body = this.args[0];
     return new Stream(this,
@@ -181,7 +181,7 @@ mainReg.register('foreach', {
       }
     );
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + ':';
@@ -195,14 +195,14 @@ mainReg.register('foreach', {
 mainReg.register('id', {
   source: true,
   numArg: 0,
-  prepare: function(scope) {
+  prepare(scope) {
     const pnode = this.prepareAll(scope);
     return scope.partial ? pnode : pnode.src;
   },
-  eval: function() {
+  eval() {
     throw new StreamError('out of scope');
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -214,7 +214,7 @@ mainReg.register('id', {
 mainReg.register(['repeat', 'rep'], {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     const src = this.src;
     if(this.args[0]) {
       const num = this.args[0].evalNum({min: 0n});
@@ -241,7 +241,7 @@ mainReg.register(['repeat', 'rep'], {
 mainReg.register(['cycle', 'cc'], {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     const src = this.src;
     if(this.args[0]) {
       const num = this.args[0].evalNum({min: 0n});
@@ -275,7 +275,7 @@ mainReg.register(['cycle', 'cc'], {
 mainReg.register(['group', 'g'], {
   source: true,
   minArg: 1,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     let lFun;
     let len;
@@ -327,7 +327,7 @@ mainReg.register(['group', 'g'], {
 mainReg.register(['flatten', 'fl'], {
   source: true,
   maxArg: 1,
-  eval: function() {
+  eval() {
     const depth = this.args[0] ? this.args[0].evalNum() : null;
     const node = this;
     return new Stream(this,
@@ -352,7 +352,7 @@ mainReg.register(['flatten', 'fl'], {
 
 mainReg.register('join', {
   source: false,
-  eval: function() {
+  eval() {
     const args = this.args.map(arg => arg.eval());
     const lens = args.map(arg => arg.isAtom ? 1n : arg.len);
     const len = lens.some(len => len === undefined) ? undefined
@@ -370,7 +370,7 @@ mainReg.register('join', {
       {len}
     );
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -386,7 +386,7 @@ mainReg.register('join', {
 
 mainReg.register('zip', {
   source: false,
-  eval: function() {
+  eval() {
     const args = this.args.map(arg => arg.evalStream());
     const lens = args.map(arg => arg.len);
     const len = lens.some(len => len === undefined) ? undefined
@@ -406,7 +406,7 @@ mainReg.register('zip', {
       {len}
     );
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -439,7 +439,7 @@ function part(sIn, iter) {
 mainReg.register('part', {
   source: true,
   minArg: 1,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom)) {
@@ -467,7 +467,7 @@ mainReg.register('part', {
       }
     );
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src) {
       ret = this.src.desc();
@@ -482,7 +482,7 @@ mainReg.register('part', {
 
 mainReg.register('in', {
   maxArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     this.check(scope.partial)
     if(scope.outer) {
       if(this.args[0]) {
@@ -497,10 +497,10 @@ mainReg.register('in', {
     } else
       return this;
   },
-  eval: function() {
+  eval() {
     throw new StreamError('out of scope');
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -522,12 +522,12 @@ mainReg.register('in', {
 mainReg.register('nest', {
   source: true,
   numArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     let curr = this.src;
     const body = this.args[0];
     return new Stream(this,
@@ -546,12 +546,12 @@ mainReg.register('reduce', {
   source: true,
   minArg: 1,
   maxArg: 3,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     const bodyMem = this.args[0];
     const bodyOut = this.args.length === 3 ? this.args[1] : bodyMem;
@@ -586,12 +586,12 @@ mainReg.register('reduce', {
 mainReg.register('recur', {
   source: true,
   numArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream({finite: true});
     const body = checks.stream(this.args[0]);
     return new Stream(this,
@@ -612,7 +612,7 @@ mainReg.register('recur', {
 mainReg.register(['reverse', 'rev'], {
   source: true,
   numArg: 0,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream({finite: true});
     const vals = [...sIn].reverse();
     return new Stream(this,
@@ -645,7 +645,7 @@ function takedrop(sIn, iter) {
 mainReg.register(['take', 'takedrop', 'td'], {
   source: true,
   minArg: 1,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom))
@@ -665,7 +665,7 @@ mainReg.register(['take', 'takedrop', 'td'], {
 mainReg.register(['drop', 'droptake', 'dt'], {
   source: true,
   minArg: 1,
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isAtom))
@@ -686,12 +686,12 @@ mainReg.register(['drop', 'droptake', 'dt'], {
 mainReg.register('over', {
   source: true,
   minArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare({...scope, partial: true}) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const body = this.src;
     const args = this.args.map(arg => arg.evalStream());
     const lens = args.map(arg => arg.len);
@@ -711,7 +711,7 @@ mainReg.register('over', {
       {len}
     );
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src && this.args.length === 1)
       ret = this.src.desc() + '@'
@@ -729,7 +729,7 @@ mainReg.register('over', {
 
 mainReg.register('if', {
   numArg: 3,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     const pnode = this.modify({src, args}).check(scope.partial);
@@ -745,12 +745,12 @@ mainReg.register('if', {
 mainReg.register(['select', 'sel'], {
   source: true,
   numArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     const cond = this.args[0];
     return new Stream(this,
@@ -767,12 +767,12 @@ mainReg.register(['select', 'sel'], {
 mainReg.register('while', {
   source: true,
   numArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream();
     const cond = this.args[0];
     return new Stream(this,
@@ -816,17 +816,17 @@ function eq(args) {
 mainReg.register('equal', {
   source: false,
   minArg: 2,
-  prepare: function(scope) {
+  prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(nnode.args.every(arg => arg.isAtom))
       return new Atom(eq(nnode.args));
     else
       return nnode;
   },
-  eval: function() {
+  eval() {
     return new Atom(eq(this.args));
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -838,7 +838,7 @@ mainReg.register('equal', {
       ret += this.ident;
     return ret;
   },
-  toAssign: function() {
+  toAssign() {
     return new Node('assign', this.token, this.src, this.args, this.meta);
   }
 });
@@ -846,7 +846,7 @@ mainReg.register('equal', {
 mainReg.register('assign', {
   source: false,
   minArg: 2,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.slice();
     if(args.length) {
@@ -864,7 +864,7 @@ mainReg.register('assign', {
       mod.meta = {...this.meta, _register: scope.register};
     return this.modify(mod).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const args = this.args.slice();
     const body = args.pop();
     const idents = args.map(arg => arg.ident);
@@ -878,7 +878,7 @@ mainReg.register('assign', {
       {len: BigInt(idents.length)}
     );
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
@@ -917,12 +917,12 @@ function usort(arr, fn = x => x) {
 mainReg.register('sort', {
   source: true,
   maxArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = (scope.args || this.args).map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     return this.modify({src, args}).check(scope.partial);
   },
-  eval: function() {
+  eval() {
     const sIn = this.src.evalStream({finite: true});
     if(this.args[0]) {
       const temp = [...sIn].map(s => [s, this.args[0].prepare({src: s}).eval()]);
@@ -946,7 +946,7 @@ mainReg.register('sort', {
 mainReg.register('history', {
   source: false,
   maxArg: 1,
-  prepare: function(scope) {
+  prepare(scope) {
     if(scope.history) {
       if(this.args[0]) {
         const ix = this.args[0].evalNum({min: 1n});
@@ -965,7 +965,7 @@ mainReg.register('history', {
     } else
       throw new StreamError('out of scope');
   },
-  desc: function() {
+  desc() {
     let ret = '';
     if(this.src)
       ret = this.src.desc() + '.';
