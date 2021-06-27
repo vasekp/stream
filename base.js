@@ -25,6 +25,8 @@ function coal(a, b) {
   return a !== undefined ? a : b;
 }
 
+export const debug = globalThis.process?.argv?.includes('debug');
+
 export class Node {
   constructor(ident, token, src = null, args = [], meta = {}) {
     this.ident = ident;
@@ -51,14 +53,15 @@ export class Node {
         }
       };
     }
-    /* Debug: */
-    const pPrep = this.prepare;
-    this.prepare = scope => {
-      const nnode = pPrep.call(this, scope);
-      if(nnode !== this)
-        console.log(`${this.desc()} => ${nnode.desc()}`);
-      return nnode;
-    };
+    if(debug) {
+      const pPrep = this.prepare;
+      this.prepare = scope => {
+        const nnode = pPrep.call(this, scope);
+        if(nnode !== this)
+          console.log(`${this.desc()} => ${nnode.desc()}`);
+        return nnode;
+      };
+    }
   }
 
   modify(what) {
