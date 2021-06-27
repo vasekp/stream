@@ -319,7 +319,11 @@ function regComparer(name, sign, fun) {
         return nnode;
     },
     eval() {
-      throw new StreamError('comparison with stream(s)');
+      const vals = this.args.map(arg => arg.evalNum());
+      let res = true;
+      for(let i = 1; i < vals.length; i++)
+        res = res && fun(vals[i-1], vals[i]);
+      return new Atom(res);
     },
     toString() {
       let ret = '';
