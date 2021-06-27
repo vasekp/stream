@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, mainReg} from '../base.js';
+import {Node, Atom, Stream, types, mainReg, compareStreams} from '../base.js';
 
 mainReg.register('array', {
   reqSource: false,
@@ -290,43 +290,18 @@ mainReg.register('over', {
   }
 });
 
-function eq(args) {
-  const ins = args.map(arg => arg.eval());
-  if(ins.every(i => i.isAtom)) {
-    const vals = args.map(arg => arg.value);
-    return vals.every(val => val === vals[0]);
-  } else if(ins.some(i => i.isAtom))
-    return false;
-  // else
-  /* all ins confirmed streams now */
-  const lens = ins.map(i => i.len).filter(i => i !== undefined);
-  if(lens.length > 1 && lens.some(l => l !== lens[0]))
-    return false;
-  if(lens.some(l => l === null))
-    throw new StreamError('can\'t determine equality');
-  for(;;) {
-    const rs = ins.map(i => i.next());
-    if(rs.every(r => r.done))
-      return true;
-    else if(rs.some(r => r.done))
-      return false;
-    if(!eq(rs.map(r => r.value)))
-      return false;
-  }
-}
-
 mainReg.register('equal', {
   reqSource: false,
   minArg: 2,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(nnode.args.every(arg => arg.isAtom))
-      return new Atom(eq(nnode.args));
+      return new Atom(compareStreams(...nnode.args));
     else
       return nnode;
   },
   eval() {
-    return new Atom(eq(this.args));
+    return new Atom(compareStreams(...this.args));
   },
   toString() {
     let ret = '';
@@ -351,12 +326,12 @@ mainReg.register('ineq', {
   prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(nnode.args.every(arg => arg.isAtom))
-      return new Atom(!eq(nnode.args));
+      return new Atom(!compareStreams(...nnode.args));
     else
       return nnode;
   },
   eval() {
-    return new Atom(!eq(this.args));
+    return new Atom(!compareStreams(...this.args));
   },
   toString() {
     let ret = '';

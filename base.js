@@ -419,3 +419,28 @@ export class History {
       return this._hist[this._hist.length - 1];
   }
 };
+
+export function compareStreams(...args) {
+  const ins = args.map(arg => arg.eval());
+  if(ins.every(i => i.isAtom)) {
+    const vals = args.map(arg => arg.value);
+    return vals.every(val => val === vals[0]);
+  } else if(ins.some(i => i.isAtom))
+    return false;
+  // else
+  /* all ins confirmed streams now */
+  const lens = ins.map(i => i.len).filter(i => i !== undefined);
+  if(lens.length > 1 && lens.some(l => l !== lens[0]))
+    return false;
+  if(lens.some(l => l === null))
+    throw new StreamError('can\'t determine equality');
+  for(;;) {
+    const rs = ins.map(i => i.next());
+    if(rs.every(r => r.done))
+      return true;
+    else if(rs.some(r => r.done))
+      return false;
+    if(!eq(rs.map(r => r.value)))
+      return false;
+  }
+}

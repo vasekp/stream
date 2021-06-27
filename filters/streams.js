@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, types, mainReg} from '../base.js';
+import {Node, Atom, Block, Stream, types, mainReg, compareStreams} from '../base.js';
 
 mainReg.register(['iota', 'seq'], {
   reqSource: false,
@@ -478,7 +478,7 @@ mainReg.register('if', {
   },
 });
 
-mainReg.register(['select', 'sel'], {
+mainReg.register(['select', 'sel', 'where'], {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -569,6 +569,24 @@ mainReg.register('sort', {
         {len: BigInt(vals.length)}
       );
     }
+  }
+});
+
+mainReg.register('uniq', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream();
+    return new Stream(this,
+      (function*() {
+        let prev;
+        for(const curr of sIn) {
+          if(!prev || !compareStreams(curr, prev))
+            yield curr;
+          prev = curr;
+        }
+      })()
+    );
   }
 });
 
