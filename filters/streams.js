@@ -791,6 +791,59 @@ mainReg.register('count', {
   }
 });
 
+mainReg.register('counts', {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const sRef = this.args[0].evalStream({finite: true});
+    const map = new Map();
+    for(const ref of sRef)
+      map.set(ref, 0);
+    for(const r of sIn) {
+      for(const [key, val] of map)
+        if(compareStreams(r, key)) {
+          map.set(key, val + 1);
+          break;
+        }
+    }
+    const token = this.token;
+    return new Stream(this,
+      (function*() {
+        for(const [key, val] of map)
+          yield new Node('array', token, null, [key, new Atom(val)]);
+      })(),
+      {len: map.size}
+    );
+  }
+});
+
+mainReg.register(['tally', 'freq'], {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const map = new Map();
+    A: for(const r of sIn) {
+      for(const [key, val] of map)
+        if(compareStreams(r, key)) {
+          map.set(key, val + 1);
+          continue A;
+        }
+      // else
+      map.set(r, 1);
+    }
+    const token = this.token;
+    return new Stream(this,
+      (function*() {
+        for(const [key, val] of map)
+          yield new Node('array', token, null, [key, new Atom(val)]);
+      })(),
+      {len: map.size}
+    );
+  }
+});
+
 mainReg.register('rle', {
   reqSource: true,
   numArg: 0,
@@ -817,7 +870,7 @@ mainReg.register('rle', {
   }
 });
 
-mainReg.register('unrle', {
+mainReg.register(['unrle', 'unfreq', 'untally'], {
   reqSource: true,
   numArg: 0,
   eval() {
