@@ -288,10 +288,17 @@ export class Block extends Node {
       return this;
   }
 
+  deepModify(what) {
+    const src = this.src?.deepModify(what);
+    const args = this.args.map(arg => arg.deepModify(what));
+    const body = this.body.deepModify(what);
+    return this.modify({...what, src, args, body});
+  }
+
   prepare(scope) {
     const pnode = this.prepareAll(scope);
-    const pbody = this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args}});
-    return scope.partial && !scope.expand ? pnode.modify({body: pbody}) : pbody;
+    const pbody = this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args, partial: scope.partial}});
+    return scope.partial ? pnode.modify({body: pbody}) : pbody;
   }
 
   apply(args) {
@@ -322,6 +329,13 @@ export class CustomNode extends Block {
         coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
+  }
+
+  prepare(scope) {
+    if(scope.expand)
+      return new Block(this.ident, this.token, this.body, this.src, this.args, this.meta).prepare(scope);
+    else
+      return super.prepare(scope);
   }
 
   toString() {

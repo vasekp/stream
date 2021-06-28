@@ -210,8 +210,8 @@ mainReg.register('part', {
 mainReg.register('in', {
   maxArg: 1,
   prepare(scope) {
-    this.check(scope.partial)
-    if(scope.outer) {
+    this.check(scope.partial);
+    if(scope.outer && !scope.outer.partial) {
       if(this.args[0]) {
         const ix = this.args[0].evalNum({min: 1n, max: scope.partial ? undefined : scope.outer.args.length});
         return ix <= scope.outer.args.length ? scope.outer.args[Number(ix) - 1] : this;
