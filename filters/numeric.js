@@ -540,29 +540,31 @@ mainReg.register('pi', {
         let wait = [];
         for(let j = 0; ; j++) {
           const w = v.map(() => 0);
-          const add = j % 3 ? 3 : 4;
+          const add = 196;
           for(let i = 0; i < add; i++) {
             v.push(0);
             w.push(2);
           }
-          for(let k = 0; k < j; k++) {
+          for(let k = 0; k < j * 59; k++) {
             w.forEach((el, ix) => w[ix] *= 10);
             normalize(w);
           }
           v.forEach((el, ix) => v[ix] += w[ix]);
-          v.forEach((el, ix) => v[ix] *= 10);
-          v[0] += normalize(v);
-          const pre = Math.floor(v[0] / 10);
-          v[0] %= 10;
-          if(pre < 9) {
-            yield* wait.map(x => new Atom(x));
-            wait = [pre];
-          } else if(pre === 10) {
-            yield* wait.map(x => new Atom(x + 1));
-            wait = [0];
-          } else {
-            // pre === 9
-            wait.push(pre);
+          for(let k = 0; k < 59; k++) {
+            v.forEach((el, ix) => v[ix] *= 10);
+            v[0] += normalize(v);
+            const pre = Math.floor(v[0] / 10);
+            v[0] %= 10;
+            if(pre < 9) {
+              yield* wait.map(x => new Atom(x));
+              wait = [pre];
+            } else if(pre === 10) {
+              yield* wait.map(x => new Atom(x + 1));
+              wait = [0];
+            } else {
+              // pre === 9
+              wait.push(pre);
+            }
           }
         }
       })(),
