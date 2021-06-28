@@ -423,7 +423,7 @@ export class History {
 export function compareStreams(...args) {
   const ins = args.map(arg => arg.eval());
   if(ins.every(i => i.isAtom)) {
-    const vals = args.map(arg => arg.value);
+    const vals = ins.map(i => i.value);
     return vals.every(val => val === vals[0]);
   } else if(ins.some(i => i.isAtom))
     return false;
