@@ -198,7 +198,10 @@ mainReg.register('lcase', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
-    const str = this.prepareAll(scope).src.evalAtom(types.S);
+    const pnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const str = pnode.src.evalAtom(types.S);
     return new Atom(str.toLowerCase());
   }
 });
@@ -206,8 +209,11 @@ mainReg.register('lcase', {
 mainReg.register('ucase', {
   reqSource: true,
   numArg: 0,
-  prepare() {
-    const str = this.prepareAll(scope).src.evalAtom(types.S);
+  prepare(scope) {
+    const pnode = this.prepareAll(scope);
+    if(scope.partial)
+      return pnode;
+    const str = pnode.src.evalAtom(types.S);
     return new Atom(str.toUpperCase());
   }
 });
