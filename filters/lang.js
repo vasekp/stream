@@ -164,13 +164,13 @@ function part(sIn, iter) {
 }
 
 mainReg.register('part', {
-  reqSource: true,
+  reqSource: false,
   minArg: 1,
   eval() {
-    const sIn = this.src.evalStream();
-    const ins = this.args.map(arg => arg.eval());
+    const sIn = this.args[0].evalStream();
+    const ins = this.args.slice(1).map(arg => arg.eval());
     if(ins.every(i => i.isAtom)) {
-      if(this.args.length === 1) {
+      if(ins.length === 1) {
         const ix = ins[0].numValue({min: 1n});
         sIn.skip(ix - 1n);
         const {value, done} = sIn.next();
@@ -181,7 +181,7 @@ mainReg.register('part', {
         return new Stream(this,
           part(sIn, ins.map(i => i.numValue({min: 1n}))),
           {len: BigInt(ins.length)});
-    } else if(this.args.length > 1)
+    } else if(ins.length > 1)
       throw new StreamError('required list of values or a single stream');
     return new Stream(this,
       part(sIn, (function*() {
@@ -196,13 +196,10 @@ mainReg.register('part', {
   },
   toString() {
     let ret = '';
-    if(this.src) {
-      ret = this.src.toString();
-      ret += '[' + this.args.map(a => a.toString()).join(',') + ']';
-    } else {
-      ret = 'part';
-      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
-    }
+    if(this.src)
+      ret = this.src.toString() + '.';
+    ret += `(${this.args[0].toString()})`;
+    ret += '[' + this.args.slice(1).map(a => a.toString()).join(',') + ']';
     return ret;
   }
 });
