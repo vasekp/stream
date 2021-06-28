@@ -58,6 +58,13 @@ mainReg.register('cat', {
   }
 });
 
+export function ord(c) {
+  const cp = c.codePointAt(0);
+  if(c !== String.fromCodePoint(cp))
+    throw new StreamError(`expected single character, got "${c}"`);
+  return cp;
+}
+
 mainReg.register('ord', {
   reqSource: true,
   maxArg: 1,
@@ -73,12 +80,8 @@ mainReg.register('ord', {
         throw new StreamError(`character "${c}" not in list`);
       else
         return new Atom(ix + 1);
-    } else {
-      const cp = c.codePointAt(0);
-      if(c !== String.fromCodePoint(cp))
-        throw new StreamError(`expected single character, got "${c}"`);
-      return new Atom(c.codePointAt(0));
-    }
+    } else
+      return new Atom(ord(c));
   }
 });
 
@@ -269,5 +272,31 @@ mainReg.register('isletter', {
       return new Atom(abc.includes(c));
     } else
       return new Atom(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z');
+  }
+});
+
+mainReg.register('prefix', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const str = nnode.src.evalAtom(types.S);
+    const len = nnode.args[0].evalNum();
+    return new Atom(str.slice(0, Number(len))); // works for ≥ 0 as well as < 0
+  }
+});
+
+mainReg.register('postfix', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const str = nnode.src.evalAtom(types.S);
+    const len = nnode.args[0].evalNum();
+    return len === 0n ? new Atom("") : new Atom(str.slice(Number(-len)));
   }
 });

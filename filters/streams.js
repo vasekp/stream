@@ -1,5 +1,6 @@
 import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, types, mainReg, compareStreams} from '../base.js';
+import {ord} from './string.js';
 
 mainReg.register(['iota', 'seq'], {
   reqSource: false,
@@ -22,24 +23,46 @@ mainReg.register(['range', 'ran', 'r'], {
   maxArg: 3,
   eval() {
     const [min, max] = this.args[0] && this.args[1]
-      ? [this.args[0].evalNum(), this.args[1].evalNum()]
+      ? [this.args[0].evalAtom([types.N, types.S]), this.args[1].evalAtom([types.N, types.S])]
       : [1n, this.args[0].evalNum()];
     const step = this.args[2] ? this.args[2].evalNum() : 1n;
-    let i = min;
-    return new Stream(this,
-      (function*() {
-        while(step >= 0n ? i <= max : i >= max) {
-          yield new Atom(i);
-          i += step;
+    if(typeof min !== typeof max)
+      throw new StreamError(`min ${Atom.format(min)}, max ${Atom.format(max)} of different types`);
+    if(typeof min === 'bigint') {
+      let i = min;
+      return new Stream(this,
+        (function*() {
+          while(step >= 0n ? i <= max : i >= max) {
+            yield new Atom(i);
+            i += step;
+          }
+        })(),
+        {
+          skip: c => i += c * step,
+          len: step !== 0n
+            ? (a => a >= 0n ? a : 0n)((max - min) / step + 1n)
+            : null
         }
-      })(),
-      {
-        skip: c => i += c * step,
-        len: step !== 0n
-          ? (a => a >= 0n ? a : 0n)((max - min) / step + 1n)
-          : null
-      }
-    );
+      );
+    } else {
+      const minCP = BigInt(ord(min));
+      const maxCP = BigInt(ord(max));
+      let i = minCP;
+      return new Stream(this,
+        (function*() {
+          while(step >= 0n ? i <= maxCP : i >= maxCP) {
+            yield new Atom(String.fromCodePoint(Number(i)));
+            i += step;
+          }
+        })(),
+        {
+          skip: c => i += c * step,
+          len: step !== 0n
+            ? (a => a >= 0n ? a : 0n)((maxCP - minCP) / step + 1n)
+            : null
+        }
+      );
+    }
   }
 });
 
@@ -47,16 +70,20 @@ mainReg.register(['length', 'len'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const sIn = this.src.evalStream({finite: true});
-    let len = 0n;
-    if(sIn.len === undefined) {
-      for(const i of sIn)
-        len++;
-    } else if(sIn.len !== null)
-      len = sIn.len;
-    else
-      throw new Error('assertion failed');
-    return new Atom(len);
+    const sIn = this.src.eval().checkType([types.stream, types.S]);
+    if(sIn.type === types.stream) {
+      sIn.checkFinite();
+      let len = 0n;
+      if(typeof sIn.len === 'bigint')
+        len = sIn.len;
+      else {
+        for(const i of sIn)
+          len++;
+      }
+      return new Atom(len);
+    } else if(sIn.type === types.S) {
+      return new Atom(sIn.value.length);
+    }
   }
 });
 
@@ -378,27 +405,32 @@ mainReg.register(['padleft', 'pl'], {
   reqSource: true,
   numArg: 2,
   eval() {
-    const sIn = this.src.evalStream();
+    const sIn = this.src.eval().checkType([types.stream, types.S]);
     const len = this.args[0].evalNum({min: 0n});
-    const arr = [];
-    let i = 0n;
-    for(const r of sIn) {
-      arr.push(r);
-      if(++i == len)
-        break;
-    }
-    const fill = this.args[1];
-    return new Stream(this,
-      (function*() {
-        for(; i < len; i++)
-          yield fill;
-        yield* arr;
-        yield* sIn;
-      })(),
-      {
-        len: typeof sIn.len === 'bigint' && sIn.len < len ? len : sIn.len
+    if(sIn.type === types.stream) {
+      const arr = [];
+      let i = 0n;
+      for(const r of sIn) {
+        arr.push(r);
+        if(++i == len)
+          break;
       }
-    );
+      const fill = this.args[1];
+      return new Stream(this,
+        (function*() {
+          for(; i < len; i++)
+            yield fill;
+          yield* arr;
+          yield* sIn;
+        })(),
+        {
+          len: typeof sIn.len === 'bigint' && sIn.len < len ? len : sIn.len
+        }
+      );
+    } else {
+      const fill = this.args[1].evalAtom(types.S);
+      return new Atom(sIn.value.padStart(Number(len), fill));
+    }
   }
 });
 
@@ -406,23 +438,28 @@ mainReg.register(['padright', 'pr'], {
   reqSource: true,
   numArg: 2,
   eval() {
-    const sIn = this.src.evalStream();
+    const sIn = this.src.eval().checkType([types.stream, types.S]);
     const len = this.args[0].evalNum({min: 0n});
     const fill = this.args[1];
-    return new Stream(this,
-      (function*() {
-        let i = 0n;
-        for(const r of sIn) {
-          yield r;
-          i++;
+    if(sIn.type === types.stream) {
+      return new Stream(this,
+        (function*() {
+          let i = 0n;
+          for(const r of sIn) {
+            yield r;
+            i++;
+          }
+          for(; i < len; i++)
+            yield fill;
+        })(),
+        {
+          len: (typeof sIn.len === 'bigint' && sIn.len < len) ? len : sIn.len
         }
-        for(; i < len; i++)
-          yield fill;
-      })(),
-      {
-        len: (typeof sIn.len === 'bigint' && sIn.len < len) ? len : sIn.len
-      }
-    );
+      );
+    } else {
+      const fillStr = fill.evalAtom(types.S);
+      return new Atom(sIn.value.padEnd(Number(len), fillStr));
+    }
   }
 });
 
@@ -686,16 +723,22 @@ mainReg.register('index', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const sIn = this.src.evalStream();
-    const ref = this.args[0];
-    let i = 0;
-    for(const r of sIn) {
-      i++;
-      if(compareStreams(r, ref))
-        return new Atom(i);
+    const sIn = this.src.eval().checkType([types.stream, types.S]);
+    if(sIn.type === types.stream) {
+      const ref = this.args[0];
+      let i = 0;
+      for(const r of sIn) {
+        i++;
+        if(compareStreams(r, ref))
+          return new Atom(i);
+      }
+      // not found
+      return new Atom(0);
+    } else {
+      const haystack = sIn.value;
+      const needle = this.args[0].evalAtom(types.S);
+      return new Atom(haystack.indexOf(needle) + 1);
     }
-    // not found
-    return new Atom(0);
   }
 });
 

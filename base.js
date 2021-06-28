@@ -171,8 +171,8 @@ export class Node extends Base {
 
   evalStream(opts = {}) {
     const r = this.eval().checkType(types.stream);
-    if(opts.finite && r.len === null)
-      throw new StreamError('infinite stream');
+    if(opts.finite)
+      r.checkFinite();
     return r;
   }
 
@@ -268,6 +268,10 @@ export class Atom extends Node {
   numValue(opts = {}) {
     return checkBounds(this.checkType(types.N).value, opts);
   }
+
+  static format(v) {
+    return (new Atom(v)).toString();
+  }
 }
 
 export class Block extends Node {
@@ -357,6 +361,12 @@ export class Stream extends Base {
 
   toString() {
     return this.node.toString();
+  }
+
+  checkFinite() {
+    if(this.len === null)
+      throw new StreamError('infinite stream');
+    return this;
   }
 }
 
