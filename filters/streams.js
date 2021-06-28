@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, types, mainReg, compareStreams} from '../base.js';
+import {Node, Atom, Block, Stream, types, Register, mainReg, compareStreams} from '../base.js';
 import {ord} from './string.js';
 
 mainReg.register(['iota', 'seq'], {
@@ -901,5 +901,39 @@ mainReg.register('isstream', {
       return nnode;
     const c = nnode.src.eval();
     return new Atom(c.type === types.stream);
+  }
+});
+
+mainReg.register('with', {
+  minArg: 2,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.slice();
+    if(args.length) {
+      const body = args.pop().prepare({...scope, src, register: undefined, partial: true});
+      args.forEach((arg, ix) => {
+        if(arg.token.value !== '=')
+          throw new StreamError(`expected assignment, found ${arg.desc()}`);
+        args[ix] = arg.toAssign().prepare({...scope, src, partial: true, expand: !scope.partial});
+      });
+      args.push(body);
+    }
+    const mod = {src: null, args};
+    if(scope.register)
+      mod.meta = {...this.meta, _register: scope.register};
+    const pnode = this.modify(mod).check(scope.partial);
+    if(scope.partial)
+      return pnode;
+    else {
+      const outerReg = pnode.meta._register;
+      if(!outerReg)
+        throw new Error('register not defined');
+      const innerReg = new Register(outerReg);
+      const args = pnode.args.slice();
+      const body = args.pop();
+      for(const arg of args)
+        arg.prepare({register: innerReg}).eval();
+      return body.prepare({...scope, register: innerReg});
+    }
   }
 });

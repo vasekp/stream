@@ -354,7 +354,7 @@ mainReg.register('assign', {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.slice();
     if(args.length) {
-      const body = args.pop().prepare({...scope, partial: true, expand: true});
+      const body = args.pop().prepare({...scope, src, partial: true, expand: !scope.partial});
       args.forEach(arg => arg.checkType(types.symbol));
       args.push(body);
     }
@@ -385,6 +385,9 @@ mainReg.register('assign', {
     } else
       ret += this.ident;
     return ret;
+  },
+  toAssign() {
+    return this;
   }
 });
 

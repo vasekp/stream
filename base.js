@@ -134,7 +134,10 @@ export class Node extends Base {
         return new CustomNode(this.ident, this.token, rec.body,
           this.src, this.args, this.meta).prepare(scope);
     } // !scope.register OR record not found
-    throw new StreamError(`symbol "${this.ident}" undefined`);
+    if(!scope.partial || scope.expand)
+      throw new StreamError(`symbol "${this.ident}" undefined`);
+    else
+      return this;
   }
 
   prepareAll(scope) {
