@@ -345,7 +345,7 @@ regComparer('gt', '>', (a, b) => a > b);
 regComparer('le', '<=', (a, b) => a <= b);
 regComparer('ge', '>=', (a, b) => a >= b);
 
-mainReg.register(['tobase', 'tbase', 'tb'], {
+mainReg.register(['tobase', 'tbase', 'tb', 'str'], {
   reqSource: true,
   maxArg: 2,
   prepare(scope) {
@@ -369,7 +369,7 @@ mainReg.register(['tobase', 'tbase', 'tb'], {
   }
 });
 
-mainReg.register(['frombase', 'fbase', 'fb'], {
+mainReg.register(['frombase', 'fbase', 'fb', 'num'], {
   reqSource: true,
   maxArg: 2,
   prepare(scope) {
