@@ -5,6 +5,7 @@ import './filters/string.js';
 import {StreamError, TimeoutError, ParseError} from './errors.js';
 import {parse} from './parser.js';
 import {History, Register, mainReg} from './base.js';
+import {RNG} from './random.js';
 
 import repl from 'repl';
 
@@ -17,7 +18,8 @@ repl.start({eval: str => {
     let node = parse(str);
     if(node.ident === 'equal')
       node = node.toAssign();
-    node = node.timed(n => n.prepare({history, register: userReg}));
+    const rng = new RNG();
+    node = node.timed(n => n.prepare({history, register: userReg, rng}));
     const out = node.timed(n => n.writeout());
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {
