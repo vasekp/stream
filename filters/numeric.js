@@ -520,3 +520,53 @@ mainReg.register(['isnumber', 'isnum'], {
     return new Atom(c.type === types.N);
   }
 });
+
+mainReg.register('pi', {
+  reqSource: false,
+  numArg: 0,
+  eval() {
+    const normalize = v => {
+      let carry = 0;
+      for(let i = v.length - 1; i > 0; i--) {
+        let x = v[i] + carry * (i + 1);
+        v[i] = x % (2*i + 1);
+        carry = Math.floor(x / (2*i + 1));
+      }
+      return carry;
+    };
+    return new Stream(this,
+      (function*() {
+        const v = [];
+        let wait = [];
+        for(let j = 0; ; j++) {
+          const w = v.map(() => 0);
+          const add = j % 3 ? 3 : 4;
+          for(let i = 0; i < add; i++) {
+            v.push(0);
+            w.push(2);
+          }
+          for(let k = 0; k < j; k++) {
+            w.forEach((el, ix) => w[ix] *= 10);
+            normalize(w);
+          }
+          v.forEach((el, ix) => v[ix] += w[ix]);
+          v.forEach((el, ix) => v[ix] *= 10);
+          v[0] += normalize(v);
+          const pre = Math.floor(v[0] / 10);
+          v[0] %= 10;
+          if(pre < 9) {
+            yield* wait.map(x => new Atom(x));
+            wait = [pre];
+          } else if(pre === 10) {
+            yield* wait.map(x => new Atom(x + 1));
+            wait = [0];
+          } else {
+            // pre === 9
+            wait.push(pre);
+          }
+        }
+      })(),
+      {len: null}
+    );
+  }
+});
