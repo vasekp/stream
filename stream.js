@@ -16,7 +16,7 @@ repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
     let node = parse(str);
-    if(node.ident === 'equal')
+    if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
       node = node.toAssign();
     const rng = new RNG();
     node = node.timed(n => n.prepare({history, register: userReg, rng}));

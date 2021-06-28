@@ -21,6 +21,7 @@ const priority = Enum.fromObj({
   '>=': 4,
   '<=': 4,
   '<>': 4,
+  '==': 4,
   '=': 3,
   '&': 2,
   '|': 1
@@ -35,6 +36,7 @@ const operMap = Enum.fromObj({
   '~': 'join',
   '%': 'zip',
   '=': 'equal',
+  '==': 'equal',
   '<': 'lt',
   '>': 'gt',
   '<>': 'ineq',
@@ -166,6 +168,7 @@ function* tokenize(str) {
         break;
       case '>':
       case '<':
+      case '=':
         state = ss.comp;
         accum = c;
         accumStart = read - 1;
