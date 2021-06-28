@@ -464,7 +464,7 @@ export function compareStreams(...args) {
       return true;
     else if(rs.some(r => r.done))
       return false;
-    if(!eq(rs.map(r => r.value)))
+    if(!compareStreams(...rs.map(r => r.value)))
       return false;
   }
 }
