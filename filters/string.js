@@ -300,3 +300,66 @@ mainReg.register('postfix', {
     return len === 0n ? new Atom("") : new Atom(str.slice(Number(-len)));
   }
 });
+
+mainReg.register('ends', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const str = nnode.src.evalAtom(types.S);
+    const pfx = nnode.args[0].evalAtom(types.S);
+    return new Atom(str.endsWith(pfx));
+  }
+});
+
+mainReg.register('starts', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const str = nnode.src.evalAtom(types.S);
+    const pfx = nnode.args[0].evalAtom(types.S);
+    return new Atom(str.startsWith(pfx));
+  }
+});
+
+mainReg.register('shift', {
+  reqSource: true,
+  numArg: 2,
+  eval() {
+    const str = this.src.evalAtom(types.S);
+    let shift = this.args[0].evalNum();
+    const abc = [...this.args[1].evalStream({finite: true})].map(s => s.evalAtom(types.S));
+    shift = Number(shift % BigInt(abc.length));
+    if(shift < 0)
+      shift += abc.length;
+    let ix = 0;
+    let ret = '';
+    while(ix < str.length) {
+      let bestLen = 0;
+      let bestIx;
+      for(let i = 0; i < abc.length; i++) {
+        const ch = abc[i];
+        if(ch.length <= bestLen)
+          continue;
+        if(str.startsWith(ch, ix)) {
+          bestLen = ch.length;
+          bestIx = i;
+        }
+      }
+      if(bestLen) {
+        ret += abc[(bestIx + shift) % abc.length];
+        ix += bestLen;
+      } else {
+        const ch = String.fromCodePoint(str.codePointAt(ix));
+        ret += ch;
+        ix += ch.length;
+      }
+    }
+    return new Atom(ret);
+  }
+});
