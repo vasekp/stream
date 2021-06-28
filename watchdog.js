@@ -17,12 +17,15 @@ export default {
   },
 
   tick() {
-    if((counter++ & 0xFFF) === 0) {
-      if(!timeEnd)
-        throw new Error('Watchdog tick() called without start()');
-      if(Date.now() > timeEnd) {
-        throw new TimeoutError(counter);
-      }
+    if((counter++ & 0xFFF) === 0)
+      this.utick();
+  },
+
+  utick() {
+    if(!timeEnd)
+      throw new Error('Watchdog tick() called without start()');
+    if(Date.now() > timeEnd) {
+      throw new TimeoutError(counter);
     }
   }
 };

@@ -539,6 +539,7 @@ mainReg.register('pi', {
         const v = [];
         let wait = [];
         for(let j = 0; ; j++) {
+          watchdog.utick();
           const w = v.map(() => 0);
           const add = 196;
           for(let i = 0; i < add; i++) {
