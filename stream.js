@@ -12,7 +12,7 @@ import repl from 'repl';
 const history = new History();
 const userReg = new Register(mainReg);
 
-repl.start({eval: str => {
+const prompt = repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');
     let node = parse(str);
@@ -46,3 +46,9 @@ repl.start({eval: str => {
       throw e;
   }
 }});
+
+prompt.on('exit', e => {
+  console.log('User register:');
+  for(const [key, value] of userReg.dump())
+    console.log(`${key} = ${value}`);
+});

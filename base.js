@@ -1,6 +1,7 @@
 import {StreamError} from './errors.js';
 import watchdog from './watchdog.js';
 import Enum from './enum.js';
+import {parse} from './parser.js';
 
 const DEFLEN = 100;
 const DEFTIME = 1000;
@@ -392,9 +393,11 @@ export class Stream extends Base {
 }
 
 export class Register {
-  constructor(parent) {
+  constructor(parent, init = []) {
     this.parent = parent;
     this._map = {};
+    for(const [ident, string] of init)
+      this.register(ident, {body: parse(string)});
   }
 
   register(ident, filter) {
@@ -417,6 +420,13 @@ export class Register {
   includes(ident) {
     ident = ident?.toLowerCase();
     return this._map.hasOwnProperty(ident);
+  }
+
+  dump() {
+    const ret = [];
+    for(const key in this._map)
+      ret.push([key, this._map[key].body.toString()]);
+    return ret;
   }
 }
 
