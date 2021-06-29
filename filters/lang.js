@@ -1,5 +1,6 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, mainReg, compareStreams} from '../base.js';
+import {Node, Atom, Stream, types, compareStreams} from '../base.js';
+import mainReg from '../register.js';
 
 mainReg.register('array', {
   reqSource: false,

@@ -392,7 +392,7 @@ function parse0(iter, open, close, array) {
   }
 }
 
-export function parse(str) {
+export default function parse(str) {
   try {
     return parse0(tokenize(str), 0, '', false);
   } catch(e) {

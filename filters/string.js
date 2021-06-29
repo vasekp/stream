@@ -1,5 +1,6 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, types, mainReg} from '../base.js';
+import {Node, Atom, Block, Stream, types} from '../base.js';
+import mainReg from '../register.js';
 
 mainReg.register('split', {
   reqSource: true,

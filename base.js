@@ -1,7 +1,7 @@
 import {StreamError} from './errors.js';
 import watchdog from './watchdog.js';
 import Enum from './enum.js';
-import {parse} from './parser.js';
+import mainReg from './register.js';
 
 const DEFLEN = 100;
 const DEFTIME = 1000;
@@ -391,46 +391,6 @@ export class Stream extends Base {
     return this;
   }
 }
-
-export class Register {
-  constructor(parent, init = []) {
-    this.parent = parent;
-    this._map = {};
-    for(const [ident, string] of init)
-      this.register(ident, {body: parse(string)});
-  }
-
-  register(ident, filter) {
-    if(ident instanceof Array) {
-      ident.forEach(e => this.register(e, filter));
-      return;
-    }
-    ident = ident.toLowerCase();
-    if(mainReg.includes(ident))
-      throw new StreamError(`trying to overwrite base symbol ${ident}`);
-    else
-      this._map[ident] = filter;
-  }
-
-  find(ident) {
-    ident = ident?.toLowerCase();
-    return this._map[ident] || this.parent?._map[ident];
-  }
-
-  includes(ident) {
-    ident = ident?.toLowerCase();
-    return this._map.hasOwnProperty(ident);
-  }
-
-  dump() {
-    const ret = [];
-    for(const key in this._map)
-      ret.push([key, this._map[key].body.toString()]);
-    return ret;
-  }
-}
-
-export const mainReg = new Register();
 
 export class History {
   constructor() {

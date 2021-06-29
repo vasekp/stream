@@ -1,6 +1,7 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, types, Register, mainReg, compareStreams} from '../base.js';
+import {Node, Atom, Block, Stream, types, compareStreams} from '../base.js';
 import {ord} from './string.js';
+import mainReg from '../register.js';
 
 mainReg.register(['iota', 'seq'], {
   reqSource: false,
@@ -928,7 +929,7 @@ mainReg.register('with', {
       const outerReg = pnode.meta._register;
       if(!outerReg)
         throw new Error('register not defined');
-      const innerReg = new Register(outerReg);
+      const innerReg = outerReg.child();
       const args = pnode.args.slice();
       const body = args.pop();
       for(const arg of args)

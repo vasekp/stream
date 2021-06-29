@@ -1,6 +1,7 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, mainReg} from '../base.js';
+import {Node, Atom, Stream, types} from '../base.js';
 import watchdog from '../watchdog.js';
+import mainReg from '../register.js';
 
 function regReducer(name, sign, fun, type = types.N) {
   mainReg.register(name, {

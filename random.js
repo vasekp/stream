@@ -1,5 +1,6 @@
 import {StreamError} from './errors.js';
-import {Atom, mainReg} from './base.js';
+import {Atom} from './base.js';
+import mainReg from './register.js';
 
 const modInner = 0x7FFFFFFF;
 const modOuter = 1<<24;

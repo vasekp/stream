@@ -3,14 +3,15 @@ import './filters/streams.js';
 import './filters/numeric.js';
 import './filters/string.js';
 import {StreamError, TimeoutError, ParseError} from './errors.js';
-import {parse} from './parser.js';
-import {History, Register, mainReg} from './base.js';
+import parse from './parser.js';
+import {History} from './base.js';
 import {RNG} from './random.js';
+import mainReg from './register.js';
 
 import repl from 'repl';
 
 const history = new History();
-const userReg = new Register(mainReg);
+const userReg = mainReg.child();
 
 const prompt = repl.start({eval: str => {
   try {
