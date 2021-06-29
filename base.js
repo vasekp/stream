@@ -119,6 +119,10 @@ export class Node extends Base {
       return this;
   }
 
+  prepend(src) {
+    return this.modify({src: this.src ? this.src.prepend(src) : src});
+  }
+
   deepModify(what) {
     const src = this.src?.deepModify(what);
     const args = this.args.map(arg => arg.deepModify(what));
