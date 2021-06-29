@@ -4,7 +4,7 @@ import './filters/numeric.js';
 import './filters/string.js';
 import {StreamError, TimeoutError, ParseError} from './errors.js';
 import parse from './parser.js';
-import {RNG} from './random.js';
+import RNG from './random.js';
 import mainReg from './register.js';
 import History from './history.js';
 
