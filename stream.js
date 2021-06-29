@@ -13,6 +13,9 @@ import repl from 'repl';
 const history = new History();
 const userReg = mainReg.child();
 
+userReg.addEventListener('register', e =>
+  console.log(`${e.detail.key} = ${e.detail.value}`));
+
 const prompt = repl.start({eval: str => {
   try {
     str = str.replace(/[\n\r]+$/, '');

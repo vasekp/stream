@@ -1,7 +1,8 @@
 import parse from './parser.js';
 
-class Register {
+class Register extends EventTarget {
   constructor(parent, init = []) {
+    super();
     this.parent = parent;
     this.map = new Map();
     for(const [ident, string] of init)
@@ -18,6 +19,11 @@ class Register {
       throw new StreamError(`trying to overwrite base symbol ${ident}`);
     else
       this.map.set(ident, filter);
+    if(this !== mainReg && filter.body) {
+      const e = new Event('register');
+      e.detail = {key: ident, value: filter.body.toString()};
+      this.dispatchEvent(e);
+    }
   }
 
   find(ident) {
