@@ -389,6 +389,28 @@ mainReg.register('assign', {
   }
 });
 
+mainReg.register('clear', {
+  reqSource: false,
+  minArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    this.args.forEach(arg => arg.checkType(types.symbol));
+    const mod = {src: null};
+    if(scope.register)
+      mod.meta = {...this.meta, _register: scope.register};
+    return this.modify(mod).check(scope.partial);
+  },
+  eval() {
+    const reg = this.meta._register;
+    if(!reg)
+      throw new StreamError('out of scope');
+    const idents = this.args.map(arg => arg.ident);
+    for(const ident of idents)
+      reg.clear(ident);
+    return new Atom("");
+  }
+});
+
 mainReg.register('history', {
   reqSource: false,
   maxArg: 1,

@@ -20,7 +20,7 @@ class Register extends EventTarget {
     else
       this.map.set(ident, filter);
     if(this !== mainReg && filter.body) {
-      const e = new Event('register');
+      const e = new Event('register'); // Node.js does not have CustomEvent
       e.detail = {key: ident, value: filter.body.toString()};
       this.dispatchEvent(e);
     }
@@ -36,6 +36,15 @@ class Register extends EventTarget {
     return this.map.has(ident);
   }
 
+  clear(ident) {
+    if(this !== mainReg && this.map.has(ident)) {
+      const e = new Event('register');
+      e.detail = {key: ident};
+      this.dispatchEvent(e);
+      this.map.delete(ident);
+    }
+  }
+
   child(init) {
     return new Register(this, init);
   }
@@ -43,7 +52,7 @@ class Register extends EventTarget {
   dump() {
     const ret = [];
     for(const [key, node] of this.map)
-      ret.push([key, value.body.toString()]);
+      ret.push([key, node.body.toString()]);
     return ret;
   }
 }
