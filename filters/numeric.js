@@ -73,63 +73,48 @@ regReducer('div', '/', (a, b) => a / b);
 regReducer('and', '&', (a, b) => a && b, types.B);
 regReducer('or', '|', (a, b) => a || b, types.B);
 
-mainReg.register('min', {
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    if(nnode.args.length > 0) {
-      const ins = nnode.args.map(arg => arg.evalNum());
-      const min = ins.reduce((a, b) => b < a ? b : a);
-      return new Atom(min);
-    } else {
-      if(!nnode.src)
-        throw new StreamError('requires source');
-      const str = nnode.src.evalStream({finite: true});
-      const iter = (function*() {
-        for(const s of str)
-          yield s.evalNum();
-      })();
-      const {value, done} = iter.next();
-      if(done)
-        throw new StreamError('empty stream');
-      let min = value;
-      for(const v of iter)
-        if(v < min)
-          min = v;
-      return new Atom(min);
+function regReducerS(name, fun, numOpts) {
+  mainReg.register(name, {
+    prepare(scope) {
+      const nnode = this.prepareAll(scope);
+      if(scope.partial)
+        return nnode;
+      if(nnode.args.length > 0) {
+        const ins = nnode.args.map(arg => arg.evalNum());
+        const res = ins.reduce(fun);
+        return new Atom(res);
+      } else {
+        if(!nnode.src)
+          throw new StreamError('requires source');
+        const sIn = nnode.src.evalStream({finite: true});
+        let res = null;
+        for(const s of sIn) {
+          const curr = s.evalNum(numOpts);
+          res = res === null ? curr : fun(res, curr);
+        }
+        if(res === null)
+          throw new StreamError('empty stream');
+        return new Atom(res);
+      }
     }
-  }
-});
+  });
+}
 
-mainReg.register('max', {
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    if(nnode.args.length > 0) {
-      const ins = nnode.args.map(arg => arg.evalNum());
-      const max = ins.reduce((a, b) => b > a ? b : a);
-      return new Atom(max);
-    } else {
-      if(!nnode.src)
-        throw new StreamError('requires source');
-      const str = nnode.src.evalStream({finite: true});
-      const iter = (function*() {
-        for(const s of str)
-          yield s.evalNum();
-      })();
-      const {value, done} = iter.next();
-      if(done)
-        throw new StreamError('empty stream');
-      let max = value;
-      for(const v of iter)
-        if(v > max)
-          max = v;
-      return new Atom(max);
-    }
+function gcd(a, b) {
+  for(;;) {
+    a %= b;
+    if(a === 0n)
+      return b;
+    b %= a;
+    if(b === 0n)
+      return a;
   }
-});
+}
+
+regReducerS('min', (a, b) => b < a ? b : a);
+regReducerS('max', (a, b) => b > a ? b : a);
+regReducerS('gcd', gcd, {min: 1n});
+regReducerS('lcm', (a, b) => a * (b / gcd(a, b)), {min: 1n});
 
 mainReg.register(['acc', 'ac'], {
   reqSource: true,
@@ -255,6 +240,32 @@ mainReg.register('mod', {
     const res0 = (inp - base) % mod;
     const res = (res0 >= 0n ? res0 : res0 + mod) + base;
     return new Atom(res);
+  }
+});
+
+mainReg.register('modinv', {
+  minArg: 1,
+  maxArg: 2,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const [val, mod] = [...
+      (nnode.args[1] ? [nnode.args[0], nnode.args[1]] : [nnode.src, nnode.args[0]])
+      .map(arg => arg.evalNum({min: 1n}))
+    ];
+    let [a, b, c, d] = [1n, 0n, 0n, 1n];
+    let [x, y] = [val, mod];
+    for(;;) {
+      if(y === 1n) {
+        c %= mod;
+        return new Atom(c >= 0n ? c : c + mod);
+      } else if(y === 0n)
+        throw new StreamError(`${val} and ${mod} are not coprime`);
+      let [q, r] = [x / y, x % y]; // Working with BigInt, no need for floor
+      [a, b] = [a - q*c, b - q*d];
+      [a, b, c, d, x, y] = [c, d, a, b, y, r];
+    }
   }
 });
 
