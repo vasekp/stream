@@ -9,12 +9,14 @@ import mainReg from './register.js';
 import History from './history.js';
 
 import repl from 'repl';
+import * as fs from 'fs/promises';
 
 const history = new History();
 const userReg = mainReg.child();
 
-userReg.addEventListener('register', e =>
-  console.log(`${e.detail.key} = ${e.detail.value}`));
+fs.readFile('.stream_vars')
+  .then(cont => userReg.init(JSON.parse(cont)))
+  .catch(() => {});
 
 const prompt = repl.start({eval: str => {
   try {
@@ -52,7 +54,7 @@ const prompt = repl.start({eval: str => {
 }});
 
 prompt.on('exit', e => {
-  console.log('User register:');
-  for(const [key, value] of userReg.dump())
-    console.log(`${key} = ${value}`);
+  fs.open('.stream_vars', 'w')
+    .then(f => f.writeFile(JSON.stringify(userReg.dump())))
+    .catch(() => {});
 });
