@@ -547,6 +547,56 @@ mainReg.register('fold', {
   }
 });
 
+mainReg.register('xfold', {
+  reqSource: true,
+  numArg: 2,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
+  eval() {
+    const sIn = this.src.evalStream();
+    const body = this.args[0].checkType([types.symbol, types.expr]);;
+    let curr = this.args[1].prepare({src: this.src});
+    return new Stream(this,
+      (function*() {
+        for(const next of sIn) {
+          const ret = body.apply([curr, next]).evalStream();
+          const add = ret.next().value?.evalStream();
+          curr = ret.next().value;
+          if(!add || !curr || !ret.next().done)
+            throw new StreamError('body must return in the format [[add...], mem]');
+          yield* add;
+        }
+        yield curr;
+      })()
+    );
+  }
+});
+
+mainReg.register('xlate', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
+  eval() {
+    const sIn = this.src.evalStream();
+    const body = this.args[0].checkType([types.symbol, types.expr]);;
+    return new Stream(this,
+      (function*() {
+        for(const value of sIn) {
+          const add = body.prepare({src: value}).evalStream();
+          yield* add;
+        }
+      })()
+    );
+  }
+});
+
 mainReg.register('reduce', {
   reqSource: true,
   minArg: 1,
