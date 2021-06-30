@@ -14,7 +14,7 @@ import * as fs from 'fs/promises';
 const history = new History();
 const userReg = mainReg.child();
 
-fs.readFile('.stream_vars')
+await fs.readFile('.stream_vars')
   .then(cont => userReg.init(JSON.parse(cont)))
   .catch(() => {});
 
