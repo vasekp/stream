@@ -3,7 +3,11 @@ const modOuter = 1<<24;
 
 export default class RNG {
   constructor(seed) {
-    this.s = (modInner - seed) || Math.floor(Math.random() * modInner);
+    this.s = seed;
+  }
+
+  static seed() {
+    return Math.floor(Math.random() * modInner);
   }
 
   advance() {
@@ -35,9 +39,5 @@ export default class RNG {
       if(v <= diff)
         return min + v;
     }
-  }
-
-  fork() {
-    return new RNG(this.s);
   }
 };

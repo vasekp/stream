@@ -2,6 +2,7 @@ import {StreamError} from '../errors.js';
 import {Node, Atom, Stream, types} from '../base.js';
 import watchdog from '../watchdog.js';
 import mainReg from '../register.js';
+import RNG from '../random.js';
 
 function regReducer(name, sign, fun, type = types.N) {
   mainReg.register(name, {
@@ -671,41 +672,74 @@ mainReg.register('pi', {
 
 mainReg.register(['random', 'rnd'], {
   minArg: 0,
-  maxArg: 2,
+  maxArg: 3,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.map(arg => arg.prepare({...scope, src}));
     const nnode = this.modify({src, args,
-      meta: scope.rng ? {...this.meta, _rng: scope.rng.fork()} : this.meta
+      meta: scope.seed ? {...this.meta, _seed: scope.seed} : this.meta
     }).check(scope.partial);
     if(scope.partial)
       return nnode;
-    if(!nnode.meta._rng)
+    if(nnode.meta._seed === undefined)
       throw new Error('RNG unitialized');
+    const rng = new RNG(nnode.meta._seed);
     if(nnode.args.length === 2) {
       const min = nnode.args[0].evalNum();
       const max = nnode.args[1].evalNum();
       if(max < min)
         throw new StreamError(`maximum ${max} less than minimum ${min}`);
-      return new Atom(nnode.meta._rng.random(min, max));
+      return new Atom(rng.random(min, max));
     } else
       return nnode;
   },
   eval() {
-    const arg = this.args[0] || this.src;
-    if(!arg)
-      throw new StreamError('requires source');
-    const sIn = arg.evalStream({finite: true});
-    if(typeof sIn.len === 'bigint' && sIn.len !== 0n) {
-      const rnd = this.meta._rng.random(0n, sIn.len - 1n);
-      sIn.skip(rnd);
-      return sIn.next().value.eval();
+    if(this.meta._seed === undefined)
+      throw new Error('RNG unitialized');
+    const rng = new RNG(this.meta._seed);
+    if(this.args.length === 3) {
+      const min = this.args[0].evalNum();
+      const max = this.args[1].evalNum();
+      const len = this.args[2].evalNum({min: 1n});
+      if(max < min)
+        throw new StreamError(`maximum ${max} less than minimum ${min}`);
+      return new Stream(this,
+        (function*() {
+          for(let i = 0n; i < len; i++)
+            yield new Atom(rng.random(min, max));
+        })(),
+        {len}
+      );
     } else {
-      const vals = [...sIn];
-      if(vals.length === 0)
-        throw new StreamError('empty stream');
-      const ix = random0(BigInt(vals.length));
-      return vals[ix].eval();
+      if(!this.src)
+        throw new StreamError('requires source');
+      const sIn = this.src.evalStream({finite: true});
+      if(!this.args[0]) {
+        if(typeof sIn.len === 'bigint' && sIn.len !== 0n) {
+          const rnd = rng.random(0n, sIn.len - 1n);
+          sIn.skip(rnd);
+          return sIn.next().value.eval();
+        } else {
+          const vals = [...sIn];
+          if(vals.length === 0)
+            throw new StreamError('empty stream');
+          const ix = random0(BigInt(vals.length));
+          return vals[ix].eval();
+        }
+      } else {
+        const len = this.args[0].evalNum({min: 1n});
+        const data = [...sIn];
+        if(data.length === 0)
+          throw new StreamError('empty stream');
+        const max = BigInt(data.length) - 1n;
+        return new Stream(this,
+          (function*() {
+            for(let i = 0n; i < len; i++)
+              yield data[rng.random(0n, max)];
+          })(),
+          {len}
+        );
+      }
     }
   }
 });

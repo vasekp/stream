@@ -24,8 +24,7 @@ const prompt = repl.start({eval: str => {
     let node = parse(str);
     if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
       node = node.toAssign();
-    const rng = new RNG();
-    node = node.timed(n => n.prepare({history, register: userReg, rng}));
+    node = node.timed(n => n.prepare({history, register: userReg, seed: RNG.seed()}));
     const out = node.timed(n => n.writeout());
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {
