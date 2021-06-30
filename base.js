@@ -102,32 +102,33 @@ export class Node extends Base {
     if(debug) {
       for(const fn of ['prepare', 'modify']) {
         const pFn = this[fn];
-        this[fn] = scope => {
-          const nnode = pFn.call(this, scope);
+        this[fn] = (...args) => {
+          const nnode = pFn.call(this, ...args);
           if(nnode !== this)
-            console.log(`${fn} ${this.toString()} {${Object.keys(scope).filter(x => x).join(',')}} => ${nnode.toString()}`);
+            console.log(`${fn} ${this.toString()} {${Object.keys(args[0]).filter(x => x).join(',')}} => ${nnode.toString()}`);
           return nnode;
         };
       }
     }
   }
 
-  modify(what) {
+  modify(what, allowAddSource = this.reqSource) {
     if(anyChanged(this, what))
       return new Node(this.ident, coal(what.token, this.token),
-        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
+        (this.src || allowAddSource) ? coal(what.src, this.src) : null,
+        coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
   }
 
   prepend(src) {
-    return this.modify({src: this.src ? this.src.prepend(src) : src});
+    return this.modify({src: this.src ? this.src.prepend(src) : src}, true);
   }
 
-  deepModify(what) {
-    const src = this.src?.deepModify(what);
-    const args = this.args.map(arg => arg.deepModify(what));
-    return this.modify({...what, src, args});
+  deepModify(what, ...opt) {
+    const src = this.src?.deepModify(what, ...opt);
+    const args = this.args.map(arg => arg.deepModify(what, ...opt));
+    return this.modify({...what, src, args}, ...opt);
   }
 
   prepare(scope) {
@@ -288,10 +289,11 @@ export class Block extends Node {
     this.body = body;
   }
 
-  modify(what) {
+  modify(what, allowAddSource = this.reqSource) {
     if(anyChanged(this, what))
       return new Block(this.ident, coal(what.token, this.token), coal(what.body, this.body),
-        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
+        (this.src || allowAddSource) ? coal(what.src, this.src) : null,
+        coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
   }
@@ -305,7 +307,7 @@ export class Block extends Node {
 
   prepare(scope) {
     const pnode = this.prepareAll(scope);
-    const pbody = this.body.prepare({...scope, outer: {src: pnode.src, args: pnode.args, partial: scope.partial}});
+    const pbody = this.body.prepare({...scope, outer: {src: pnode.src || scope.src, args: pnode.args, partial: scope.partial}});
     return scope.partial ? pnode.modify({body: pbody}) : pbody;
   }
 
@@ -331,10 +333,11 @@ export class CustomNode extends Block {
     super(ident, token, body.deepModify({token}), src, args, meta);
   }
 
-  modify(what) {
+  modify(what, allowAddSource = this.reqSource) {
     if(anyChanged(this, what))
       return new CustomNode(this.ident, coal(what.token, this.token), coal(what.body, this.body),
-        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
+        (this.src || allowAddSource) ? coal(what.src, this.src) : null,
+        coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
   }

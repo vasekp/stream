@@ -63,6 +63,7 @@ mainReg.register('id', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
+    // TODO this.check
     return this.src?.prepare(scope) || scope.src || this;
   },
   eval() {
@@ -207,17 +208,13 @@ mainReg.register('part', {
 mainReg.register('in', {
   maxArg: 1,
   prepare(scope) {
-    this.check(scope.partial);
+    // TODO this.check
     if(scope.outer && !scope.outer.partial) {
       if(this.args[0]) {
-        const ix = this.args[0].evalNum({min: 1n, max: scope.partial ? undefined : scope.outer.args.length});
+        const ix = this.args[0].evalNum({min: 1n, max: scope.outer.args.length});
         return ix <= scope.outer.args.length ? scope.outer.args[Number(ix) - 1] : this;
-      } else {
-        if(scope.outer.src)
-          return scope.outer.src;
-        else
-          return this;
-      }
+      } else
+        return scope.outer.src || this;
     } else
       return this;
   },
