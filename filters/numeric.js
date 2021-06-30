@@ -66,7 +66,13 @@ function regReducer(name, sign, fun, type = types.N) {
   });
 }
 
-regReducer('plus', '+', (a, b) => a + b);
+regReducer('plus', '+', (a, b) => {
+  if(typeof a !== typeof b)
+    throw new StreamError(`${Atom.format(a)} and ${Atom.format(b)} have different types`);
+  else
+    return a + b;
+}, [types.N, types.S]);
+
 regReducer('minus', '-', (a, b) => a - b);
 regReducer('times', '*', (a, b) => a * b);
 regReducer('div', '/', (a, b) => a / b);
