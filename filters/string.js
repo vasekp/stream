@@ -195,7 +195,7 @@ mainReg.register('ords', {
   }
 });
 
-mainReg.register('lcase', {
+mainReg.register(['lcase', 'lc'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -207,7 +207,7 @@ mainReg.register('lcase', {
   }
 });
 
-mainReg.register('ucase', {
+mainReg.register(['ucase', 'uc'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {

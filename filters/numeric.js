@@ -131,7 +131,7 @@ mainReg.register('max', {
   }
 });
 
-mainReg.register(['total', 'tot'], {
+mainReg.register(['total', 'tot', 'sum'], {
   reqSource: true,
   numArg: 0,
   eval() {

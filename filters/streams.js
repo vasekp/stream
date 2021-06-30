@@ -487,7 +487,7 @@ mainReg.register('nest', {
   }
 });
 
-mainReg.register('reduce', {
+mainReg.register('fold', {
   reqSource: true,
   minArg: 1,
   maxArg: 3,
@@ -686,7 +686,7 @@ mainReg.register('sort', {
   }
 });
 
-mainReg.register('uniq', {
+mainReg.register(['ddup', 'drep', 'dd'], {
   reqSource: true,
   numArg: 0,
   eval() {
