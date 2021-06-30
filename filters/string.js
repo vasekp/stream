@@ -66,6 +66,10 @@ export function ord(c) {
   return cp;
 }
 
+export function isSingleChar(c) {
+  return c === String.fromCodePoint(c.codePointAt(0));
+}
+
 mainReg.register('ord', {
   reqSource: true,
   maxArg: 1,
@@ -259,7 +263,7 @@ mainReg.register('isdigit', {
     if(r.type !== types.S)
       return new Atom(false);
     const c = r.value;
-    return new Atom(c >= '0' && c <= '9');
+    return new Atom(isSingleChar(c) && c >= '0' && c <= '9');
   }
 });
 
@@ -275,10 +279,54 @@ mainReg.register('isletter', {
       return new Atom(false);
     const c = r.value;
     if(nnode.args[0]) {
-      const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(types.S));
+      const abc = [...nnode.args[0]
+        .evalStream({finite: true})]
+        .map(a => a.evalAtom(types.S).toLowerCase());
+      return new Atom(abc.includes(c.toLowerCase()));
+    } else
+      return new Atom(isSingleChar(c) && (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'));
+  }
+});
+
+mainReg.register(['isupper', 'isucase', 'isuc'], {
+  reqSource: true,
+  maxArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const r = nnode.src.eval();
+    if(r.type !== types.S)
+      return new Atom(false);
+    const c = r.value;
+    if(nnode.args[0]) {
+      const abc = [...nnode.args[0]
+        .evalStream({finite: true})]
+        .map(a => a.evalAtom(types.S).toUpperCase());
       return new Atom(abc.includes(c));
     } else
-      return new Atom(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z');
+      return new Atom(isSingleChar(c) && c >= 'A' && c <= 'Z');
+  }
+});
+
+mainReg.register(['islower', 'islcase', 'islc'], {
+  reqSource: true,
+  maxArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const r = nnode.src.eval();
+    if(r.type !== types.S)
+      return new Atom(false);
+    const c = r.value;
+    if(nnode.args[0]) {
+      const abc = [...nnode.args[0]
+        .evalStream({finite: true})]
+        .map(a => a.evalAtom(types.S).toLowerCase());
+      return new Atom(abc.includes(c));
+    } else
+      return new Atom(isSingleChar(c) && c >= 'a' && c <= 'z');
   }
 });
 
