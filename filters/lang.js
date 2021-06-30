@@ -59,11 +59,10 @@ mainReg.register('foreach', {
   }
 });
 
-mainReg.register('id', {
+mainReg.register('#id', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
-    // TODO this.check
     return this.src?.prepare(scope) || scope.src || this;
   },
   eval() {
@@ -205,10 +204,9 @@ mainReg.register('part', {
   }
 });
 
-mainReg.register('in', {
+mainReg.register('#in', {
   maxArg: 1,
   prepare(scope) {
-    // TODO this.check
     if(scope.outer && !scope.outer.partial) {
       if(this.args[0]) {
         const ix = this.args[0].evalNum({min: 1n, max: scope.outer.args.length});
@@ -407,7 +405,7 @@ mainReg.register('clear', {
   }
 });
 
-mainReg.register('history', {
+mainReg.register('#history', {
   reqSource: false,
   maxArg: 1,
   prepare(scope) {
