@@ -131,6 +131,24 @@ mainReg.register('max', {
   }
 });
 
+mainReg.register(['acc', 'ac'], {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream();
+    return new Stream(this,
+      (function*() {
+        let sum = 0n;
+        for(const next of sIn) {
+          sum += next.evalNum();
+          yield new Atom(sum);
+        }
+      })(),
+      {len: sIn.len}
+    );
+  }
+});
+
 mainReg.register(['total', 'tot', 'sum'], {
   reqSource: true,
   numArg: 0,
@@ -150,12 +168,13 @@ mainReg.register('diff', {
     const sIn = this.src.evalStream();
     return new Stream(this,
       (function*() {
-        const {value, done} = sIn.next();
-        if(done)
-          return;
-        let prev = value.evalNum();
+        let prev = null;
         for(const next of sIn) {
           const curr = next.evalNum();
+          if(prev === null) {
+            prev = curr;
+            continue;
+          }
           yield new Atom(curr - prev);
           prev = curr;
         }
@@ -167,6 +186,21 @@ mainReg.register('diff', {
           : sIn.len - 1n
       }
     );
+  }
+});
+
+mainReg.register(['product', 'prod'], {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const str = this.src.evalStream({finite: true});
+    let prod = 1n;
+    for(const s of str) {
+      prod *= s.evalNum();
+      if(prod === 0n)
+        break;
+    }
+    return new Atom(prod);
   }
 });
 
@@ -221,6 +255,49 @@ mainReg.register('mod', {
     const res0 = (inp - base) % mod;
     const res = (res0 >= 0n ? res0 : res0 + mod) + base;
     return new Atom(res);
+  }
+});
+
+mainReg.register('add', {
+  reqSource: true,
+  minArg: 1,
+  maxArg: 3,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum();
+    const add = nnode.args[0].evalNum();
+    if(nnode.args.length > 1) {
+      const mod = nnode.args[1].evalNum({min: 1n});
+      const base = nnode.args[2] ? nnode.args[2].evalNum() : 0n;
+      const res0 = (inp + add - base) % mod;
+      const res = (res0 >= 0n ? res0 : res0 + mod) + base;
+      return new Atom(res);
+    } else
+      return new Atom(inp + add);
+  }
+});
+
+mainReg.register('abs', {
+  reqSource: true,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum();
+    return new Atom(inp >= 0n ? inp : -inp);
+  }
+});
+
+mainReg.register(['sign', 'sgn'], {
+  reqSource: true,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum();
+    return new Atom(inp > 0n ? 1 : inp < 0n ? -1 : 0);
   }
 });
 

@@ -252,12 +252,17 @@ mainReg.register(['reverse', 'rev'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const sIn = this.src.evalStream({finite: true});
-    const vals = [...sIn].reverse();
-    return new Stream(this,
-      vals.values(),
-      {len: BigInt(vals.length)}
-    );
+    const sIn = this.src.eval().checkType([types.stream, types.S]);
+    if(sIn.type === types.stream) {
+      sIn.checkFinite();
+      const vals = [...sIn].reverse();
+      return new Stream(this,
+        vals.values(),
+        {len: BigInt(vals.length)}
+      );
+    } else if(sIn.type === types.S) {
+      return new Atom([...sIn.value].reverse().join(''));
+    }
   }
 });
 
@@ -464,6 +469,30 @@ mainReg.register(['padright', 'pr'], {
   }
 });
 
+mainReg.register(['prepend', 'prep'], {
+  reqSource: true,
+  minArg: 1,
+  eval() {
+    const args = this.args.map(arg => arg.eval());
+    args.push(this.src.eval());
+    const lens = args.map(arg => arg.isAtom ? 1n : arg.len);
+    const len = lens.some(len => len === undefined) ? undefined
+      : lens.some(len => len === null) ? null
+      : lens.reduce((a,b) => a+b);
+    return new Stream(this,
+      (function*() {
+        for(const arg of args) {
+          if(arg.isAtom)
+            yield arg;
+          else
+            yield* arg;
+        }
+      })(),
+      {len}
+    );
+  }
+});
+
 mainReg.register('nest', {
   reqSource: true,
   numArg: 1,
@@ -515,6 +544,29 @@ mainReg.register('fold', {
       })(),
       {len: sIn.len}
     );
+  }
+});
+
+mainReg.register('reduce', {
+  reqSource: true,
+  minArg: 1,
+  maxArg: 2,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const body = this.args[0].checkType([types.symbol, types.expr]);;
+    let curr;
+    if(this.args.length > 1)
+      curr = this.args[this.args.length - 1].prepare({src: this.src});
+    for(const next of sIn)
+      curr = curr ? body.apply([curr, next]) : next;
+    if(!curr)
+      throw new StreamError('empty stream');
+    return curr.eval();
   }
 });
 
@@ -841,6 +893,27 @@ mainReg.register(['tally', 'freq'], {
           yield new Node('array', token, null, [key, new Atom(val)]);
       })(),
       {len: map.size}
+    );
+  }
+});
+
+mainReg.register('uniq', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const set = new Set();
+    return new Stream(this,
+      (function*() {
+        A: for(const r of sIn) {
+          for(const s of set)
+            if(compareStreams(r, s))
+              continue A;
+          // else
+          set.add(r);
+          yield r;
+        }
+      })()
     );
   }
 });
