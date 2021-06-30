@@ -105,7 +105,7 @@ export class Node extends Base {
         this[fn] = scope => {
           const nnode = pFn.call(this, scope);
           if(nnode !== this)
-            console.log(`${fn} ${this.toString()} {${Object.keys(scope).join(',')}} => ${nnode.toString()}`);
+            console.log(`${fn} ${this.toString()} {${Object.keys(scope).filter(x => x).join(',')}} => ${nnode.toString()}`);
           return nnode;
         };
       }

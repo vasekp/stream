@@ -63,8 +63,7 @@ mainReg.register('id', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
-    const pnode = this.prepareAll(scope);
-    return scope.partial ? pnode : pnode.src;
+    return this.src?.prepare(scope) || scope.src || this;
   },
   eval() {
     throw new StreamError('out of scope');

@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, types, compareStreams} from '../base.js';
+import {Node, Atom, Block, Stream, types, debug, compareStreams} from '../base.js';
 import {ord} from './string.js';
 import mainReg from '../register.js';
 
@@ -1046,6 +1046,8 @@ mainReg.register('with', {
     if(scope.register)
       mod.meta = {...this.meta, _register: scope.register};
     const pnode = this.modify(mod).check(scope.partial);
+    if(debug)
+      console.log(`prepare ${this.toString()} stage 1 => ${pnode.toString()}`);
     if(scope.partial)
       return pnode;
     else {
