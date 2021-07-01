@@ -716,6 +716,30 @@ mainReg.register(['select', 'sel', 'where'], {
   }
 });
 
+mainReg.register('iwhere', {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
+  },
+  eval() {
+    const sIn = this.src.evalStream();
+    const cond = this.args[0];
+    return new Stream(this,
+      (function*() {
+        let i = 1;
+        for(const value of sIn) {
+          if(cond.prepare({src: value}).evalAtom('boolean'))
+            yield new Atom(i);
+          ++i;
+        }
+      })()
+    );
+  }
+});
+
 mainReg.register('while', {
   reqSource: true,
   numArg: 1,
@@ -841,6 +865,43 @@ mainReg.register('index', {
       const haystack = sIn.value;
       const needle = this.args[0].evalAtom(types.S);
       return new Atom(haystack.indexOf(needle) + 1);
+    }
+  }
+});
+
+mainReg.register('indexes', {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const sIn = this.src.eval().checkType([types.stream, types.S]);
+    if(sIn.type === types.stream) {
+      const ref = this.args[0];
+      return new Stream(this,
+        (function*() {
+          let i = 0;
+          for(const r of sIn) {
+            i++;
+            if(compareStreams(r, ref))
+              yield new Atom(i);
+          }
+        })()
+      );
+    } else {
+      const haystack = sIn.value;
+      const needle = this.args[0].evalAtom(types.S);
+      return new Stream(this,
+        (function*() {
+          let start = 0;
+          for(;;) {
+            let curr = haystack.indexOf(needle, start);
+            if(curr < 0)
+              break;
+            // else
+            yield new Atom(curr + 1);
+            start = curr + 1;
+          }
+        })()
+      );
     }
   }
 });
@@ -1061,5 +1122,65 @@ mainReg.register('with', {
         arg.prepare({register: innerReg}).eval();
       return body.prepare({...scope, register: innerReg});
     }
+  }
+});
+
+mainReg.register('longest', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    let maxS = null, maxL = -1n;
+    for(const read of sIn) {
+      const sRead = read.evalStream();
+      let len = 0n;
+      if(sRead.len === null) // infinite, auto winner
+        return read.eval();
+      else if(typeof sRead.len === 'bigint')
+        len = sRead.len;
+      else {
+        for(const i of sRead)
+          len++;
+      }
+      if(len > maxL) {
+        maxL = len;
+        maxS = read;
+      }
+    }
+    if(maxS === null)
+      throw new StreamError('empty stream');
+    else
+      return maxS.eval();
+  }
+});
+
+mainReg.register('shortest', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    let minS = null, minL = null;
+    for(const read of sIn) {
+      const sRead = read.evalStream();
+      let len = 0n;
+      if(sRead.len === null)
+        continue;
+      else if(sRead.len === 0n) // can't be shorter
+        return read.eval();
+      else if(typeof sRead.len === 'bigint')
+        len = sRead.len;
+      else {
+        for(const i of sRead)
+          len++;
+      }
+      if(minL === null || len < minL) {
+        minL = len;
+        minS = read;
+      }
+    }
+    if(minS === null)
+      throw new StreamError('empty stream');
+    else
+      return minS.eval();
   }
 });
