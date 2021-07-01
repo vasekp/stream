@@ -76,7 +76,13 @@ regReducer('plus', '+', (a, b) => {
 
 regReducer('minus', '-', (a, b) => a - b);
 regReducer('times', '*', (a, b) => a * b);
-regReducer('div', '/', (a, b) => a / b);
+regReducer('div', '/', (a, b) => {
+  if(b === 0n)
+    throw new StreamError('division by zero');
+  else
+    return a / b
+});
+
 regReducer('and', '&', (a, b) => a && b, types.B);
 regReducer('or', '|', (a, b) => a || b, types.B);
 
