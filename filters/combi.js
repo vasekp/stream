@@ -1,6 +1,6 @@
 import {StreamError} from '../errors.js';
 import {Node, Atom, Stream, types, debug, compareStreams} from '../base.js';
-//import watchdog from '../watchdog.js';
+import watchdog from '../watchdog.js';
 import R from '../register.js';
 
 const defSort = (a, b) => a < b ? -1 : a > b ? +1 : 0;
@@ -134,92 +134,6 @@ R.register('rcomb', {
   }
 });
 
-function permStream(vals, lens, token) {
-  const ixs = lens.flatMap((len, ix) => Array.from({length: Number(len)}, _ => ix));
-  let pIx = 0n;
-  const pMax = comb(lens);
-  return new Stream(this,
-    (function*() {
-      for(;;) {
-        if(pIx >= pMax)
-          return;
-        yield new Node('array', token, null, ixs.map(i => vals[i]));
-        let iRev, iSwap;
-        for(iRev = ixs.length - 1; iRev > 0; iRev--)
-          if(ixs[iRev - 1] < ixs[iRev])
-            break;
-        if(iRev === 0)
-          return;
-        iRev--;
-        for(iSwap = iRev + 1; iSwap < ixs.length; iSwap++)
-          if(ixs[iSwap] <= ixs[iRev])
-            break;
-        iSwap--;
-        [ixs[iRev], ixs[iSwap]] = [ixs[iSwap], ixs[iRev]];
-        const a2 = ixs.splice(iRev + 1);
-        ixs.push(...a2.sort(defSort));
-        pIx++;
-      }
-    })(),
-    {
-      skip(c) {
-        pIx += c;
-        if(pIx >= pMax)
-          return;
-        const cnts = lens.slice();
-        let cnt = cnts.reduce((a, b) => a + b);
-        let ix = pIx;
-        let tot = pMax;
-        for(let i = 0; i < ixs.length; i++) {
-          let j;
-          for(j of cnts.keys()) {
-            if(ix < tot * cnts[j] / cnt)
-              break;
-            else
-              ix -= tot * cnts[j] / cnt;
-          }
-          if(debug)
-            console.log(j, cnts, cnt, ix, tot);
-          tot = tot * cnts[j] / cnt;
-          ixs[i] = j;
-          cnts[j]--;
-          cnt--;
-        }
-      },
-      len: pMax
-    }
-  );
-}
-
-R.register(['perm', 'perms'], {
-  maxArg: 1,
-  sourceOrArgs: 1,
-  eval() {
-    if(this.args[0]) {
-      const max = this.args[0].evalNum({min: 0n});
-      const vals = Array.from({length: Number(max)}, (_, ix) => new Atom(ix + 1));
-      const lens = vals.map(_ => 1n);
-      return permStream(vals, lens, this.token);
-    } else {
-      const sIn = this.src.evalStream({finite: true});
-      const vals = [];
-      const lens = [];
-      const map = new Map();
-      A: for(const r of sIn) {
-        for(const ix of vals.keys())
-          if(compareStreams(r, vals[ix])) {
-            lens[ix]++;
-            continue A;
-          }
-        // else
-        vals.push(r);
-        lens.push(1n);
-      }
-      return permStream(vals, lens, this.token);
-    }
-  }
-});
-
 R.register('tuples', {
   minArg: 1,
   sourceOrArgs: 2,
@@ -270,11 +184,7 @@ R.register('tuples', {
         skip(c) {
           let ix;
           let inLen = 1n;
-          if(debug)
-            console.log(lens);
           A: for(ix = 0; ix < streams.length; ix++) {
-            if(debug)
-              console.log(c, ixs, ix, inLen);
             if(ix > 0) { // carry
               curr[ix] = streams[ix].next().value;
               ixs[ix]++;
@@ -310,10 +220,6 @@ R.register('tuples', {
               break A;
             }
           }
-          if(debug) {
-            console.log(c, ixs, ix, inLen);
-            console.log(lens);
-          }
           if(ix === streams.length) {
             done = true;
             return;
@@ -329,6 +235,213 @@ R.register('tuples', {
             c %= inLen;
           }
         }
+      }
+    );
+  }
+});
+
+function permHelper(src) {
+  const ixs = [];
+  const lens = [];
+  let lenTot = 0n;
+  let pIx = 0n;
+  let curMax = 1n;
+  let done = false;
+
+  const expand = _ => {
+    const next = src.next().value;
+    if(next === undefined) {
+      done = true;
+      return false;
+    }
+    ixs.push(next);
+    lenTot++;
+    lens[next] = (lens[next] || 0n) + 1n;
+    curMax = curMax * lenTot / lens[next];
+    return true;
+  };
+
+  do
+    expand();
+  while(curMax === 1n && !done);
+  done = false;
+
+  const iter = (function*() {
+    for(;;) {
+      if(done)
+        return;
+      watchdog.tick();
+      yield ixs;
+      if(ixs.length === 0) {
+        expand();
+        continue;
+      }
+      let iRev, iSwap;
+      for(iRev = 0; iRev < ixs.length - 1; iRev++)
+        if(ixs[iRev + 1] > ixs[iRev])
+          break;
+      if(iRev === ixs.length - 1)
+        if(!expand())
+          return;
+      iRev++;
+      for(iSwap = iRev - 1; iSwap >= 0; iSwap--)
+        if(ixs[iSwap] >= ixs[iRev])
+          break;
+      iSwap++;
+      [ixs[iRev], ixs[iSwap]] = [ixs[iSwap], ixs[iRev]];
+      const a2 = ixs.splice(0, iRev);
+      ixs.unshift(...a2.sort(defSort));
+      pIx++;
+    }
+  })();
+
+  iter.skip = c => {
+    pIx += c;
+    while(pIx >= curMax)
+      if(!expand())
+        return;
+
+    const cnts = lens.slice();
+    let cnt = lenTot;
+    let ix = pIx;
+    let tot = curMax;
+    for(let i = 0; i < ixs.length; i++) {
+      let j;
+      for(j of [...cnts.keys()].reverse()) {
+        if(ix < tot * cnts[j] / cnt)
+          break;
+        else
+          ix -= tot * cnts[j] / cnt;
+      }
+      tot = tot * cnts[j] / cnt;
+      ixs[i] = j;
+      cnts[j]--;
+      cnt--;
+    }
+    ixs.reverse();
+  };
+
+  return iter;
+}
+
+R.register(['perm', 'perms'], {
+  maxArg: 1,
+  sourceOrArgs: 1,
+  eval() {
+    if(this.args[0]) {
+      const max = this.args[0].evalNum({min: 0n, max: Number.MAX_SAFE_INTEGER});
+      const nmax = Number(max);
+      const helperSrc = function*() {
+        for(let i = 0; i < nmax; i++)
+          yield i;
+      };
+      const helper = permHelper(helperSrc());
+      const token = this.token;
+      return new Stream(this,
+        (function*() {
+          for(const arr of helper) {
+            const ret = arr.map(i => new Atom(i + 1));
+            for(let i = BigInt(arr.length + 1); i <= max; i++)
+              ret.push(new Atom(i));
+            yield new Node('array', token, null, ret);
+          }
+        })(),
+        {
+          len: fact(max),
+          skip: helper.skip
+        }
+      );
+    } else {
+      let sIn = this.src.evalStream();
+      const vals = [];
+      const helperSrc = function*() {
+        A: for(const r of sIn) {
+          for(const ix of vals.keys())
+            if(compareStreams(r, vals[ix])) {
+              yield ix;
+              continue A;
+            }
+          // else
+          vals.push(r);
+          yield vals.length - 1;
+        }
+      };
+      let len;
+      if(sIn.len === null)
+        len = null;
+      else if(sIn.len !== undefined) {
+        const lens = [];
+        let lenTot = 0n;
+        len = 1n;
+        for(const ix of helperSrc()) {
+          lenTot++;
+          lens[ix] = (lens[ix] || 0n) + 1n;
+          len = len * lenTot / lens[ix];
+        }
+        // sIn is consumed, need to reset
+        sIn = this.src.evalStream();
+      }
+      const helper = permHelper(helperSrc());
+      const thisSrc = this.src;
+      const thisToken = this.token;
+      return new Stream(this,
+        (function*() {
+          for(const arr of helper)
+            yield new Node('#permute', thisToken, thisSrc, [],
+              {_vals: vals, _arr: arr});
+        })(),
+        {
+          len,
+          skip: helper.skip
+        }
+      );
+    }
+  }
+});
+
+R.register('#permute', {
+  reqSource: true,
+  eval() {
+    const sIn = this.src.evalStream();
+    const meta = this.meta;
+    return new Stream(this,
+      (function*() {
+        for(const ix of meta._arr)
+          yield meta._vals[ix];
+        sIn.skip(BigInt(meta._arr.length));
+        yield* sIn;
+      })(),
+      {
+        len: sIn.len
+      }
+    );
+  },
+  toString() {
+    return new Node('permute', this.token, this.src, this.meta._arr.map(i => new Atom(i + 1))).toString();
+  }
+});
+
+R.register('permute', {
+  reqSource: true,
+  eval() {
+    const sIn = this.src.evalStream();
+    const arr = this.args.map(arg => Number(arg.evalNum({min: 1n}) - 1n));
+    const vals = [];
+    for(let i = 0; i < arr.length; i++) {
+      vals[i] = sIn.next().value;
+      if(!vals[i])
+        throw new StreamError(`requested part ${i+1} beyond end`);
+      if(!arr.includes(i))
+        throw new StreamError('malformed argument list');
+    }
+    return new Stream(this,
+      (function*() {
+        for(const ix of arr)
+          yield vals[ix];
+        yield* sIn;
+      })(),
+      {
+        len: sIn.len
       }
     );
   }
