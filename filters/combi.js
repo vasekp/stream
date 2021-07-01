@@ -422,3 +422,86 @@ R.register('#permute', {
       + '])';
   }
 });
+
+R.register(['subsets', 'ss', 'choose'], {
+  reqSource: true,
+  eval() {
+    if(!this.args[0]) {
+      let ix = 0n;
+      const src = this.src;
+      const token = this.token;
+      let sIn = src.evalStream();
+      return new Stream(this,
+        (function*() {
+          for(;;) {
+            const ret = [];
+            let i = ix;
+            for(const r of sIn) {
+              if(i & 1n)
+                ret.push(r);
+              i /= 2n;
+              if(i === 0n)
+                break;
+            }
+            if(i !== 0n)
+              return;
+            yield new Node('array', token, null, ret);
+            ix++;
+            sIn = src.evalStream();
+          }
+        })(),
+        {
+          len: sIn.len === null ? null
+            : sIn.len === undefined ? undefined
+            : 2n ** sIn.len,
+          skip: c => ix += c
+        }
+      );
+    } else {
+      const sizes = this.args.map(arg => arg.evalNum({min: 0n}));
+      const patt = sizes.flatMap((sz, ix) => Array.from({length: Number(sz)}, _ => ix));
+      const out = sizes.length;
+      const total = BigInt(patt.length);
+      const helperSrc = total
+        ? function*() {
+            yield* patt;
+            for(;;)
+              yield out;
+          }
+        : Array.prototype.values.bind([]);
+      const helper = permHelper(helperSrc());
+      const src = this.src;
+      const token = this.token;
+      let sIn = src.evalStream();
+      return new Stream(this,
+        (function*() {
+          for(const arr of helper) {
+            if(arr.length < total)
+              arr.push(...patt.slice(arr.length));
+            const rets = Array.from({length: out}, _ => []);
+            for(const ix of arr) {
+              const r = sIn.next().value;
+              if(ix === out)
+                continue;
+              if(!r)
+                return;
+              rets[ix].push(r);
+            }
+            yield sizes.length > 1
+              ? new Node('array', token, null,
+                  rets.map(ret => new Node('array', token, null, ret)))
+              : new Node('array', token, null, rets[0]);
+            sIn = src.evalStream();
+          }
+        })(),
+        {
+          len: sIn.len === null ? null
+            : sIn.len === undefined ? undefined
+            : sIn.len < total ? 0n
+            : comb([...sizes, sIn.len - total]),
+          skip: helper.skip
+        }
+      );
+    }
+  }
+});
