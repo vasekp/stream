@@ -324,31 +324,30 @@ function permHelper(src) {
   return iter;
 }
 
-R.register(['perm', 'perms'], {
+R.register(['perm', 'perms', 'permute'], {
+  reqSource: true,
   maxArg: 1,
-  sourceOrArgs: 1,
   eval() {
     if(this.args[0]) {
-      const max = this.args[0].evalNum({min: 0n, max: Number.MAX_SAFE_INTEGER});
-      const nmax = Number(max);
-      const helperSrc = function*() {
-        for(let i = 0; i < nmax; i++)
-          yield i;
-      };
-      const helper = permHelper(helperSrc());
-      const token = this.token;
+      const sIn = this.src.evalStream();
+      const sArg = this.args[0].evalStream({finite: true});
+      const arr = [...sArg].map(arg => Number(arg.evalNum({min: 1n}) - 1n));
+      const vals = [];
+      for(let i = 0; i < arr.length; i++) {
+        vals[i] = sIn.next().value;
+        if(!vals[i])
+          throw new StreamError(`requested part ${i+1} beyond end`);
+        if(!arr.includes(i))
+          throw new StreamError('malformed argument list');
+      }
       return new Stream(this,
         (function*() {
-          for(const arr of helper) {
-            const ret = arr.map(i => new Atom(i + 1));
-            for(let i = BigInt(arr.length + 1); i <= max; i++)
-              ret.push(new Atom(i));
-            yield new Node('array', token, null, ret);
-          }
+          for(const ix of arr)
+            yield vals[ix];
+          yield* sIn;
         })(),
         {
-          len: fact(max),
-          skip: helper.skip
+          len: sIn.len
         }
       );
     } else {
@@ -417,32 +416,9 @@ R.register('#permute', {
     );
   },
   toString() {
-    return new Node('permute', this.token, this.src, this.meta._arr.map(i => new Atom(i + 1))).toString();
-  }
-});
-
-R.register('permute', {
-  reqSource: true,
-  eval() {
-    const sIn = this.src.evalStream();
-    const arr = this.args.map(arg => Number(arg.evalNum({min: 1n}) - 1n));
-    const vals = [];
-    for(let i = 0; i < arr.length; i++) {
-      vals[i] = sIn.next().value;
-      if(!vals[i])
-        throw new StreamError(`requested part ${i+1} beyond end`);
-      if(!arr.includes(i))
-        throw new StreamError('malformed argument list');
-    }
-    return new Stream(this,
-      (function*() {
-        for(const ix of arr)
-          yield vals[ix];
-        yield* sIn;
-      })(),
-      {
-        len: sIn.len
-      }
-    );
+    return this.src
+      + '.permute(['
+      + this.meta._arr.map(i => i + 1).join(',')
+      + '])';
   }
 });
