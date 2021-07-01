@@ -2,13 +2,13 @@ import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, types} from '../base.js';
 import R from '../register.js';
 
-R.register('split', {
+R.register(['split', 'chars'], {
   reqSource: true,
   maxArg: 1,
   eval() {
     const str = this.src.evalAtom(types.S);
     if(this.args[0]) {
-      const ev = this.args[0].eval().checkType([types.N, types.S]);
+      const ev = this.args[0].eval().checkType([types.N, types.S, types.stream]);
       if(ev.type === types.S) {
         const sep = ev.value;
         const split = str.split(sep);
@@ -29,6 +29,27 @@ R.register('split', {
               yield new Atom(c);
           })(),
           {len: BigInt(split.length)}
+        );
+      } else if(ev.type === types.stream) {
+        const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
+        return new Stream(this,
+          (function*() {
+            let ix = 0;
+            while(ix < str.length) {
+              let best = '';
+              for(const ch of abc) {
+                if(ch.length <= best.length)
+                  continue;
+                if(str.startsWith(ch, ix))
+                  best = ch;
+              }
+              if(best) {
+                yield new Atom(best);
+                ix += best.length;
+              } else
+                throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
+            }
+          })()
         );
       }
     } else {
@@ -135,34 +156,6 @@ R.register('chrm', {
       if(ix < 0n) ix += abcEval.length;
       return abcEval[ix].eval();
     }
-  }
-});
-
-R.register('chars', {
-  reqSource: true,
-  numArg: 1,
-  eval() {
-    const str = this.src.evalAtom(types.S);
-    const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
-    return new Stream(this,
-      (function*() {
-        let ix = 0;
-        while(ix < str.length) {
-          let best = '';
-          for(const ch of abc) {
-            if(ch.length <= best.length)
-              continue;
-            if(str.startsWith(ch, ix))
-              best = ch;
-          }
-          if(best) {
-            yield new Atom(best);
-            ix += best.length;
-          } else
-            throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
-        }
-      })()
-    );
   }
 });
 

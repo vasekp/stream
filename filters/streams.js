@@ -955,55 +955,34 @@ R.register('count', {
   }
 });
 
-R.register('counts', {
+R.register(['counts', 'tally', 'freq'], {
   reqSource: true,
-  numArg: 1,
-  eval() {
-    const sIn = this.src.evalStream({finite: true});
-    const sRef = this.args[0].evalStream({finite: true});
-    const map = new Map();
-    for(const ref of sRef)
-      map.set(ref, 0);
-    for(const r of sIn) {
-      for(const [key, val] of map)
-        if(compareStreams(r, key)) {
-          map.set(key, val + 1);
-          break;
-        }
-    }
-    const token = this.token;
-    return new Stream(this,
-      (function*() {
-        for(const [key, val] of map)
-          yield new Node('array', token, null, [key, new Atom(val)]);
-      })(),
-      {len: map.size}
-    );
-  }
-});
-
-R.register(['tally', 'freq'], {
-  reqSource: true,
-  numArg: 0,
+  maxArg: 1,
   eval() {
     const sIn = this.src.evalStream({finite: true});
     const map = new Map();
+    const fixed = (this.args.length !== 0);
+    const vals = fixed ? [...this.args[0].evalStream({finite: true})] : [];
+    const cnts = vals.map(_ => 0n);
     A: for(const r of sIn) {
-      for(const [key, val] of map)
-        if(compareStreams(r, key)) {
-          map.set(key, val + 1);
+      for(const ix of vals.keys())
+        if(compareStreams(r, vals[ix])) {
+          cnts[ix]++;
           continue A;
         }
-      // else
-      map.set(r, 1);
+      // not found
+      if(!fixed) {
+        vals.push(r);
+        cnts.push(1n);
+      }
     }
     const token = this.token;
     return new Stream(this,
       (function*() {
-        for(const [key, val] of map)
-          yield new Node('array', token, null, [key, new Atom(val)]);
+        for(const ix of vals.keys())
+          yield new Node('array', token, null, [vals[ix], new Atom(cnts[ix])]);
       })(),
-      {len: map.size}
+      {len: BigInt(vals.length)}
     );
   }
 });
