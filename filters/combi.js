@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, compareStreams} from '../base.js';
+import {Node, Atom, Stream, types, debug, compareStreams} from '../base.js';
 //import watchdog from '../watchdog.js';
 import R from '../register.js';
 
@@ -178,7 +178,8 @@ function permStream(vals, lens, token) {
             else
               ix -= tot * cnts[j] / cnt;
           }
-          //console.log(j, cnts, cnt, ix, tot);
+          if(debug)
+            console.log(j, cnts, cnt, ix, tot);
           tot = tot * cnts[j] / cnt;
           ixs[i] = j;
           cnts[j]--;
@@ -194,7 +195,6 @@ R.register(['perm', 'perms'], {
   maxArg: 1,
   sourceOrArgs: 1,
   eval() {
-    const token = this.token;
     if(this.args[0]) {
       const max = this.args[0].evalNum({min: 0n});
       const vals = Array.from({length: Number(max)}, (_, ix) => new Atom(ix + 1));
@@ -217,5 +217,119 @@ R.register(['perm', 'perms'], {
       }
       return permStream(vals, lens, this.token);
     }
+  }
+});
+
+R.register('tuples', {
+  minArg: 1,
+  sourceOrArgs: 2,
+  eval() {
+    const args = this.args.length === 1
+      ? Array.from(
+          {length: Number(this.args[0].evalNum({min: 1n}))},
+          _ => this.src
+        ).reverse()
+      : this.args.slice().reverse();
+    const streams = args.map(arg => arg.evalStream());
+    const lens = streams.map(s => s.len);
+    const ixs = streams.map(_ => 0n);
+    const curr = streams.map(s => s.next().value);
+    if(curr.some(c => !c))
+      return new Stream(this, [].values(), {len: 0n});
+    const token = this.token;
+    const len = lens.some(len => len === undefined) ? undefined
+      : lens.some(len => len === null) ? null
+      : lens.reduce((a, b) => a * b);
+    let done = false;
+    return new Stream(this,
+      (function*() {
+        for(;;) {
+          if(done)
+            return;
+          yield new Node('array', token, null, curr.slice().reverse());
+          let ix;
+          for(ix = 0; ix < streams.length; ix++) {
+            curr[ix] = streams[ix].next().value;
+            ixs[ix]++;
+            if(curr[ix])
+              break;
+          }
+          if(ix === streams.length)
+            return;
+          for(--ix; ix >= 0; ix--) {
+            if(lens[ix] === undefined)
+              lens[ix] = ixs[ix];
+            streams[ix] = args[ix].evalStream();
+            curr[ix] = streams[ix].next().value;
+            ixs[ix] = 0n;
+          }
+        }
+      })(),
+      {
+        len,
+        skip(c) {
+          let ix;
+          let inLen = 1n;
+          if(debug)
+            console.log(lens);
+          A: for(ix = 0; ix < streams.length; ix++) {
+            if(debug)
+              console.log(c, ixs, ix, inLen);
+            if(ix > 0) { // carry
+              curr[ix] = streams[ix].next().value;
+              ixs[ix]++;
+              if(!curr[ix]) {
+                lens[ix] = ixs[ix];
+                inLen *= lens[ix];
+                continue A;
+              }
+            }
+            if(lens[ix] !== undefined) {
+              if(lens[ix] !== null && c >= (lens[ix] - ixs[ix]) * inLen) {
+                c -= (lens[ix] - ixs[ix]) * inLen;
+                inLen *= lens[ix];
+                continue A;
+              } else if(c >= inLen) {
+                streams[ix].skip(c / inLen - 1n);
+                curr[ix] = streams[ix].next().value;
+                ixs[ix] += c / inLen;
+                c %= inLen;
+              }
+              break A;
+            } else {
+              while(c >= inLen) {
+                curr[ix] = streams[ix].next().value;
+                ixs[ix]++;
+                c -= inLen;
+                if(!curr[ix]) {
+                  lens[ix] = ixs[ix];
+                  inLen *= lens[ix];
+                  continue A;
+                }
+              }
+              break A;
+            }
+          }
+          if(debug) {
+            console.log(c, ixs, ix, inLen);
+            console.log(lens);
+          }
+          if(ix === streams.length) {
+            done = true;
+            return;
+          }
+          // streams[ix] now the last one read, < ix should be reset
+          // c < inLen so stream[ix] is at its final index
+          for(--ix; ix >= 0; ix--) {
+            inLen /= lens[ix];
+            streams[ix] = args[ix].evalStream();
+            streams[ix].skip(c / inLen);
+            ixs[ix] = c / inLen;
+            curr[ix] = streams[ix].next().value;
+            c %= inLen;
+          }
+        }
+      }
+    );
   }
 });
