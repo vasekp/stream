@@ -1,8 +1,8 @@
 import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, types} from '../base.js';
-import mainReg from '../register.js';
+import R from '../register.js';
 
-mainReg.register('split', {
+R.register('split', {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -44,7 +44,7 @@ mainReg.register('split', {
   }
 });
 
-mainReg.register('cat', {
+R.register('cat', {
   eval() {
     if(this.args.length > 1) {
       const strs = this.args.map(arg => arg.evalAtom(types.S));
@@ -70,7 +70,7 @@ export function isSingleChar(c) {
   return c === String.fromCodePoint(c.codePointAt(0));
 }
 
-mainReg.register('ord', {
+R.register('ord', {
   reqSource: true,
   maxArg: 1,
   prepare(scope) {
@@ -90,7 +90,7 @@ mainReg.register('ord', {
   }
 });
 
-mainReg.register('chr', {
+R.register('chr', {
   reqSource: true,
   maxArg: 1,
   prepare(scope) {
@@ -113,7 +113,7 @@ mainReg.register('chr', {
   }
 });
 
-mainReg.register('chrm', {
+R.register('chrm', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -139,7 +139,7 @@ mainReg.register('chrm', {
   }
 });
 
-mainReg.register('chars', {
+R.register('chars', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -167,7 +167,7 @@ mainReg.register('chars', {
   }
 });
 
-mainReg.register('ords', {
+R.register('ords', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -199,7 +199,7 @@ mainReg.register('ords', {
   }
 });
 
-mainReg.register(['lcase', 'lc'], {
+R.register(['lcase', 'lc'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -211,7 +211,7 @@ mainReg.register(['lcase', 'lc'], {
   }
 });
 
-mainReg.register(['ucase', 'uc'], {
+R.register(['ucase', 'uc'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -223,7 +223,7 @@ mainReg.register(['ucase', 'uc'], {
   }
 });
 
-mainReg.register('abc', {
+R.register('abc', {
   reqSource: false,
   numArg: 0,
   eval() {
@@ -240,7 +240,7 @@ mainReg.register('abc', {
   }
 });
 
-mainReg.register(['isstring', 'isstr'], {
+R.register(['isstring', 'isstr'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -252,7 +252,7 @@ mainReg.register(['isstring', 'isstr'], {
   }
 });
 
-mainReg.register('isdigit', {
+R.register('isdigit', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -267,7 +267,7 @@ mainReg.register('isdigit', {
   }
 });
 
-mainReg.register('isletter', {
+R.register('isletter', {
   reqSource: true,
   maxArg: 1,
   prepare(scope) {
@@ -288,7 +288,7 @@ mainReg.register('isletter', {
   }
 });
 
-mainReg.register(['isupper', 'isucase', 'isuc'], {
+R.register(['isupper', 'isucase', 'isuc'], {
   reqSource: true,
   maxArg: 1,
   prepare(scope) {
@@ -309,7 +309,7 @@ mainReg.register(['isupper', 'isucase', 'isuc'], {
   }
 });
 
-mainReg.register(['islower', 'islcase', 'islc'], {
+R.register(['islower', 'islcase', 'islc'], {
   reqSource: true,
   maxArg: 1,
   prepare(scope) {
@@ -330,7 +330,7 @@ mainReg.register(['islower', 'islcase', 'islc'], {
   }
 });
 
-mainReg.register('prefix', {
+R.register('prefix', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -343,7 +343,7 @@ mainReg.register('prefix', {
   }
 });
 
-mainReg.register('postfix', {
+R.register('postfix', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -356,7 +356,7 @@ mainReg.register('postfix', {
   }
 });
 
-mainReg.register('ends', {
+R.register('ends', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -369,7 +369,7 @@ mainReg.register('ends', {
   }
 });
 
-mainReg.register('starts', {
+R.register('starts', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -382,7 +382,7 @@ mainReg.register('starts', {
   }
 });
 
-mainReg.register('shift', {
+R.register('shift', {
   reqSource: true,
   numArg: 2,
   eval() {

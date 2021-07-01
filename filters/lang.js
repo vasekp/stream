@@ -1,8 +1,8 @@
 import {StreamError} from '../errors.js';
 import {Node, Atom, Stream, types, compareStreams} from '../base.js';
-import mainReg from '../register.js';
+import R from '../register.js';
 
-mainReg.register('array', {
+R.register('array', {
   reqSource: false,
   eval() {
     return new Stream(this,
@@ -21,7 +21,7 @@ mainReg.register('array', {
   }
 });
 
-mainReg.register('foreach', {
+R.register('foreach', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -59,7 +59,7 @@ mainReg.register('foreach', {
   }
 });
 
-mainReg.register('#id', {
+R.register('#id', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -77,7 +77,7 @@ mainReg.register('#id', {
   }
 });
 
-mainReg.register('join', {
+R.register('join', {
   reqSource: false,
   eval() {
     const args = this.args.map(arg => arg.eval());
@@ -111,7 +111,7 @@ mainReg.register('join', {
   }
 });
 
-mainReg.register('zip', {
+R.register('zip', {
   reqSource: false,
   eval() {
     const args = this.args.map(arg => arg.evalStream());
@@ -163,7 +163,7 @@ function part(sIn, iter) {
   })();
 }
 
-mainReg.register('part', {
+R.register('part', {
   reqSource: false,
   minArg: 1,
   eval() {
@@ -204,7 +204,7 @@ mainReg.register('part', {
   }
 });
 
-mainReg.register('#in', {
+R.register('#in', {
   maxArg: 1,
   prepare(scope) {
     if(scope.outer && !scope.outer.partial) {
@@ -238,7 +238,7 @@ mainReg.register('#in', {
   }
 });
 
-mainReg.register('over', {
+R.register('over', {
   reqSource: true,
   minArg: 1,
   prepare(scope) {
@@ -282,7 +282,7 @@ mainReg.register('over', {
   }
 });
 
-mainReg.register('equal', {
+R.register('equal', {
   reqSource: false,
   minArg: 2,
   prepare(scope) {
@@ -312,7 +312,7 @@ mainReg.register('equal', {
   }
 });
 
-mainReg.register('ineq', {
+R.register('ineq', {
   reqSource: false,
   numArg: 2,
   prepare(scope) {
@@ -339,7 +339,7 @@ mainReg.register('ineq', {
   }
 });
 
-mainReg.register('assign', {
+R.register('assign', {
   reqSource: false,
   minArg: 2,
   prepare(scope) {
@@ -383,7 +383,7 @@ mainReg.register('assign', {
   }
 });
 
-mainReg.register('clear', {
+R.register('clear', {
   reqSource: false,
   minArg: 1,
   prepare(scope) {
@@ -405,7 +405,7 @@ mainReg.register('clear', {
   }
 });
 
-mainReg.register('#history', {
+R.register('#history', {
   reqSource: false,
   maxArg: 1,
   prepare(scope) {

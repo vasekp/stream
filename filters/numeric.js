@@ -1,11 +1,11 @@
 import {StreamError} from '../errors.js';
 import {Node, Atom, Stream, types} from '../base.js';
 import watchdog from '../watchdog.js';
-import mainReg from '../register.js';
+import R from '../register.js';
 import RNG from '../random.js';
 
 function regReducer(name, sign, fun, type = types.N) {
-  mainReg.register(name, {
+  R.register(name, {
     reqSource: false,
     minArg: 2,
     prepare(scope) {
@@ -81,7 +81,7 @@ regReducer('and', '&', (a, b) => a && b, types.B);
 regReducer('or', '|', (a, b) => a || b, types.B);
 
 function regReducerS(name, fun, numOpts) {
-  mainReg.register(name, {
+  R.register(name, {
     prepare(scope) {
       const nnode = this.prepareAll(scope);
       if(scope.partial)
@@ -123,7 +123,7 @@ regReducerS('max', (a, b) => b > a ? b : a);
 regReducerS('gcd', gcd, {min: 1n});
 regReducerS('lcm', (a, b) => a * (b / gcd(a, b)), {min: 1n});
 
-mainReg.register(['acc', 'ac'], {
+R.register(['acc', 'ac'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -141,7 +141,7 @@ mainReg.register(['acc', 'ac'], {
   }
 });
 
-mainReg.register(['total', 'tot', 'sum'], {
+R.register(['total', 'tot', 'sum'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -153,7 +153,7 @@ mainReg.register(['total', 'tot', 'sum'], {
   }
 });
 
-mainReg.register('diff', {
+R.register('diff', {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -181,7 +181,7 @@ mainReg.register('diff', {
   }
 });
 
-mainReg.register(['product', 'prod'], {
+R.register(['product', 'prod'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -196,7 +196,7 @@ mainReg.register(['product', 'prod'], {
   }
 });
 
-mainReg.register('pow', {
+R.register('pow', {
   minArg: 1,
   maxArg: 2,
   prepare(scope) {
@@ -233,7 +233,7 @@ mainReg.register('pow', {
   }
 });
 
-mainReg.register('mod', {
+R.register('mod', {
   reqSource: true,
   minArg: 1,
   maxArg: 2,
@@ -250,7 +250,7 @@ mainReg.register('mod', {
   }
 });
 
-mainReg.register('modinv', {
+R.register('modinv', {
   minArg: 1,
   maxArg: 2,
   prepare(scope) {
@@ -276,7 +276,7 @@ mainReg.register('modinv', {
   }
 });
 
-mainReg.register('add', {
+R.register('add', {
   reqSource: true,
   minArg: 1,
   maxArg: 3,
@@ -297,7 +297,7 @@ mainReg.register('add', {
   }
 });
 
-mainReg.register('abs', {
+R.register('abs', {
   reqSource: true,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -308,7 +308,7 @@ mainReg.register('abs', {
   }
 });
 
-mainReg.register(['sign', 'sgn'], {
+R.register(['sign', 'sgn'], {
   reqSource: true,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -319,7 +319,7 @@ mainReg.register(['sign', 'sgn'], {
   }
 });
 
-mainReg.register('odd', {
+R.register('odd', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -331,7 +331,7 @@ mainReg.register('odd', {
   }
 });
 
-mainReg.register('even', {
+R.register('even', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -343,7 +343,7 @@ mainReg.register('even', {
   }
 });
 
-mainReg.register('not', {
+R.register('not', {
   maxArg: 1,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
@@ -361,7 +361,7 @@ mainReg.register('not', {
   }
 });
 
-mainReg.register(['every', 'each', 'all'], {
+R.register(['every', 'each', 'all'], {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -379,7 +379,7 @@ mainReg.register(['every', 'each', 'all'], {
   }
 });
 
-mainReg.register('some', {
+R.register('some', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -398,7 +398,7 @@ mainReg.register('some', {
 });
 
 function regComparer(name, sign, fun) {
-  mainReg.register(name, {
+  R.register(name, {
     reqSource: false,
     minArg: 2,
     prepare(scope) {
@@ -441,7 +441,7 @@ regComparer('gt', '>', (a, b) => a > b);
 regComparer('le', '<=', (a, b) => a <= b);
 regComparer('ge', '>=', (a, b) => a >= b);
 
-mainReg.register(['tobase', 'tbase', 'tb', 'str'], {
+R.register(['tobase', 'tbase', 'tb', 'str'], {
   reqSource: true,
   maxArg: 2,
   prepare(scope) {
@@ -465,7 +465,7 @@ mainReg.register(['tobase', 'tbase', 'tb', 'str'], {
   }
 });
 
-mainReg.register(['frombase', 'fbase', 'fb', 'num'], {
+R.register(['frombase', 'fbase', 'fb', 'num'], {
   reqSource: true,
   maxArg: 2,
   prepare(scope) {
@@ -492,7 +492,7 @@ mainReg.register(['frombase', 'fbase', 'fb', 'num'], {
   }
 });
 
-mainReg.register(['todigits', 'tdig'], {
+R.register(['todigits', 'tdig'], {
   reqSource: true,
   maxArg: 2,
   eval() {
@@ -513,7 +513,7 @@ mainReg.register(['todigits', 'tdig'], {
   }
 });
 
-mainReg.register(['fromdigits', 'fdig'], {
+R.register(['fromdigits', 'fdig'], {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -550,7 +550,7 @@ const primes = (() => {
   };
 })();
 
-mainReg.register('primes', {
+R.register('primes', {
   reqSource: false,
   numArg: 0,
   eval() {
@@ -564,7 +564,7 @@ mainReg.register('primes', {
   }
 });
 
-mainReg.register('isprime', {
+R.register('isprime', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -585,7 +585,7 @@ mainReg.register('isprime', {
   }
 });
 
-mainReg.register('factor', {
+R.register('factor', {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -605,7 +605,7 @@ mainReg.register('factor', {
   }
 });
 
-mainReg.register(['isnumber', 'isnum'], {
+R.register(['isnumber', 'isnum'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -617,7 +617,7 @@ mainReg.register(['isnumber', 'isnum'], {
   }
 });
 
-mainReg.register('pi', {
+R.register('pi', {
   reqSource: false,
   numArg: 0,
   eval() {
@@ -670,7 +670,7 @@ mainReg.register('pi', {
   }
 });
 
-mainReg.register(['random', 'rnd'], {
+R.register(['random', 'rnd'], {
   minArg: 0,
   maxArg: 3,
   prepare(scope) {

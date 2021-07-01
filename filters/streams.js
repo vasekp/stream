@@ -1,9 +1,9 @@
 import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, types, debug, compareStreams} from '../base.js';
 import {ord} from './string.js';
-import mainReg from '../register.js';
+import R from '../register.js';
 
-mainReg.register(['iota', 'seq'], {
+R.register(['iota', 'seq'], {
   reqSource: false,
   numArg: 0,
   eval() {
@@ -18,7 +18,7 @@ mainReg.register(['iota', 'seq'], {
   }
 });
 
-mainReg.register(['range', 'ran', 'r'], {
+R.register(['range', 'ran', 'r'], {
   reqSource: false,
   minArg: 1,
   maxArg: 3,
@@ -67,7 +67,7 @@ mainReg.register(['range', 'ran', 'r'], {
   }
 });
 
-mainReg.register(['length', 'len'], {
+R.register(['length', 'len'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -88,7 +88,7 @@ mainReg.register(['length', 'len'], {
   }
 });
 
-mainReg.register('first', {
+R.register('first', {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -120,7 +120,7 @@ mainReg.register('first', {
   }
 });
 
-mainReg.register('last', {
+R.register('last', {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -183,7 +183,7 @@ function takedrop(sIn, iter) {
   })();
 }
 
-mainReg.register(['take', 'takedrop', 'td'], {
+R.register(['take', 'takedrop', 'td'], {
   reqSource: true,
   minArg: 1,
   eval() {
@@ -203,7 +203,7 @@ mainReg.register(['take', 'takedrop', 'td'], {
   }
 });
 
-mainReg.register(['drop', 'droptake', 'dt'], {
+R.register(['drop', 'droptake', 'dt'], {
   reqSource: true,
   minArg: 1,
   eval() {
@@ -224,7 +224,7 @@ mainReg.register(['drop', 'droptake', 'dt'], {
   }
 });
 
-mainReg.register(['droplast', 'dl'], {
+R.register(['droplast', 'dl'], {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -248,7 +248,7 @@ mainReg.register(['droplast', 'dl'], {
   }
 });
 
-mainReg.register(['reverse', 'rev'], {
+R.register(['reverse', 'rev'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -266,7 +266,7 @@ mainReg.register(['reverse', 'rev'], {
   }
 });
 
-mainReg.register(['repeat', 'rep'], {
+R.register(['repeat', 'rep'], {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -293,7 +293,7 @@ mainReg.register(['repeat', 'rep'], {
   }
 });
 
-mainReg.register(['cycle', 'cc'], {
+R.register(['cycle', 'cc'], {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -330,7 +330,7 @@ mainReg.register(['cycle', 'cc'], {
   }
 });
 
-mainReg.register(['group', 'g'], {
+R.register(['group', 'g'], {
   reqSource: true,
   minArg: 1,
   eval() {
@@ -381,7 +381,7 @@ mainReg.register(['group', 'g'], {
   }
 });
 
-mainReg.register(['flatten', 'fl'], {
+R.register(['flatten', 'fl'], {
   reqSource: true,
   maxArg: 1,
   eval() {
@@ -407,7 +407,7 @@ mainReg.register(['flatten', 'fl'], {
   }
 });
 
-mainReg.register(['padleft', 'pl'], {
+R.register(['padleft', 'pl'], {
   reqSource: true,
   numArg: 2,
   eval() {
@@ -440,7 +440,7 @@ mainReg.register(['padleft', 'pl'], {
   }
 });
 
-mainReg.register(['padright', 'pr'], {
+R.register(['padright', 'pr'], {
   reqSource: true,
   numArg: 2,
   eval() {
@@ -469,7 +469,7 @@ mainReg.register(['padright', 'pr'], {
   }
 });
 
-mainReg.register(['prepend', 'prep'], {
+R.register(['prepend', 'prep'], {
   reqSource: true,
   minArg: 1,
   eval() {
@@ -493,7 +493,7 @@ mainReg.register(['prepend', 'prep'], {
   }
 });
 
-mainReg.register('nest', {
+R.register('nest', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -516,7 +516,7 @@ mainReg.register('nest', {
   }
 });
 
-mainReg.register('fold', {
+R.register('fold', {
   reqSource: true,
   minArg: 1,
   maxArg: 3,
@@ -547,7 +547,7 @@ mainReg.register('fold', {
   }
 });
 
-mainReg.register('xfold', {
+R.register('xfold', {
   reqSource: true,
   numArg: 2,
   prepare(scope) {
@@ -575,7 +575,7 @@ mainReg.register('xfold', {
   }
 });
 
-mainReg.register('xlate', {
+R.register('xlate', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -597,7 +597,7 @@ mainReg.register('xlate', {
   }
 });
 
-mainReg.register('reduce', {
+R.register('reduce', {
   reqSource: true,
   minArg: 1,
   maxArg: 2,
@@ -620,7 +620,7 @@ mainReg.register('reduce', {
   }
 });
 
-mainReg.register('recur', {
+R.register('recur', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -648,7 +648,7 @@ mainReg.register('recur', {
   }
 });
 
-mainReg.register('map2', {
+R.register('map2', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -679,7 +679,7 @@ mainReg.register('map2', {
   }
 });
 
-mainReg.register('if', {
+R.register('if', {
   numArg: 3,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -694,7 +694,7 @@ mainReg.register('if', {
   },
 });
 
-mainReg.register(['select', 'sel', 'where'], {
+R.register(['select', 'sel', 'where'], {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -716,7 +716,7 @@ mainReg.register(['select', 'sel', 'where'], {
   }
 });
 
-mainReg.register('iwhere', {
+R.register('iwhere', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -740,7 +740,7 @@ mainReg.register('iwhere', {
   }
 });
 
-mainReg.register('while', {
+R.register('while', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -783,7 +783,7 @@ function usort(arr, fn = x => x) {
   }
 }
 
-mainReg.register('sort', {
+R.register('sort', {
   reqSource: true,
   maxArg: 1,
   prepare(scope) {
@@ -812,7 +812,7 @@ mainReg.register('sort', {
   }
 });
 
-mainReg.register(['ddup', 'drep', 'dd'], {
+R.register(['ddup', 'drep', 'dd'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -830,7 +830,7 @@ mainReg.register(['ddup', 'drep', 'dd'], {
   }
 });
 
-mainReg.register('fixed', {
+R.register('fixed', {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -846,7 +846,7 @@ mainReg.register('fixed', {
   }
 });
 
-mainReg.register('index', {
+R.register('index', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -869,7 +869,7 @@ mainReg.register('index', {
   }
 });
 
-mainReg.register('indexes', {
+R.register('indexes', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -906,7 +906,7 @@ mainReg.register('indexes', {
   }
 });
 
-mainReg.register('includes', {
+R.register('includes', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -923,7 +923,7 @@ mainReg.register('includes', {
   }
 });
 
-mainReg.register('element', {
+R.register('element', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -940,7 +940,7 @@ mainReg.register('element', {
   }
 });
 
-mainReg.register('count', {
+R.register('count', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -955,7 +955,7 @@ mainReg.register('count', {
   }
 });
 
-mainReg.register('counts', {
+R.register('counts', {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -982,7 +982,7 @@ mainReg.register('counts', {
   }
 });
 
-mainReg.register(['tally', 'freq'], {
+R.register(['tally', 'freq'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -1008,7 +1008,7 @@ mainReg.register(['tally', 'freq'], {
   }
 });
 
-mainReg.register('uniq', {
+R.register('uniq', {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -1029,7 +1029,7 @@ mainReg.register('uniq', {
   }
 });
 
-mainReg.register('rle', {
+R.register('rle', {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -1055,7 +1055,7 @@ mainReg.register('rle', {
   }
 });
 
-mainReg.register(['unrle', 'unfreq', 'untally'], {
+R.register(['unrle', 'unfreq', 'untally'], {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -1077,7 +1077,7 @@ mainReg.register(['unrle', 'unfreq', 'untally'], {
   }
 });
 
-mainReg.register('isstream', {
+R.register('isstream', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -1089,7 +1089,7 @@ mainReg.register('isstream', {
   }
 });
 
-mainReg.register('with', {
+R.register('with', {
   minArg: 2,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
@@ -1125,7 +1125,7 @@ mainReg.register('with', {
   }
 });
 
-mainReg.register('longest', {
+R.register('longest', {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -1154,7 +1154,7 @@ mainReg.register('longest', {
   }
 });
 
-mainReg.register('shortest', {
+R.register('shortest', {
   reqSource: true,
   numArg: 0,
   eval() {
