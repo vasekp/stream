@@ -82,6 +82,7 @@ regReducer('or', '|', (a, b) => a || b, types.B);
 
 function regReducerS(name, fun, numOpts) {
   R.register(name, {
+    sourceOrArgs: 1,
     prepare(scope) {
       const nnode = this.prepareAll(scope);
       if(scope.partial)
@@ -91,8 +92,6 @@ function regReducerS(name, fun, numOpts) {
         const res = ins.reduce(fun);
         return new Atom(res);
       } else {
-        if(!nnode.src)
-          throw new StreamError('requires source');
         const sIn = nnode.src.evalStream({finite: true});
         let res = null;
         for(const s of sIn) {
@@ -345,6 +344,7 @@ R.register('even', {
 
 R.register('not', {
   maxArg: 1,
+  sourceOrArgs: 1,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
     if(scope.partial)
@@ -353,8 +353,6 @@ R.register('not', {
       const val = nnode.args[0].evalAtom(types.B);
       return new Atom(!val);
     } else {
-      if(!nnode.src)
-        throw new StreamError('requires source');
       const val = nnode.src.evalAtom(types.B);
       return new Atom(!val);
     }
@@ -673,6 +671,7 @@ R.register('pi', {
 R.register(['random', 'rnd'], {
   minArg: 0,
   maxArg: 3,
+  sourceOrArgs: 2,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.map(arg => arg.prepare({...scope, src}));
@@ -711,8 +710,6 @@ R.register(['random', 'rnd'], {
         {len}
       );
     } else {
-      if(!this.src)
-        throw new StreamError('requires source');
       const sIn = this.src.evalStream({finite: true});
       if(!this.args[0]) {
         if(typeof sIn.len === 'bigint' && sIn.len !== 0n) {

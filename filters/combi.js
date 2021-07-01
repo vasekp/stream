@@ -192,6 +192,7 @@ function permStream(vals, lens, token) {
 
 R.register(['perm', 'perms'], {
   maxArg: 1,
+  sourceOrArgs: 1,
   eval() {
     const token = this.token;
     if(this.args[0]) {

@@ -80,6 +80,8 @@ export class Node extends Base {
     if(rec) {
       this.known = true;
       Object.assign(this, rec);
+      if(this.sourceOrArgs !== undefined)
+        this.reqSource = this.args.length < this.sourceOrArgs;
     }
     for(const fn of ['eval', 'prepare']) {
       const pFn = this[fn];

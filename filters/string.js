@@ -45,13 +45,12 @@ R.register('split', {
 });
 
 R.register('cat', {
+  sourceOrArgs: 2,
   eval() {
     if(this.args.length > 1) {
       const strs = this.args.map(arg => arg.evalAtom(types.S));
       return new Atom(strs.join(''));
     } else {
-      if(!this.src)
-        throw new StreamError('requires source');
       const strs = [...this.src.evalStream({finite: true})].map(a => a.evalAtom(types.S));
       const sep = this.args[0] ? this.args[0].evalAtom(types.S) : '';
       return new Atom(strs.join(sep));
