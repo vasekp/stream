@@ -7,7 +7,7 @@ class Register extends EventTarget {
     this.init(init);
   }
 
-  init(init) {
+  init(init = []) {
     this.map = new Map();
     for(const [ident, string] of init)
       this.register(ident, {body: parse(string)});

@@ -117,7 +117,7 @@ R.register('save', {
   }
 });
 
-R.register('restore', {
+R.register(['restore', 'revert'], {
   minArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
