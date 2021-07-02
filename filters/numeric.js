@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types} from '../base.js';
+import {Node, Atom, Stream, types, MAXMEM} from '../base.js';
 import watchdog from '../watchdog.js';
 import R from '../register.js';
 import RNG from '../random.js';
@@ -690,6 +690,7 @@ R.register(['random', 'rnd'], {
       throw new Error('RNG unitialized');
     const rng = new RNG(nnode.meta._seed);
     if(nnode.args.length === 2) {
+      /*** 2-arg: min, max - resolve in prepare() ***/
       const min = nnode.args[0].evalNum();
       const max = nnode.args[1].evalNum();
       if(max < min)
@@ -703,6 +704,7 @@ R.register(['random', 'rnd'], {
       throw new Error('RNG unitialized');
     const rng = new RNG(this.meta._seed);
     if(this.args.length === 3) {
+      /*** 3-arg: min, max, count ***/
       const min = this.args[0].evalNum();
       const max = this.args[1].evalNum();
       const len = this.args[2].evalNum({min: 1n});
@@ -716,32 +718,59 @@ R.register(['random', 'rnd'], {
         {len}
       );
     } else {
-      const sIn = this.src.evalStream({finite: true});
+      let sIn = this.src.evalStream({finite: true});
       if(!this.args[0]) {
+        /*** 0-arg: one sample from source ***/
         if(typeof sIn.len === 'bigint' && sIn.len !== 0n) {
           const rnd = rng.random(0n, sIn.len - 1n);
           sIn.skip(rnd);
           return sIn.next().value.eval();
         } else {
-          const vals = [...sIn];
-          if(vals.length === 0)
+          let len = 0n;
+          for(const _ of sIn)
+            len++;
+          if(len === 0n)
             throw new StreamError('empty stream');
-          const ix = random0(BigInt(vals.length));
-          return vals[ix].eval();
+          const ix = rng.random(0n, len - 1n);
+          sIn = this.src.evalStream();
+          sIn.skip(ix);
+          return sIn.next().value.eval();
         }
       } else {
-        const len = this.args[0].evalNum({min: 1n});
-        const data = [...sIn];
-        if(data.length === 0)
+        /*** 1-arg: source + count ***/
+        const count = this.args[0].evalNum({min: 1n});
+        let len = 0n;
+        if(typeof sIn.len === 'bigint')
+          len = sIn.len;
+        else {
+          for(const _ of sIn)
+            len++;
+        }
+        if(len === 0n)
           throw new StreamError('empty stream');
-        const max = BigInt(data.length) - 1n;
-        return new Stream(this,
-          (function*() {
-            for(let i = 0n; i < len; i++)
-              yield data[rng.random(0n, max)];
-          })(),
-          {len}
-        );
+        if(len < MAXMEM) {
+          sIn = this.src.evalStream();
+          const data = [...sIn];
+          return new Stream(this,
+            (function*() {
+              for(let i = 0n; i < count; i++)
+                yield data[rng.random(0n, len - 1n)];
+            })(),
+            {len: count}
+          );
+        } else {
+          return new Stream(this,
+            (function*(self) {
+              for(let i = 0n; i < count; i++) {
+                const ix = rng.random(0n, len - 1n);
+                sIn = self.src.evalStream();
+                sIn.skip(ix);
+                yield sIn.next().value;
+              }
+            })(this),
+            {len: count}
+          );
+        }
       }
     }
   }

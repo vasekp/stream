@@ -5,6 +5,7 @@ import mainReg from './register.js';
 
 const DEFLEN = 100;
 const DEFTIME = 1000;
+export const MAXMEM = 1000;
 
 export const debug = globalThis.process?.argv?.includes('debug');
 

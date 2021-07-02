@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, compareStreams} from '../base.js';
+import {Node, Atom, Stream, types, compareStreams, MAXMEM} from '../base.js';
 import R from '../register.js';
 
 R.register('array', {
@@ -147,18 +147,34 @@ R.register('zip', {
   }
 });
 
-function part(sIn, iter) {
+function part(src, iter) {
   return (function*() {
     const mem = [];
+    const stMem = src.evalStream();
+    let stSkip = null;
+    let read = 0n;
     for(const ix of iter) {
-      if(ix > mem.length)
-        for(let i = mem.length; i < ix; i++) {
-          const {value, done} = sIn.next();
-          if(done)
-            throw new StreamError(`requested part ${ix} beyond end`);
-          mem.push(value);
+      if(ix < MAXMEM) {
+        if(ix > mem.length)
+          for(let i = mem.length; i < ix; i++) {
+            const next = stMem.next().value;
+            if(!next)
+              throw new StreamError(`requested part ${ix} beyond end`);
+            mem.push(next);
+          }
+        yield mem[Number(ix) - 1];
+      } else {
+        if(!stSkip || ix <= read) {
+          stSkip = src.evalStream();
+          read = 0n;
         }
-      yield mem[Number(ix) - 1];
+        stSkip.skip(ix - read - 1n);
+        const next = stSkip.next().value;
+        if(!next)
+          throw new StreamError(`requested part ${ix} beyond end`);
+        yield next;
+        read = ix;
+      }
     }
   })();
 }
@@ -167,10 +183,10 @@ R.register('part', {
   reqSource: false,
   minArg: 1,
   eval() {
-    const sIn = this.args[0].evalStream();
     const ins = this.args.slice(1).map(arg => arg.eval());
     if(ins.every(i => i.isAtom)) {
       if(ins.length === 1) {
+        const sIn = this.args[0].evalStream();
         const ix = ins[0].numValue({min: 1n});
         sIn.skip(ix - 1n);
         const {value, done} = sIn.next();
@@ -179,18 +195,19 @@ R.register('part', {
         return value.eval();
       } else
         return new Stream(this,
-          part(sIn, ins.map(i => i.numValue({min: 1n}))),
-          {len: BigInt(ins.length)});
+          part(this.args[0], ins.map(i => i.numValue({min: 1n}))),
+            {len: BigInt(ins.length)});
     } else if(ins.length > 1)
       throw new StreamError('required list of values or a single stream');
+    const sPart = ins[0];
     return new Stream(this,
-      part(sIn, (function*() {
-        for(const s of ins[0])
+      part(this.args[0], (function*() {
+        for(const s of sPart)
           yield s.evalNum({min: 1n});
       })()),
       {
-        len: sIn.len,
-        skip: sIn.skip
+        len: sPart.len,
+        skip: sPart.skip
       }
     );
   },
