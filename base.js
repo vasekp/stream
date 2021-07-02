@@ -64,6 +64,19 @@ class Base {
     // else
     return this;
   }
+
+  timed(func, limit = DEFTIME) {
+    try {
+      watchdog.start(limit);
+      return func(this);
+    } finally {
+      watchdog.stop();
+    }
+  }
+
+  static timed(func, limit = DEFTIME) {
+    return Base.prototype.timed(func, limit);
+  }
 }
 
 export class Node extends Base {
@@ -231,15 +244,6 @@ export class Node extends Base {
         yield* value.writeout_gen();
       }
       yield ']';
-    }
-  }
-
-  timed(func, limit = DEFTIME) {
-    try {
-      watchdog.start(limit);
-      return func(this);
-    } finally {
-      watchdog.stop();
     }
   }
 }
