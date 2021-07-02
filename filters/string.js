@@ -358,10 +358,13 @@ R.register('starts', {
 R.register('shift', {
   reqSource: true,
   numArg: 2,
-  eval() {
-    const str = this.src.evalAtom(types.S);
-    let shift = this.args[0].evalNum();
-    const abc = this.args[1].evalAlphabet();
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const str = nnode.src.evalAtom(types.S);
+    let shift = nnode.args[0].evalNum();
+    const abc = nnode.args[1].evalAlphabet();
     shift = Number(shift % BigInt(abc.length));
     if(shift < 0)
       shift += abc.length;
