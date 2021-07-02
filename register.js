@@ -59,7 +59,7 @@ class Register extends EventTarget {
     return new Register(this, init);
   }
 
-  dump(recursive = true) {
+  dump() {
     const set = new Set();
     for(let reg = this; reg !== mainReg; reg = reg.parent) {
       for(const key of reg.map.keys())
