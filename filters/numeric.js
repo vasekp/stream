@@ -33,8 +33,8 @@ function regReducer(name, sign, fun, type = types.N) {
                 if(i.isAtom)
                   vs.push(i.value);
                 else {
-                  const {value: r, done} = i.next();
-                  if(done)
+                  const r = i.next().value;
+                  if(!r)
                     return;
                   vs.push(r.evalAtom(type));
                 }

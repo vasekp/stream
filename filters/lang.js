@@ -34,13 +34,8 @@ R.register('foreach', {
     const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
       (function*() {
-        for(;;) {
-          const {value, done} = sIn.next();
-          if(done)
-            return;
-          else
-            yield body.prepare({src: value});
-        }
+        for(const r of sIn)
+          yield body.prepare({src: r});
       })(),
       {
         skip: sIn.skip,
@@ -189,10 +184,10 @@ R.register('part', {
         const sIn = this.args[0].evalStream();
         const ix = ins[0].numValue({min: 1n});
         sIn.skip(ix - 1n);
-        const {value, done} = sIn.next();
-        if(done)
+        const r = sIn.next().value;
+        if(!r)
           throw new StreamError(`requested part ${ix} beyond end`);
-        return value.eval();
+        return r.eval();
       } else
         return new Stream(this,
           part(this.args[0], ins.map(i => i.numValue({min: 1n}))),

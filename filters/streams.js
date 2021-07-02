@@ -99,10 +99,10 @@ R.register('first', {
       return new Stream(this,
         (function*() {
           while(i++ < l) {
-            const {value, done} = sIn.next();
-            if(done)
+            const r = sIn.next().value;
+            if(!r)
               return;
-            yield value;
+            yield r;
           }
         })(),
         { len: sIn.len === undefined ? undefined
@@ -111,11 +111,11 @@ R.register('first', {
             : sIn.len }
       );
     } else {
-      const {value, done} = sIn.next();
-      if(done)
+      const r = sIn.next().value;
+      if(!r)
         throw new StreamError('empty stream');
       else
-        return value.eval();
+        return r.eval();
     }
   }
 });
@@ -169,10 +169,10 @@ function takedrop(sIn, iter) {
     for(const num of iter) {
       if(take) {
         for(let i = 0n; i < num; i++) {
-          const {value, done} = sIn.next();
-          if(done)
+          const r = sIn.next().value;
+          if(!r)
             return;
-          yield value;
+          yield r;
         }
       } else
         sIn.skip(num);
@@ -362,17 +362,17 @@ R.register(['group', 'g'], {
     return new Stream(this,
       (function*() {
         for(const len of lFun) {
-          const r = [];
+          const arr = [];
           for(let i = 0n; i < len; i++) {
-            const {value, done} = sIn.next();
-            if(done)
+            const r = sIn.next().value;
+            if(!r)
               break;
-            r.push(value);
+            arr.push(r);
           }
           // Yield empty group if asked to, but don't output trailing [] on EOI
-          if(r.length > 0n || len === 0n)
-            yield new Node('array', token, null, r, {});
-          if(r.length < len)
+          if(arr.length > 0n || len === 0n)
+            yield new Node('array', token, null, arr, {});
+          if(arr.length < len)
             break;
         }
       })(),
