@@ -14,10 +14,11 @@ import repl from 'repl';
 import * as fs from 'fs/promises';
 
 const history = new History();
-const userReg = mainReg.child();
+const saveReg = mainReg.child();
+const sessReg = saveReg.child();
 
 await fs.readFile('.stream_vars')
-  .then(cont => userReg.init(JSON.parse(cont)))
+  .then(cont => saveReg.init(JSON.parse(cont)))
   .catch(() => {});
 
 const prompt = repl.start({eval: str => {
@@ -26,7 +27,7 @@ const prompt = repl.start({eval: str => {
     let node = parse(str);
     if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
       node = node.toAssign();
-    node = node.timed(n => n.prepare({history, register: userReg, seed: RNG.seed()}));
+    node = node.timed(n => n.prepare({history, register: sessReg, seed: RNG.seed()}));
     const out = node.timed(n => n.writeout());
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {
@@ -56,6 +57,6 @@ const prompt = repl.start({eval: str => {
 
 prompt.on('exit', e => {
   fs.open('.stream_vars', 'w')
-    .then(f => f.writeFile(JSON.stringify(userReg.dump())))
-    .catch(() => {});
+    .then(f => f.writeFile(JSON.stringify(saveReg.dump())))
+    .catch(console.error);
 });

@@ -76,7 +76,7 @@ export class Node extends Base {
     this.meta = meta;
     this.bare = this.src === null && this.args.length === 0;
     this.type = this.bare ? types.symbol : types.expr;
-    const rec = mainReg.find(this.ident);
+    const rec = ident ? mainReg.find(this.ident) : null;
     if(rec) {
       this.known = true;
       Object.assign(this, rec);

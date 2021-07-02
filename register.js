@@ -40,25 +40,35 @@ class Register extends EventTarget {
     return this.map.has(ident);
   }
 
-  clear(ident) {
-    if(this !== mainReg && this.map.has(ident)) {
+  clear(ident, deep = false) {
+    if(this === mainReg)
+      return false;
+    if(this.map.has(ident)) {
       const e = new Event('register');
       e.detail = {key: ident};
       this.dispatchEvent(e);
       this.map.delete(ident);
+      if(deep)
+        this.parent.clear(ident, deep);
       return true;
     } else
-      return false;
+      return deep ? this.parent.clear(ident, deep) : false;
   }
 
   child(init) {
     return new Register(this, init);
   }
 
-  dump() {
+  dump(recursive = true) {
+    const set = new Set();
+    for(let reg = this; reg !== mainReg; reg = reg.parent) {
+      for(const key of reg.map.keys())
+        set.add(key);
+    }
+    const keys = [...set.keys()].sort();
     const ret = [];
-    for(const [key, node] of this.map)
-      ret.push([key, node.body.toString()]);
+    for(const key of keys)
+      ret.push([key, this.find(key).body.toString()]);
     return ret;
   }
 }

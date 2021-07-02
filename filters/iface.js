@@ -21,7 +21,7 @@ R.register('clear', {
     const idents = this.args.map(arg => arg.ident);
     const ret = [];
     for(const ident of idents)
-      if(reg.clear(ident))
+      if(reg.clear(ident, true))
         ret.push(new Atom(ident));
     return new Stream(this, ret.values());
   }
@@ -76,3 +76,69 @@ R.register('desc', {
     return parse(src).prepare({...scope, src: undefined, args: undefined});
   }
 });*/
+
+R.register('save', {
+  minArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => {
+      arg.checkType([types.symbol, types.expr]);
+      if(arg.type === types.symbol)
+        return arg;
+      else if(arg.token.value !== '=')
+        throw new StreamError(`expected assignment, found ${arg.desc()}`);
+      else
+        return arg.toAssign().prepare({...scope, src, partial: true, expand: !scope.partial});
+    });
+    const mod = {src: null, args};
+    if(scope.register)
+      mod.meta = {...this.meta, _register: scope.register};
+    return this.modify(mod).check(scope.partial);
+  },
+  eval() {
+    const innerReg = this.meta._register;
+    if(!innerReg)
+      throw new Error('register not defined');
+    const outerReg = innerReg.parent;
+    if(outerReg === R || outerReg.parent !== R)
+      throw new Error('must be called in outer scope');
+    const ret = [];
+    this.args.forEach(arg => {
+      if(arg.type === types.symbol) {
+        const rec = innerReg.find(arg.ident);
+        if(rec?.body) {
+          outerReg.register(arg.ident, rec);
+          ret.push(new Atom(arg.ident));
+        }
+      } else
+        ret.push(...arg.prepare({register: outerReg}).eval());
+    });
+    return new Stream(this, ret.values());
+  }
+});
+
+R.register('restore', {
+  minArg: 1,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.checkType(types.symbol));
+    const mod = {src: null, args};
+    if(scope.register)
+      mod.meta = {...this.meta, _register: scope.register};
+    return this.modify(mod).check(scope.partial);
+  },
+  eval() {
+    const innerReg = this.meta._register;
+    if(!innerReg)
+      throw new Error('register not defined');
+    const outerReg = innerReg.parent;
+    if(outerReg === R || outerReg.parent !== R)
+      throw new Error('must be called in outer scope');
+    const ret = [];
+    this.args.forEach(arg => {
+      if(innerReg.clear(arg.ident))
+        ret.push(new Atom(arg.ident));
+    });
+    return new Stream(this, ret.values());
+  }
+});
