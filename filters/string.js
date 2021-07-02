@@ -69,7 +69,7 @@ R.register(['split', 'chars'], {
           {len: BigInt(split.length)}
         );
       } else if(ev.type === types.stream) {
-        const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
+        const abc = this.args[0].evalAlphabet();
         return new Stream(this,
           (function*() {
             for(const [ch, _] of splitABC(str, abc))
@@ -113,7 +113,7 @@ R.register('ord', {
       return nnode;
     const c = nnode.src.evalAtom(types.S);
     if(nnode.args[0]) {
-      const abc = [...nnode.args[0].evalStream({finite: true})].map(a => a.evalAtom(types.S));
+      const abc = nnode.args[0].evalAlphabet();
       const ix = abc.indexOf(c);
       if(ix < 0)
         throw new StreamError(`character "${c}" not in list`);
@@ -133,13 +133,11 @@ R.register('chr', {
       return nnode;
     if(nnode.args[0]) {
       const ix = nnode.src.evalNum({min: 1n});
-      const abc = nnode.args[0].evalStream({finite: true});
-      abc.skip(ix - 1n);
-      const {value, done} = abc.next();
-      if(done)
+      const abc = nnode.args[0].evalAlphabet();
+      if(ix > abc.length)
         throw new StreamError(`index ${ix} beyond end`);
       else
-        return value.eval();
+        return new Atom(abc[Number(ix) - 1]);
     } else {
       const cp = nnode.src.evalNum({min: 0n});
       return new Atom(String.fromCodePoint(Number(cp)));
@@ -155,21 +153,10 @@ R.register('chrm', {
     if(scope.partial)
       return nnode;
     let ix = nnode.src.evalNum() - 1n;
-    const abc = nnode.args[0].evalStream({finite: true});
-    if(typeof abc.len === 'bigint' && abc.len !== 0n) {
-      ix %= abc.len;
-      if(ix < 0n) ix += abc.len;
-      abc.skip(ix);
-      const {value} = abc.next();
-      return value.eval();
-    } else {
-      const abcEval = [...abc];
-      if(!abcEval.length)
-        throw new StreamError('empty alphabet');
-      ix = Number(ix) % abcEval.length;
-      if(ix < 0n) ix += abcEval.length;
-      return abcEval[ix].eval();
-    }
+    const abc = nnode.args[0].evalAlphabet();
+    ix = Number(ix % BigInt(abc.length));
+    if(ix < 0) ix += abc.length;
+    return new Atom(abc[ix]);
   }
 });
 
@@ -178,7 +165,7 @@ R.register('ords', {
   numArg: 1,
   eval() {
     const str = this.src.evalAtom(types.S);
-    const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
+    const abc = this.args[0].evalAlphabet();
     return new Stream(this,
       (function*() {
         for(const [_, ix] of splitABC(str, abc, true))
@@ -268,8 +255,7 @@ R.register('isletter', {
       return new Atom(false);
     const c = r.value;
     if(nnode.args[0]) {
-      const abc = [...nnode.args[0]
-        .evalStream({finite: true})]
+      const abc = nnode.args[0].evalAlphabet()
         .map(a => a.evalAtom(types.S).toLowerCase());
       return new Atom(abc.includes(c.toLowerCase()));
     } else
@@ -289,8 +275,7 @@ R.register(['isupper', 'isucase', 'isuc'], {
       return new Atom(false);
     const c = r.value;
     if(nnode.args[0]) {
-      const abc = [...nnode.args[0]
-        .evalStream({finite: true})]
+      const abc = nnode.args[0].evalAlphabet()
         .map(a => a.evalAtom(types.S).toUpperCase());
       return new Atom(abc.includes(c));
     } else
@@ -310,8 +295,7 @@ R.register(['islower', 'islcase', 'islc'], {
       return new Atom(false);
     const c = r.value;
     if(nnode.args[0]) {
-      const abc = [...nnode.args[0]
-        .evalStream({finite: true})]
+      const abc = nnode.args[0].evalAlphabet()
         .map(a => a.evalAtom(types.S).toLowerCase());
       return new Atom(abc.includes(c));
     } else
@@ -377,7 +361,7 @@ R.register('shift', {
   eval() {
     const str = this.src.evalAtom(types.S);
     let shift = this.args[0].evalNum();
-    const abc = [...this.args[1].evalStream({finite: true})].map(s => s.evalAtom(types.S));
+    const abc = this.args[1].evalAlphabet();
     shift = Number(shift % BigInt(abc.length));
     if(shift < 0)
       shift += abc.length;
@@ -404,7 +388,7 @@ R.register('tr', {
     const from = nnode.args[0].evalAtom(types.S);
     const to = nnode.args[1].evalAtom(types.S);
     if(nnode.args[2]) {
-      const abc = [...nnode.args[2].evalStream({finite: true})].map(s => s.evalAtom(types.S));
+      const abc = nnode.args[2].evalAlphabet();
       const fArr = [...splitABC(from, abc)].map(([ch, _]) => ch);
       const tArr = [...splitABC(to, abc)].map(([ch, _]) => ch);
       if(fArr.length !== tArr.length)

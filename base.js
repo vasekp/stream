@@ -194,6 +194,14 @@ export class Node extends Base {
     throw new Error(`Node.prototype.eval() (${this.toString()})`);
   }
 
+  evalAlphabet() {
+    if(!this._cache)
+      this._cache = [...this.evalStream({finite: true})].map(s => s.evalAtom(types.S));
+    if(!this._cache.length)
+      throw new StreamError('empty alphabet');
+    return this._cache;
+  }
+
   evalStream(opts = {}) {
     const r = this.eval().checkType(types.stream);
     if(opts.finite)
