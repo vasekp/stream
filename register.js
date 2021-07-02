@@ -46,7 +46,9 @@ class Register extends EventTarget {
       e.detail = {key: ident};
       this.dispatchEvent(e);
       this.map.delete(ident);
-    }
+      return true;
+    } else
+      return false;
   }
 
   child(init) {

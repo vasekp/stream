@@ -19,9 +19,11 @@ R.register('clear', {
     if(!reg)
       throw new StreamError('out of scope');
     const idents = this.args.map(arg => arg.ident);
+    const ret = [];
     for(const ident of idents)
-      reg.clear(ident);
-    return new Atom("");
+      if(reg.clear(ident))
+        ret.push(new Atom(ident));
+    return new Stream(this, ret.values());
   }
 });
 

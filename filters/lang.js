@@ -362,9 +362,12 @@ R.register('assign', {
     const reg = this.meta._register;
     if(!reg)
       throw new StreamError('out of scope');
-    for(const ident of idents)
+    const ret = [];
+    for(const ident of idents) {
       reg.register(ident, {body});
-    return new Atom(body.toString());
+      ret.push(new Atom(ident));
+    }
+    return new Stream(this, ret.values());
   },
   toString() {
     let ret = '';
