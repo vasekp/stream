@@ -674,7 +674,21 @@ R.register('pi', {
   }
 });
 
-R.register(['random', 'rnd'], {
+function* rnds(seed, min, max) {
+  if(max < min)
+    throw new StreamError(`maximum ${max} less than minimum ${min}`);
+  if(seed === undefined)
+    throw new Error('RNG unitialized');
+  const rng = new RNG(seed);
+  for(;;)
+    yield rng.random(min, max);
+}
+
+function rnd1(seed, min, max) {
+  return rnds(seed, min, max).next().value;
+}
+
+R.register(['random', 'rnd', 'sample'], {
   minArg: 0,
   maxArg: 3,
   sourceOrArgs: 2,
@@ -686,91 +700,142 @@ R.register(['random', 'rnd'], {
     }).check(scope.partial);
     if(scope.partial)
       return nnode;
-    if(nnode.meta._seed === undefined)
-      throw new Error('RNG unitialized');
-    const rng = new RNG(nnode.meta._seed);
     if(nnode.args.length === 2) {
       /*** 2-arg: min, max - resolve in prepare() ***/
       const min = nnode.args[0].evalNum();
       const max = nnode.args[1].evalNum();
-      if(max < min)
-        throw new StreamError(`maximum ${max} less than minimum ${min}`);
-      return new Atom(rng.random(min, max));
+      return new Atom(rnd1(nnode.meta._seed, min, max));
     } else
       return nnode;
   },
   eval() {
-    if(this.meta._seed === undefined)
-      throw new Error('RNG unitialized');
-    const rng = new RNG(this.meta._seed);
     if(this.args.length === 3) {
       /*** 3-arg: min, max, count ***/
       const min = this.args[0].evalNum();
       const max = this.args[1].evalNum();
-      const len = this.args[2].evalNum({min: 1n});
-      if(max < min)
-        throw new StreamError(`maximum ${max} less than minimum ${min}`);
+      const count = this.args[2].evalNum({min: 1n});
+      const gen = rnds(this.meta._seed, min, max);
       return new Stream(this,
         (function*() {
-          for(let i = 0n; i < len; i++)
-            yield new Atom(rng.random(min, max));
+          for(let i = 0n; i < count; i++)
+            yield new Atom(gen.next().value);
         })(),
-        {len}
+        {count}
       );
     } else {
       let sIn = this.src.evalStream({finite: true});
+      let sLen;
+      if(typeof sIn.len === 'bigint')
+        sLen = sIn.len;
+      else {
+        sLen = 0n;
+        for(const _ of sIn)
+          sLen++;
+        sIn = this.src.evalStream();
+      }
+      if(sLen === 0n)
+        throw new StreamError('empty stream');
+      const gen = rnds(this.meta._seed, 0n, sLen - 1n);
       if(!this.args[0]) {
         /*** 0-arg: one sample from source ***/
-        if(typeof sIn.len === 'bigint' && sIn.len !== 0n) {
-          const rnd = rng.random(0n, sIn.len - 1n);
-          sIn.skip(rnd);
-          return sIn.next().value.eval();
-        } else {
-          let len = 0n;
-          for(const _ of sIn)
-            len++;
-          if(len === 0n)
-            throw new StreamError('empty stream');
-          const ix = rng.random(0n, len - 1n);
-          sIn = this.src.evalStream();
-          sIn.skip(ix);
-          return sIn.next().value.eval();
-        }
+        sIn.skip(gen.next().value);
+        return sIn.next().value.eval();
       } else {
         /*** 1-arg: source + count ***/
         const count = this.args[0].evalNum({min: 1n});
-        let len = 0n;
-        if(typeof sIn.len === 'bigint')
-          len = sIn.len;
-        else {
-          for(const _ of sIn)
-            len++;
-        }
-        if(len === 0n)
-          throw new StreamError('empty stream');
-        if(len < MAXMEM) {
-          sIn = this.src.evalStream();
+        if(sLen < MAXMEM) {
+          // Memoize
           const data = [...sIn];
           return new Stream(this,
             (function*() {
               for(let i = 0n; i < count; i++)
-                yield data[rng.random(0n, len - 1n)];
+                yield data[gen.next().value];
             })(),
             {len: count}
           );
         } else {
+          // Skip + reinit
           return new Stream(this,
             (function*(self) {
               for(let i = 0n; i < count; i++) {
-                const ix = rng.random(0n, len - 1n);
-                sIn = self.src.evalStream();
+                const ix = gen.next().value;
                 sIn.skip(ix);
                 yield sIn.next().value;
+                sIn = self.src.evalStream();
               }
             })(this),
             {len: count}
           );
         }
+      }
+    }
+  }
+});
+
+R.register(['rndstream', 'rnds'], {
+  minArg: 0,
+  maxArg: 2,
+  sourceOrArgs: 2,
+  prepare(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src}));
+    const nnode = this.modify({src, args,
+      meta: scope.seed ? {...this.meta, _seed: scope.seed} : this.meta
+    }).check(scope.partial);
+    if(!scope.partial && nnode.args.length === 1)
+      throw new StreamError('zero or two arguments required');
+    return nnode;
+  },
+  eval() {
+    if(this.args.length === 2) {
+      /*** 2-arg: min, max ***/
+      const min = this.args[0].evalNum();
+      const max = this.args[1].evalNum();
+      const gen = rnds(this.meta._seed, min, max);
+      return new Stream(this,
+        (function*() {
+          for(const ix of gen)
+            yield new Atom(ix);
+        })(),
+        {len: null}
+      );
+    } else {
+      /*** 0-arg: source */
+      let sIn = this.src.evalStream({finite: true});
+      let sLen;
+      if(typeof sIn.len === 'bigint')
+        sLen = sIn.len;
+      else {
+        sLen = 0n;
+        for(const _ of sIn)
+          sLen++;
+        sIn = this.src.evalStream();
+      }
+      if(sLen === 0n)
+        throw new StreamError('empty stream');
+      const gen = rnds(this.meta._seed, 0n, sLen - 1n);
+      if(sLen < MAXMEM) {
+        // Memoize
+        const data = [...sIn];
+        return new Stream(this,
+          (function*() {
+            for(const ix of gen)
+              yield data[ix];
+          })(),
+          {len: null}
+        );
+      } else {
+        // Skip + reinit
+        return new Stream(this,
+          (function*(self) {
+            for(const ix of gen) {
+              sIn.skip(ix);
+              yield sIn.next().value;
+              sIn = self.src.evalStream();
+            }
+          })(this),
+          {len: null}
+        );
       }
     }
   }
