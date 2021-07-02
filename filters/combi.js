@@ -242,10 +242,12 @@ R.register('tuples', {
 
 function permHelper(src) {
   const ixs = [];
-  const lens = [];
-  let lenTot = 0n;
+  const counts = [];
+  let length = 0;
   let pIx = 0n;
-  let curMax = 1n;
+  let product = 1n;
+  let curMax = -1;
+  let curSeen = undefined;
   let done = false;
 
   const expand = _ => {
@@ -255,16 +257,47 @@ function permHelper(src) {
       return false;
     }
     ixs.push(next);
-    lenTot++;
-    lens[next] = (lens[next] || 0n) + 1n;
-    curMax = curMax * lenTot / lens[next];
+    length++;
+    if(next >= curMax) {
+      for(let i = curMax + 1; i <= next; i++)
+        counts[i] = 0n;
+      curMax = next;
+    }
+    counts[next]++;
+    product = product * BigInt(length) / counts[next];
+    curSeen = next;
     return true;
   };
 
+  const advance = _ => {
+    let iRev;
+    for(iRev = 0; iRev < length - 1; iRev++)
+      if(ixs[iRev + 1] > ixs[iRev])
+        break;
+    iRev++;
+    // 0 ... iRev-1 is nonincreasing,
+    //   iRev < length: ixs[iRev] > ixs[iRev - 1]
+    //   iRev == length: need more input
+    if(iRev === length)
+      return false; // whole sequence nonincreasing: need more data
+    // Now we have: a ≥ b ≥ c ≥ ... ≥ d < (rev)
+    // so this always finds swap (breaks loop)
+    let iSwap;
+    for(iSwap = 0; iSwap < iRev; iSwap++)
+      if(ixs[iSwap] < ixs[iRev])
+        break;
+    // Replace ixs[iRev] by next smaller,
+    // sort the prefix
+    [ixs[iRev], ixs[iSwap]] = [ixs[iSwap], ixs[iRev]];
+    ixs.unshift(...ixs.splice(0, iRev).sort(defSort));
+    return true;
+  }
+
+  // Load indexes until we have two different values in the array.
   do
     expand();
-  while(curMax === 1n && !done);
-  done = false;
+  while(product === 1n && !done);
+  done = false; // Reset done so that the trivial permutation is listed.
 
   const iter = (function*() {
     for(;;) {
@@ -273,41 +306,64 @@ function permHelper(src) {
       watchdog.tick();
       yield ixs;
       if(ixs.length === 0) {
-        expand();
-        continue;
+        done = true;
+        return;
       }
-      let iRev, iSwap;
-      for(iRev = 0; iRev < ixs.length - 1; iRev++)
-        if(ixs[iRev + 1] > ixs[iRev])
-          break;
-      if(iRev === ixs.length - 1)
-        if(!expand())
+      let needMore = false;
+      // Try advance
+      if(!advance())
+        needMore = true;
+      else if(ixs[length - 1] === curSeen) {
+        // advance() was successful, but resulted in a permutation we have already listed
+        // (before the newest element was known). This skips all of them.
+        ixs.unshift(...ixs.splice(0, length - 1).sort(revSort));
+        if(!advance())
+          needMore = true;
+      }
+      if(needMore) {
+        // At this point ixs is guaranteed to be nonincreasing.
+        // Try expand()
+        if(!expand()) {
           return;
-      iRev++;
-      for(iSwap = iRev - 1; iSwap >= 0; iSwap--)
-        if(ixs[iSwap] >= ixs[iRev])
-          break;
-      iSwap++;
-      [ixs[iRev], ixs[iSwap]] = [ixs[iSwap], ixs[iRev]];
-      const a2 = ixs.splice(0, iRev);
-      ixs.unshift(...a2.sort(defSort));
+        }
+        // curSeen, curMax set by expand()
+        if(curSeen < curMax) {
+          // This means that the permutations we have listed so far are ones whose last index is less
+          // than the maximum. As this would put us into a middle of an enumeration, we need to restart
+          // with curMax in this position and skip curSeen when we reach it again.
+          ixs.sort(defSort);
+        } else
+          // If the new number matches or exceeds the current maximum, we still need to advance() once.
+          // This always succeeds because a nonincreasing sequence followed by a higher number is exactly
+          // what advance() expects.
+          advance();
+      }
       pIx++;
     }
   })();
 
   iter.skip = c => {
     pIx += c;
-    while(pIx >= curMax)
+    while(pIx >= product)
       if(!expand())
         return;
 
-    const cnts = lens.slice();
-    let cnt = lenTot;
+    const cnts = counts.slice();
+    let cnt = BigInt(length);
     let ix = pIx;
-    let tot = curMax;
-    for(let i = 0; i < ixs.length; i++) {
+    let tot = product;
+    for(let i = 0; i < length; i++) {
       let j;
-      for(j of [...cnts.keys()].reverse()) {
+      // The last index is special in case of curSeen < curMax (after the last expand()):
+      // permutations ending in curSeen are listed before the rest (and skipped later), e.g.
+      //        3 3 7 7 5 4 2 1
+      // curSeen↑   ↑curMax
+      // "Inner" indices follow an unaltered reverse order.
+      // Because we build the new ixs[] from back, the last index is i = 0.
+      const order = [...cnts.keys()].reverse();
+      if(i === 0)
+        order.splice(0, 0, ...order.splice(-(curSeen + 1), 1));
+      for(j of order) {
         if(ix < tot * cnts[j] / cnt)
           break;
         else
@@ -369,13 +425,13 @@ R.register(['perm', 'perms', 'permute'], {
       if(sIn.len === null)
         len = null;
       else if(sIn.len !== undefined) {
-        const lens = [];
-        let lenTot = 0n;
+        const counts = [];
+        let total = 0n;
         len = 1n;
         for(const ix of helperSrc()) {
-          lenTot++;
-          lens[ix] = (lens[ix] || 0n) + 1n;
-          len = len * lenTot / lens[ix];
+          total++;
+          counts[ix] = (counts[ix] || 0n) + 1n;
+          len = len * total / counts[ix];
         }
         // sIn is consumed, need to reset
         sIn = this.src.evalStream();
@@ -476,10 +532,11 @@ R.register(['subsets', 'ss', 'choose'], {
       return new Stream(this,
         (function*() {
           for(const arr of helper) {
-            if(arr.length < total)
-              arr.push(...patt.slice(arr.length));
+            const a2 = arr.slice();
+            if(a2.length < total)
+              a2.push(...patt.slice(a2.length));
             const rets = Array.from({length: out}, _ => []);
-            for(const ix of arr) {
+            for(const ix of a2) {
               const r = sIn.next().value;
               if(ix === out)
                 continue;
