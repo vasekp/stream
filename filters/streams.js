@@ -1163,3 +1163,40 @@ R.register('shortest', {
       return minS.eval();
   }
 });
+
+R.register(['subs', 'subst', 'replace', 'repl'], {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const sIn = this.src.evalStream();
+    const sSubs = this.args[0].evalStream({finite: true});
+    const map = new Map();
+    for(const r of sSubs) {
+      const sTemp = r.evalStream();
+      const key = sTemp.next().value;
+      const val = sTemp.next().value;
+      if(!key || !val || !(sTemp.next().done))
+        throw new StreamError('substitutions not in the format [[a,b], ...]');
+      if([...map.keys()].some(k => compareStreams(k, key)))
+        throw new StreamError(`duplicate key ${key.toString()}`);
+      map.set(key, val);
+    }
+    return new Stream(this,
+      (function*() {
+        A: for(const r of sIn) {
+          for(const [key, val] of map)
+            if(compareStreams(r, key)) {
+              yield val;
+              continue A;
+            }
+          // else
+          yield r;
+        }
+      })(),
+      {
+        len: sIn.len,
+        skip: sIn.skip
+      }
+    );
+  }
+});

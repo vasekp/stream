@@ -2,6 +2,44 @@ import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, types} from '../base.js';
 import R from '../register.js';
 
+export function ord(c) {
+  const cp = c.codePointAt(0);
+  if(c !== String.fromCodePoint(cp))
+    throw new StreamError(`expected single character, got "${c}"`);
+  return cp;
+}
+
+export function isSingleChar(c) {
+  return c === String.fromCodePoint(c.codePointAt(0));
+}
+
+function* splitABC(str, abc, err = false) {
+  let ix = 0;
+  while(ix < str.length) {
+    let bestLen = 0;
+    let bestIx;
+    for(let i = 0; i < abc.length; i++) {
+      const ch = abc[i];
+      if(ch.length <= bestLen)
+        continue;
+      if(str.startsWith(ch, ix)) {
+        bestLen = ch.length;
+        bestIx = i;
+      }
+    }
+    if(bestLen) {
+      yield [abc[bestIx], bestIx];
+      ix += bestLen;
+    } else {
+      if(err)
+        throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
+      const ch = String.fromCodePoint(str.codePointAt(ix));
+      yield [ch, -1];
+      ix += ch.length;
+    }
+  }
+}
+
 R.register(['split', 'chars'], {
   reqSource: true,
   maxArg: 1,
@@ -34,21 +72,8 @@ R.register(['split', 'chars'], {
         const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
         return new Stream(this,
           (function*() {
-            let ix = 0;
-            while(ix < str.length) {
-              let best = '';
-              for(const ch of abc) {
-                if(ch.length <= best.length)
-                  continue;
-                if(str.startsWith(ch, ix))
-                  best = ch;
-              }
-              if(best) {
-                yield new Atom(best);
-                ix += best.length;
-              } else
-                throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
-            }
+            for(const [ch, _] of splitABC(str, abc))
+              yield new Atom(ch);
           })()
         );
       }
@@ -78,17 +103,6 @@ R.register('cat', {
     }
   }
 });
-
-export function ord(c) {
-  const cp = c.codePointAt(0);
-  if(c !== String.fromCodePoint(cp))
-    throw new StreamError(`expected single character, got "${c}"`);
-  return cp;
-}
-
-export function isSingleChar(c) {
-  return c === String.fromCodePoint(c.codePointAt(0));
-}
 
 R.register('ord', {
   reqSource: true,
@@ -167,25 +181,8 @@ R.register('ords', {
     const abc = [...this.args[0].evalStream({finite: true})].map(s => s.evalAtom(types.S));
     return new Stream(this,
       (function*() {
-        let ix = 0;
-        while(ix < str.length) {
-          let bestLen = 0;
-          let bestIx;
-          for(let i = 0; i < abc.length; i++) {
-            const ch = abc[i];
-            if(ch.length <= bestLen)
-              continue;
-            if(str.startsWith(ch, ix)) {
-              bestLen = ch.length;
-              bestIx = i;
-            }
-          }
-          if(bestLen) {
-            yield new Atom(bestIx + 1);
-            ix += bestLen;
-          } else
-            throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
-        }
+        for(const [_, ix] of splitABC(str, abc, true))
+          yield new Atom(ix + 1);
       })()
     );
   }
@@ -384,29 +381,49 @@ R.register('shift', {
     shift = Number(shift % BigInt(abc.length));
     if(shift < 0)
       shift += abc.length;
-    let ix = 0;
     let ret = '';
-    while(ix < str.length) {
-      let bestLen = 0;
-      let bestIx;
-      for(let i = 0; i < abc.length; i++) {
-        const ch = abc[i];
-        if(ch.length <= bestLen)
-          continue;
-        if(str.startsWith(ch, ix)) {
-          bestLen = ch.length;
-          bestIx = i;
-        }
-      }
-      if(bestLen) {
-        ret += abc[(bestIx + shift) % abc.length];
-        ix += bestLen;
-      } else {
-        const ch = String.fromCodePoint(str.codePointAt(ix));
+    for(const [ch, ix] of splitABC(str, abc)) {
+      if(ix >= 0)
+        ret += abc[(ix + shift) % abc.length];
+      else
         ret += ch;
-        ix += ch.length;
-      }
     }
     return new Atom(ret);
+  }
+});
+
+R.register('tr', {
+  reqSource: true,
+  minArg: 2,
+  maxArg: 3,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const str = nnode.src.evalAtom(types.S);
+    const from = nnode.args[0].evalAtom(types.S);
+    const to = nnode.args[1].evalAtom(types.S);
+    if(nnode.args[2]) {
+      const abc = [...nnode.args[2].evalStream({finite: true})].map(s => s.evalAtom(types.S));
+      const fArr = [...splitABC(from, abc)].map(([ch, _]) => ch);
+      const tArr = [...splitABC(to, abc)].map(([ch, _]) => ch);
+      if(fArr.length !== tArr.length)
+        throw new StreamError('pattern and replacement strings of different lengths');
+      let ret = '';
+      for(const [ch, _] of splitABC(str, abc)) {
+        const ix = fArr.indexOf(ch);
+        ret += ix >= 0 ? tArr[ix] : ch;
+      }
+      return new Atom(ret);
+    } else {
+      if(from.length !== to.length)
+        throw new StreamError('pattern and replacement strings of different lengths');
+      let ret = '';
+      for(const ch of [...str]) {
+        const ix = from.indexOf(ch);
+        ret += ix >= 0 ? to[ix] : ch;
+      }
+      return new Atom(ret);
+    }
   }
 });
