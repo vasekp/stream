@@ -20,7 +20,7 @@ body {
   height: 100%;
   margin-top: -1rem;
   padding: 1rem;
-  overflow: scroll;
+  overflow: auto;
 }
 
 h1, h2 {
@@ -147,7 +147,7 @@ h3 span::before {
 
 .output::before {
   color: #888;
-  content: attr(data-pre) ": ";
+  content: attr(data-pre);
 }
 
 #head {
@@ -171,5 +171,5 @@ h3 span::before {
 
 #filter-list {
   padding: 0 1rem;
-  overflow: scroll;
+  overflow: auto;
 }

@@ -1,4 +1,5 @@
 import parse from './parser.js';
+import {help} from './help.js';
 
 class Register extends EventTarget {
   constructor(parent, init = []) {
@@ -13,19 +14,28 @@ class Register extends EventTarget {
       this.register(ident, {body: parse(string)});
   }
 
-  register(ident, filter) {
+  register(ident, obj) {
+    if(obj.help) {
+      help.register(ident, {
+        reqSource: obj.reqSource,
+        minArg: obj.minArg,
+        maxArg: obj.maxArg,
+        numArg: obj.numArg,
+        ...obj.help
+      });
+    }
     if(ident instanceof Array) {
-      ident.forEach(e => this.register(e, filter));
+      ident.forEach(e => this.register(e, {...obj, help: null}));
       return;
     }
     ident = ident.toLowerCase();
     if(mainReg.includes(ident))
       throw new StreamError(`trying to overwrite base symbol ${ident}`);
     else
-      this.map.set(ident, filter);
-    if(this !== mainReg && filter.body) {
+      this.map.set(ident, obj);
+    if(this !== mainReg && obj.body) {
       const e = new Event('register'); // Node.js does not have CustomEvent
-      e.detail = {key: ident, value: filter.body.toString()};
+      e.detail = {key: ident, value: obj.body.toString()};
       this.dispatchEvent(e);
     }
   }

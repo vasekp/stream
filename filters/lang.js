@@ -1,6 +1,7 @@
 import {StreamError} from '../errors.js';
 import {Node, Atom, Stream, types, compareStreams, MAXMEM} from '../base.js';
 import R from '../register.js';
+import {catg} from '../help.js';
 
 R.register('array', {
   reqSource: false,
@@ -18,6 +19,12 @@ R.register('array', {
     ret += this.args.map(n => n.toString()).join(',');
     ret += ']';
     return ret;
+  },
+  help: {
+    en: ['A finite stream made of the arguments. Long form of `[...]`.'],
+    cs: ['Konečný proud sestavený z argumentů. Plná forma `[...]`.'],
+    cat: catg.lang,
+    ex: [['array(1,3,5)', '[1,3,5]']]
   }
 });
 

@@ -5,8 +5,10 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, minimum-scale=1.0"/>
     <link rel="stylesheet" type="text/css" href="help.css"/>
+    <script type="module" src="filters/lang.js"></script>
+    <script type="module" src="help.js"></script>
   </head>
-  <body>
+  <body id="help">
     <main id="intro" hidden>
       <h1>Introduction</h1>
       <p><em>Stream</em> is a domain-specific language for simple, terse, mostly single-line programs creating or manipulating simple data.</p>
@@ -89,23 +91,8 @@
       <header id="head">
         A B C
       </header>
-      <nav id="abc">
-        <a href="#nav-a">A</a>
-        <a href="#nav-b">B</a>
-        <a href="#nav-c">C</a>
-      </nav>
-      <main id="filter-list">
-        <div class="anchor" id="nav-a"></div>
-        <section id="acc">
-          <h3><span data-pre="().">acc</span></h3>
-          <p>This is a test.</p>
-          <p class="info">This is some additional information.</p>
-          <div class="stream-example">
-            <div class="input">iota.acc</div>
-            <div class="output" data-pre="$1">[1,3,6,10,...]</div>
-          </div>
-        </section>
-      </main>
+      <nav id="abc"></nav>
+      <main id="filter-list"></main>
     </div>
   </body>
 </html>
