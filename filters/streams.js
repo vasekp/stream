@@ -5,13 +5,20 @@ import R from '../register.js';
 
 R.register(['iota', 'seq'], {
   reqSource: false,
-  numArg: 0,
+  maxArg: 2,
   eval() {
-    let i = 1n;
+    const start = this.args[0] ? this.args[0].evalNum() : 1n;
+    const step = this.args[1] ? this.args[1].evalNum() : 1n;
+    let i = start;
     return new Stream(this,
-      (function*() { for(;;) yield new Atom(i++); })(),
+      (function*() {
+        for(;;) {
+          yield new Atom(i);
+          i += step;
+        }
+      })(),
       {
-        skip: c => i += c,
+        skip: c => i += c * step,
         len: null
       }
     );
