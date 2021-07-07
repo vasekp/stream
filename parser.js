@@ -251,6 +251,12 @@ class Stack {
       this._stack.unshift({token, prio, terms: [term]});
   }
 
+  addArgs(args) {
+    // assert: topOper === '@'
+    const entry = this._stack.shift();
+    return new Node('over', entry.token, entry.terms[0], args);
+  }
+
   flatten(term, prio = -1) {
     return this.reduce('', prio, term);
   }
@@ -317,7 +323,11 @@ function parse0(iter, open, close, array) {
               state = ss.term;
               break; }
             case '(':
-              term = parse0(iter, s, ')', false);
+              if(state === ss.oper && stack.topOper === '@') {
+                const args = parse0(iter, s, ')', true);
+                term = stack.addArgs(args);
+              } else
+                term = parse0(iter, s, ')', false);
               state = ss.term;
               break;
             case '{': {
