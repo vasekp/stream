@@ -18,7 +18,7 @@ R.register(['iota', 'seq'], {
   }
 });
 
-R.register(['range', 'ran', 'r'], {
+R.register(['range', 'ran', 'rng', 'r'], {
   reqSource: false,
   minArg: 1,
   maxArg: 3,
@@ -716,7 +716,7 @@ R.register(['select', 'sel', 'where'], {
   }
 });
 
-R.register('iwhere', {
+R.register(['iwhere', 'ixwhere'], {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
