@@ -840,3 +840,89 @@ R.register(['rndstream', 'rnds'], {
     }
   }
 });
+
+R.register(['divmod', 'quotrem'], {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum();
+    const mod = nnode.args[0].evalNum({min: 1n});
+    let rem = inp % mod;
+    if(rem < 0n)
+      rem += mod;
+    const div = (inp - rem) / mod;
+    return new Node('array', this.token, null, [new Atom(div), new Atom(rem)]);
+  }
+});
+
+R.register(['mantexp', 'manexp'], {
+  reqSource: true,
+  numArg: 1,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum({min: 1n});
+    const base = nnode.args[0].evalNum({min: 1n});
+    let exp = 0n, rem = inp;
+    while(rem % base === 0n) {
+      rem /= base;
+      exp++;
+    }
+    return new Node('array', this.token, null, [new Atom(rem), new Atom(exp)]);
+  }
+});
+
+function sqrt(n) {
+  if(n < 16n)
+    return BigInt(Math.floor(Math.sqrt(Number(n))));
+  let x = 1n;
+  for(;;) {
+    let y = (x + n / x) / 2n;
+    if(x === y || x === y - 1n)
+      return x;
+    else
+      x = y;
+  }
+}
+
+R.register('sqrt', {
+  reqSource: true,
+  numArg: 0,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum({min: 0n});
+    return new Atom(sqrt(inp));
+  }
+});
+
+R.register('sqrem', {
+  reqSource: true,
+  numArg: 0,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum({min: 0n});
+    const sqr = sqrt(inp);
+    return new Node('array', this.token, null, [new Atom(sqr), new Atom(inp - sqr * sqr)]);
+  }
+});
+
+R.register('trirem', {
+  reqSource: true,
+  numArg: 0,
+  prepare(scope) {
+    const nnode = this.prepareAll(scope);
+    if(scope.partial)
+      return nnode;
+    const inp = nnode.src.evalNum({min: 0n});
+    const row = (sqrt(1n + 8n * inp) - 1n) / 2n;
+    return new Node('array', this.token, null, [new Atom(row), new Atom(inp - row * (row + 1n) / 2n)]);
+  }
+});
