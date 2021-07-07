@@ -1,13 +1,13 @@
 import Enum from './enum.js';
 
-export const catg = Enum.fromArray(['lang']);
+export const catg = Enum.fromArray(['base', 'sources', 'streams']);
 
 const _map = new Map();
 
 export const help = {
   register(names, obj) {
     if(names instanceof Array) {
-      const fname = name[0];
+      const fname = names[0];
       const names1 = [];
       for(const name of names) {
         if(name[0] === fname[0])
@@ -17,19 +17,24 @@ export const help = {
       }
       _map.set(fname, {names: names1, ...obj});
     } else
-      _map.set(names, {names, ...obj});
+      _map.set(names, {names: [names], ...obj});
   }
 };
 
-function populate() {
+async function populate() {
   if(document.body.id !== 'help')
     return;
+  await Promise.all([
+    import('./filters/lang.js'),
+    import('./filters/iface.js'),
+    import('./filters/streams.js'),
+  ]);
   const head = document.getElementById('head');
   const nav = document.getElementById('abc');
   const list = document.getElementById('filter-list');
   let lastLett = '';
   for(const name of [..._map.keys()].sort()) {
-    if(name[0] !== lastLett) {
+    if(name[0].toUpperCase() !== lastLett) {
       lastLett = name[0].toUpperCase();
       const anchor = document.createElement('div');
       anchor.classList.add('anchor');
@@ -42,36 +47,49 @@ function populate() {
     }
     const obj = _map.get(name);
     const sec = document.createElement('section');
-    sec.id = name;
-    const h = document.createElement('h3');
+    sec.id = `id-${name}`;
     for(const n of obj.names) {
-      const span = document.createElement('span');
+      const h = document.createElement('h3');
       if(obj.reqSource)
-        span.dataset.pre = '().';
+        h.dataset.pre = obj.src ? `${obj.src}.` : '(...).';
       if(obj.args)
-        span.dataset.post = `(${obj.args})`;
+        h.dataset.post = `(${obj.args})`;
       else if(obj.minArg || obj.maxArg || obj.numArg)
-        span.dataset.post = `(...)`;
-      span.textContent = n;
-      h.append(span);
+        h.dataset.post = `(...)`;
+      h.textContent = n;
+      sec.append(h);
     }
-    sec.append(h);
-    for(let line of obj.en) {
-      const p = document.createElement('p');
-      if(line[0] === '-') {
-        p.classList.add('info');
-        line = line.substring(1);
-      } else if(line[0] === '!') {
-        p.classList.add('warn');
-        line = line.substring(1);
+    if(obj.en)
+      for(let line of obj.en) {
+        const p = document.createElement('p');
+        if(line[0] === '-') {
+          p.classList.add('info');
+          line = line.substring(1);
+        } else if(line[0] === '!') {
+          p.classList.add('warn');
+          line = line.substring(1);
+        }
+        const html = line.replace(/`([^``]*)`/g, (_, m) => {
+          return '<i-pre>' + m.replace(/\w+/g, mm => {
+            if(_map.has(mm) && mm !== name)
+              return `<a href="#id-${mm}">${mm}</a>`;
+            else if(mm[0] === '_')
+              return mm.substring(1);
+            else
+              return mm;
+          }) + '</i-pre>';
+        });
+        p.innerHTML = html;
+        sec.append(p);
       }
-      const html = line.replace(/`([^``]*)`/g, (_, m) => {
-        if(_map.has(m))
-          return `<i-pre><a href="#${m}">${m}</a></i-pre>`;
-        else
-          return `<i-pre>${m}</i-pre>`;
-      });
-      p.innerHTML = html;
+    if(obj.see) {
+      const p = document.createElement('p');
+      let html = obj.en ? 'See also ' : 'See ';
+      if(obj.see instanceof Array)
+        html += obj.see.map(ident => `<i-pre><a href="#id-${ident}">${ident}</a></i-pre>`).join(', ');
+      else
+        html += `<i-pre><a href="#id-${obj.see}">${obj.see}</a></i-pre>`;
+      p.innerHTML = html + '.';
       sec.append(p);
     }
     if(obj.ex) {
@@ -81,17 +99,22 @@ function populate() {
       for(let [inp, out] of obj.ex) {
         const html = inp.replace(/`([^``]*)`/g, (_, m) => {
           if(_map.has(m))
-            return `<a href="#${m}">${m}</a>`;
+            return `<a href="#id-${m}">${m}</a>`;
           else
             return m;
         });
         const d1 = document.createElement('div');
         d1.classList.add('input');
-        d1.textContent = html;
+        d1.innerHTML = html;
         const d2 = document.createElement('div');
-        d2.classList.add('output');
-        d2.textContent = out;
-        d2.dataset.pre = `$${hi++}: `;
+        if(out[0] !== '!') {
+          d2.classList.add('output');
+          d2.textContent = out;
+          d2.dataset.pre = `$${hi++}: `;
+        } else {
+          d2.classList.add('error');
+          d2.textContent = out.substring(1);
+        }
         exDiv.append(d1, d2);
       }
       sec.append(exDiv);

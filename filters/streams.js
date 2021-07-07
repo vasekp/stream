@@ -2,6 +2,7 @@ import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, types, debug, compareStreams} from '../base.js';
 import {ord} from './string.js';
 import R from '../register.js';
+import {catg} from '../help.js';
 
 R.register(['iota', 'seq'], {
   reqSource: false,
@@ -22,6 +23,13 @@ R.register(['iota', 'seq'], {
         len: null
       }
     );
+  },
+  help: {
+    en: ['A stream of consecutive numbers. If `from` or `step` are not given, they default to 1.'],
+    cz: ['Posloupnost čísel s daným začátkem a krokem. Pokud `from` nebo `step` nejsou dány, výchozí hodnota pro obě je 1.'],
+    cat: catg.sources,
+    ex: [['iota', '[1,2,3,4,5,...]'], ['iota(0,2)', '[0,2,4,6,8,...]']],
+    args: ['from?,step?']
   }
 });
 
@@ -71,6 +79,19 @@ R.register(['range', 'ran', 'rng', 'r'], {
         }
       );
     }
+  },
+  help: {
+    en: [
+      'A finite stream of consecutive numbers. If `from` or `step` are not given, they default to 1.',
+      '-If `to` is less (greater) than `from` with a positive (negative) `step`, the stream is empty. If `step` is 0, it is infinite.',
+      '-Also works with single characters, in which case `from` can not be omitted. `step` is numeric. The sequence runs in Unicode code points.'],
+    cz: [
+      'Posloupnost čísel s daným začátkem, koncem a krokem. Pokud `from` nebo `step` nejsou dány, výchozí hodnota pro obě je 1.',
+      '-Jestliže `to` je menší (větší) než `from` a `step` kladné (záporné), vrátí prázdný proud. Jestliže `step` je 0, nekonečný.',
+      '-Také funguje se znaky místo čísel. `from` potom nesmí být vynecháno. `step` je číslo. Počítá se v Unicode kódových bodech.'],
+    cat: catg.sources,
+    ex: [['range(5)', '[1,2,3,4,5]'], ['range("α","γ")', '["α","β","γ"]'], ['range(5,1,-2)', '[5,3,1]']],
+    args: 'from?,to,step?'
   }
 });
 
@@ -92,6 +113,16 @@ R.register(['length', 'len'], {
     } else if(sIn.type === types.S) {
       return new Atom(sIn.value.length);
     }
+  },
+  help: {
+    en: ['Returns the number of elements in the source stream.',
+      'Also works for strings, where it gives the number of characters.',
+      '-For counting characters with a custom alphabet, use `"...".split(abc).length`.'],
+    cz: ['Počet prvků vstupního proudu.',
+      'Funguje také pro řetězce, kde vrátí počet znaků.',
+      '-Pro počet znaků dle upravené abecedy použijte `"...".split(abc).length`.'],
+    cat: catg.streams,
+    ex: [['`range`(1,10,3).length', '4'], ['"string".length', '6']]
   }
 });
 
@@ -124,6 +155,16 @@ R.register('first', {
       else
         return r.eval();
     }
+  },
+  help: {
+    en: ['Returns the first element of the source stream.',
+      'The 1-argument form returns `_count` first elements.'],
+    cz: ['Vrátí první prvek vstupního proudu.',
+      'Forma s argumentem vrátí `_count` prvních prvků.'],
+    args: 'count?',
+    cat: catg.streams,
+    ex: [['`iota`.first', '1'], ['`primes`.first(5)', '[2,3,5,7,11]']],
+    see: ['last', 'take', 'drop']
   }
 });
 
@@ -167,6 +208,19 @@ R.register('last', {
       else
         return l.eval();
     }
+  },
+  help: {
+    en: ['Returns the last element of the source stream.',
+      'The 1-argument form returns `_count` last elements.'],
+    cz: ['Vrátí poslední prvek vstupního proudu.',
+      'Forma s argumentem vrátí `_count` posledních prvků.'],
+    args: 'count?',
+    cat: catg.streams,
+    ex: [
+      ['`range`(1,10,4).last', '9'],
+      ['range(100).last(3)', '[98,99,100]'],
+      ['`pi`.last', '!infinite stream']],
+    see: ['first', 'droplast']
   }
 });
 
@@ -207,6 +261,16 @@ R.register(['take', 'takedrop', 'td'], {
           yield s.evalNum({min: 0n});
       })())
     );
+  },
+  help: {
+    en: ['Takes n1 elements, drops n2, etc.',
+      'If the last instruction is take, terminates there, otherwise, leaves the rest of the stream.'],
+    cz: ['Vypíše n1 prvků, pak n2 ignoruje atd.',
+      'Jestliže poslední instrukce je brát, skončí po ní. Jestliže zahodit, vypíše i celý zbytek vstupu.'],
+    cat: catg.streams,
+    args: 'n1,n2,...',
+    ex: [['`iota`.take(5)', '[1,2,3,4,5]'], ['iota.take([1,2].`cycle`)', '[1,4,7,10,...']],
+    see: 'drop'
   }
 });
 
@@ -228,6 +292,16 @@ R.register(['drop', 'droptake', 'dt'], {
           yield s.evalNum({min: 0n});
       })())
     );
+  },
+  help: {
+    en: ['Drops n1 elements, takes n2, etc.',
+      'If the last instruction is take, terminates there, otherwise, leaves the rest of the stream.'],
+    cz: ['Zahodí n1 prvků, pak n2 vypíše atd.',
+      'Jestliže poslední instrukce je brát, skončí po ní. Jestliže zahodit, vypíše i celý zbytek vstupu.'],
+    cat: catg.streams,
+    args: 'n1,n2,...',
+    ex: [['`iota`.drop(5)', '[6,7,8,9,10,...]'], ['iota.drop([1,2].`cycle`)', '[2,3,5,6,8,...]']],
+    see: ['take', 'droplast']
   }
 });
 
@@ -236,7 +310,7 @@ R.register(['droplast', 'dl'], {
   maxArg: 1,
   eval() {
     const sIn = this.src.evalStream({finite: true});
-    const num = this.args[0] ? this.args[0].evalNum({min: 1n}) : 0n;
+    const num = this.args[0] ? this.args[0].evalNum({min: 1n}) : 1n;
     let l = [];
     return new Stream(this,
       (function*() {
@@ -252,6 +326,14 @@ R.register(['droplast', 'dl'], {
           : sIn.len >= num ? sIn.len - num
           : 0n
       });
+  },
+  help: {
+    en: ['Drops `_count` last elements. If `_count` is not given, it defaults to 1.'],
+    cz: ['Zahodí `_count` posledních prvků. Jestliže `_count` není uveden, zahodí jeden.'],
+    args: 'count?',
+    cat: catg.streams,
+    ex: [['`range`(5).droplast', '[1,2,3,4]']],
+    see: 'drop'
   }
 });
 
@@ -270,6 +352,12 @@ R.register(['reverse', 'rev'], {
     } else if(sIn.type === types.S) {
       return new Atom([...sIn.value].reverse().join(''));
     }
+  },
+  help: {
+    en: ['Returns the input stream or string in reverse.'],
+    cz: ['Vrátí vstupní proud nebo řetězec v obráceném pořadí.'],
+    cat: catg.streams,
+    ex: [['1024.`todigits`.reverse', '[4,2,0,1]'], ['1024.`tobase`(10).reverse', '"4201"']]
   }
 });
 
@@ -297,6 +385,16 @@ R.register(['repeat', 'rep'], {
         }
       );
     }
+  },
+  help: {
+    en: ['Returns a stream made of a finite or infinite number of copies of `_source`.'],
+    cz: ['Vrátí proud konečně nebo nekonečně mnoha kopií `_source`'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'count?',
+    ex: [['"a".repeat', '["a","a","a","a",...]'],
+      ['[1,2].repeat(3)', '[[1,2],[1,2],[1,2]]']],
+    see: 'cycle'
   }
 });
 
@@ -334,6 +432,16 @@ R.register(['cycle', 'cc'], {
         }
       );
     }
+  },
+  help: {
+    en: ['Returns a stream obtained by reading `_source` repeatedly from beginning to end.'],
+    cz: ['Vrátí proud vzniklý opakovaným čtením `_source` od začátku do konce.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'count?',
+    ex: [['[1,2].cycle', '[1,2,1,2,1,2,1,2,...]'],
+      ['[1,2].cycle(3)', '[1,2,1,2,1,2]']],
+    see: 'repeat'
   }
 });
 
@@ -385,6 +493,22 @@ R.register(['group', 'g'], {
       })(),
       {len}
     );
+  },
+  help: {
+    en: [
+      'Splits `_source` into groups of given lengths.',
+      'One or more lengths may be given, or a stream.',
+      '-If a list of lengths is given, the stream finishes after the last group.'],
+    cz: [
+      'Rozdělí `_source` na skupiny po daných počtech prvků.',
+      'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.',
+      '-Jestliže jsou délky dány seznamem, proud skončí po poslední skupině.'],
+    cat: catg.streams,
+    ex: [
+      ['`iota`.group(3)', '[[1,2,3],[4,5,6],[7,8,9],...]'],
+      ['iota.group(3,2)', '[[1,2,3],[4,5]]'],
+      ['iota.group(iota)', '[[1],[2,3],[4,5,6],...]']],
+    src: 'source'
   }
 });
 
@@ -411,6 +535,15 @@ R.register(['flatten', 'fl'], {
         }
       })()
     );
+  },
+  help: {
+    en: ['Flattens all stream elements of `_source`.',
+      'If `_depth` is given, flattens only up to that depth.'],
+    cz: ['Zploští všechny prvky `_source`, které jsou samy proudy, do jednoho dlouhého proudu.',
+      'Jestliže je dáno `_depth`, zploští vnořené proudy pouze do této hloubky.'],
+    cat: catg.streams,
+    ex: [['[1].`nest`([#]).flatten', '[1,1,1,1,1,1,...]'],
+      ['[1].nest([#]).flatten(3)', '[1,1,1,[1],[[1]],...']]
   }
 });
 

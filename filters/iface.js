@@ -2,6 +2,7 @@ import {StreamError} from '../errors.js';
 import {Node, Atom, Block, Stream, types, debug, compareStreams} from '../base.js';
 import R from '../register.js';
 import parse from '../parser.js';
+import {catg} from '../help.js';
 
 R.register('clear', {
   reqSource: false,
@@ -24,6 +25,18 @@ R.register('clear', {
       if(reg.clear(ident, true))
         ret.push(new Atom(ident));
     return new Stream(this, ret.values());
+  },
+  help: {
+    en: ['Clears one or more variables. The affected identifiers are returned as a list of strings.',
+      '-Clearing a nonexistent variable is not an error.',
+      '!This command clears session-wide as well as persistent assignments.'],
+    cz: ['Smaže jedno nebo více přiřazení. Změněné identifikátory jsou navráceny jako seznam řetězců.',
+      '-Pokus o smazání neexistující proměnné není chyba.',
+      '!Tento příkaz maže dočasné i trvalé proměnné.'],
+    cat: catg.base,
+    ex: [['a=3', '["a"]'], ['clear(a)', '["a"]'], ['a', '!symbol "a" undefined']],
+    args: 'vars...',
+    see: ['restore', 'vars']
   }
 });
 
@@ -47,6 +60,12 @@ R.register('vars', {
             [new Atom(key), new Atom(node.toString())]);
       })(this)
     );
+  },
+  help: {
+    en: ['Lists all user-defined variables and their assignments.'],
+    cz: ['Seznam všech uživatelských proměnných a jejich hodnot.'],
+    cat: catg.base,
+    ex: [['a=b=10', '["a","b"]'], ['vars', '[["a","10"], ["b","10"]]']]
   }
 });
 
@@ -62,6 +81,12 @@ R.register('desc', {
       return nnode;
     else
       return new Atom(nnode.src.toString());
+  },
+  help: {
+    en: ['Provides a valid input-form description of the input stream.'],
+    cz: ['Popíše proud na vstupu formou validního vstupního příkazu.'],
+    cat: catg.base,
+    ex: [['`iota`:`range`(#):desc', '["r(1)","r(2)","r(3)",...]']]
   }
 });
 
@@ -114,6 +139,15 @@ R.register('save', {
         ret.push(...arg.prepare({register: outerReg}).eval());
     });
     return new Stream(this, ret.values());
+  },
+  help: {
+    en: ['Saves a temporary variable or variables into a persistent register.',
+      '-An assignment can be put directly into `save`.'],
+    cz: ['Uloží dočasnou uživatelskou proměnnou do trvalého registru.',
+      '-Přiřazení může být zapsáno přímo jako argument `save`.'],
+    args: 'vars|assign',
+    ex: [['a=3', '["a"]'], ['save(a)', '["a"]'], ['save(b=3)', '["b"]']],
+    see: ['restore', 'clear']
   }
 });
 
@@ -140,5 +174,14 @@ R.register(['restore', 'revert'], {
         ret.push(new Atom(arg.ident));
     });
     return new Stream(this, ret.values());
+  },
+  help: {
+    en: ['Clears one or more temporary variables, effectively restoring its assignment in the persistent register.',
+      '-If a variable has no persistent assignment, it is undefined.'],
+    cz: ['Smaže záznam jedné nebo více proměnných v dočasném registru. Pokud má proměnná záznam v trvalém registru, zastíněná hodnota se tak zpřístupní.',
+      '-Jestliže trvalý záznam stejného jména neexistuje, proměnná bude nedefinovaná.'],
+    args: 'vars...',
+    ex: [['save(a=1)', '["a"]'], ['a=2', '["a"]'], ['restore(a)', '["a"]'], ['a', '1']],
+    see: ['save', 'clear']
   }
 });
