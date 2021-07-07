@@ -255,7 +255,7 @@ R.register('over', {
   minArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare({...scope, partial: true}) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, partial: true}));
+    const args = this.args.map(arg => arg.prepare(scope));
     return this.modify({src, args}).check(scope.partial);
   },
   eval() {
@@ -299,7 +299,7 @@ R.register('equal', {
   minArg: 2,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
-    if(nnode.args.every(arg => arg.isAtom))
+    if(!scope.partial && nnode.args.every(arg => arg.isAtom))
       return new Atom(compareStreams(...nnode.args));
     else
       return nnode;
