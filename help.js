@@ -17,14 +17,11 @@ export const help = {
   register(names, obj) {
     if(names instanceof Array) {
       const fname = names[0];
-      const names1 = [];
       for(const name of names) {
-        if(name[0] === fname[0])
-          names1.push(name);
-        else
+        if(name[0] !== fname[0])
           _map.set(name, {names: [name], see: fname});
       }
-      _map.set(fname, {names: names1, ...obj});
+      _map.set(fname, {names: names, ...obj});
     } else
       _map.set(names, {names: [names], ...obj});
   }
