@@ -577,6 +577,14 @@ R.register(['padleft', 'pl'], {
       const fill = this.args[1].evalAtom(types.S);
       return new Atom(sIn.value.padStart(Number(len), fill));
     }
+  },
+  help: {
+    en: ['If the input stream is shorter than `_length`, extends to this length by adding copies of `_pad` at the beginning.', 'Also works with strings.'],
+    cz: ['Jestliže vstup je kratší než `_length`, rozšíří jej na tuto délku přidáním kopií `_pad` na začátek.', 'Funguje také s řetězci.'],
+    cat: catg.streams,
+    args: 'length,pad',
+    ex: [['`range`(3).padleft(5,0)', '[0,0,1,2,3]'],
+      ['12.`str`.padleft(5," ")', '"   12"']]
   }
 });
 
@@ -606,6 +614,14 @@ R.register(['padright', 'pr'], {
       const fillStr = fill.evalAtom(types.S);
       return new Atom(sIn.value.padEnd(Number(len), fillStr));
     }
+  },
+  help: {
+    en: ['If the input stream is shorter than `_length`, extends to this length by adding copies of `_pad` at the end.', 'Also works with strings.'],
+    cz: ['Jestliže vstup je kratší než `_length`, rozšíří jej na tuto délku přidáním kopií `_pad` na konec.', 'Funguje také s řetězci.'],
+    cat: catg.streams,
+    args: 'length,pad',
+    ex: [['`range`(5).`group`(3).padright(5,[])', '[[1,2,3],[4,5],[],[],[]]'],
+      ['12.`str`.padright(5,"_")', '"12___"']]
   }
 });
 
@@ -630,6 +646,13 @@ R.register(['prepend', 'prep'], {
       })(),
       {len}
     );
+  },
+  help: {
+    en: ['Returns a stream formed by concatenating all the arguments, followed by the input stream.', 'Non-stream values are treated the same way as in `join`.'],
+    cz: ['Vrátí proud vzniklý navázáním všech argumentů a nakonec vstupu.', 'S argumenty, které nejsou proudy, nakládá stejně jako `join`.'],
+    cat: catg.streams,
+    ex: [['1.`nest`(#*2).prepend(0)', '[0,1,2,4,8,16,...]']],
+    see: 'append'
   }
 });
 
@@ -653,6 +676,15 @@ R.register('nest', {
       })(),
       {len: null}
     );
+  },
+  help: {
+    en: ['Returns the results of iterative applications of `_body` on `_init`.'],
+    cz: ['Vrátí výsledky iterovaného použití `_body` na `_init`.'],
+    cat: catg.streams,
+    ex: [['10.nest(`if`(`odd`,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]'],
+      ['"caesar".nest(`shift`(1,`abc`))', '["caesar","dbftbs","ecguct",...]']],
+    src: 'init',
+    args: 'body'
   }
 });
 
@@ -684,6 +716,21 @@ R.register('fold', {
       })(),
       {len: sIn.len}
     );
+  },
+  help: {
+    en: ['Returns the results of iterative applications of `_body` on the previous result and the next element of `_source`.',
+      'If `_init` is given, it is used as the initial value rather than the first element of `_source`.',
+      'If three arguments are given, the value of `_bodyOut` is output (but `_body` kept for subsequent evaluation).',
+      '-The input values are used as arguments to `_body`. You can use a plain symbol or a block, where they are accessed as `#1`, `#2`.'],
+    cz: ['Vrátí výsledky iterovaného použití `_body` na předchozí výsledek a nový prvek ze `_source`.',
+      'Jestliže je dán argument `_init`, je použit jako počáteční hodnota, jinak je jí první prvek `_source`.',
+      'Jestliže jsou dány tři argumenty, výstup tvoří hodnoty `_bodyOut` (ale pro další výpočet je použit výsledek `_body`).',
+      '-Zpracovávané hodnoty jsou do `_body` vloženy jako argumenty. Můžete použít samotný symbol nebo blok, v němž jsou pak viditelné jako `#1`, `#2`.'],
+    cat: catg.streams,
+    ex: [['`iota`.fold(`times`)', '[1,2,6,24,120,...]'],
+      ['iota.fold([#1,#2])', '[1,[1,2],[[1,2],3],...]']],
+    src: 'source',
+    args: 'body,bodyOut??,init?'
   }
 });
 
@@ -757,6 +804,17 @@ R.register('reduce', {
     if(!curr)
       throw new StreamError('empty stream');
     return curr.eval();
+  },
+  help: {
+    en: ['Returns the result of `_body(...(_body(_body(_init,_source[1]),_source[2]),...)`.',
+      'Equivalent to `_source.fold(_body,_init?).last`.'],
+    cz: ['Vrátí hodnotu `_body(...(_body(_body(_init,_source[1]),_source[2]),...)`.',
+      'Ekvivalentní `_source.fold(_body,_init?).last`.'],
+    cat: catg.streams,
+    ex: [['`lt`.`over`([1,3,5],[2,4,5])', '[true,true,false]'],
+      ['$.reduce(`and`)', 'false']],
+    src: 'source',
+    args: 'body,init?'
   }
 });
 
@@ -785,6 +843,16 @@ R.register('recur', {
       })(),
       {len: null}
     );
+  },
+  help: {
+    en: ['Keeping n last entries, iteratively applies `_body` on them.',
+      'Back-references are indexed in reverse: `#1` refers to the most recent entry.'],
+    cz: ['Udržuje n posledních prvků a iterativně na ně aplikuje `_body`.',
+      '`#1` odkazuje na aktuálně nejnovější prvek, `#2` jemu předchozí atd.'],
+    cat: catg.streams,
+    src: '[a1,a2,...,an]',
+    args: 'body',
+    ex: [['[1,1].recur(plus)', '[1,1,2,3,5,8,13,21,...]']]
   }
 });
 
@@ -816,6 +884,14 @@ R.register('map2', {
         len: typeof sIn.len === 'bigint' && sIn.len > 0n ? sIn.len - 1n : sIn.len
       }
     );
+  },
+  help: {
+    en: ['Applies `_body` on pairs of consecutive values from `_source` as arguments `#1`, `#2`.'],
+    cz: ['Aplikuje `_body` na dvojice sousedních prvků `_source` jakožto argumenty `#1`, `#2`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'body',
+    ex: [['[1,5,9,7,2].map2(`lt`)', '[true,true,false,false]']]
   }
 });
 
@@ -832,6 +908,14 @@ R.register('if', {
       return pnode.args[val ? 1 : 2].prepare({...scope, src});
     }
   },
+  help: {
+    en: ['Evaluates first argument as a boolean value. If this produces `true`, returns second, if `false`, third argument.',
+      '-The unused argument needs not give a valid stream.'],
+    cz: ['Vyhodnotí první argument jako pravdivostní hodnotu. Jestliže je `true`, vrátí druhý argument, jestliže `false`, třetí.',
+      '-Nepoužitý argument nemusí dávat validní proud.'],
+    args: 'test,iftrue,iffalse',
+    ex: [['[3,"a"]:if(`isnumber`,`range`(#),#.`ord`)', '[[1,2,3],97]']]
+  }
 });
 
 R.register(['select', 'sel', 'where'], {
@@ -853,6 +937,15 @@ R.register(['select', 'sel', 'where'], {
         }
       })()
     );
+  },
+  help: {
+    en: ['Keeps only those entries of `_source` for which `_condition` evaluates to `true`.'],
+    cz: ['Ponechá pouze ty prvky `_source`, pro které se podmínka `_condition` vyhodnotí na `true`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'condition',
+    ex: [['`iota`.where(#.`factor`.`length`=2)', '[4,6,9,10,14,15,21,...]'],
+      ['"one two three".split.select(#<>" ").cat', '"onetwothree"']]
   }
 });
 
@@ -877,6 +970,14 @@ R.register(['iwhere', 'ixwhere'], {
         }
       })()
     );
+  },
+  help: {
+    en: ['Returns a sequence of positions of entries of `_source` for which `_condition` evaluates to `true`.'],
+    cz: ['Vrátí posloupnost pozic prvků `_source`, pro které se podmínka `_condition` vyhodnotí na `true`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'condition',
+    ex: [['"a1b2c3".`split`.iwhere(`isdigit`)', '[2,4,6]']]
   }
 });
 
@@ -901,6 +1002,14 @@ R.register('while', {
         }
       })()
     );
+  },
+  help: {
+    en: ['Returns elements of `_source` as long as `_condition` evaluates to `true`.'],
+    cz: ['Vrací prvky `_source`, dokud se podmínka `_condition` vyhodnocuje na `true`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'condition',
+    ex: [['primes.while(#<30)', '[2,3,5,7,11,13,17,19,23,29]']]
   }
 });
 
@@ -949,6 +1058,19 @@ R.register('sort', {
         {len: BigInt(vals.length)}
       );
     }
+  },
+  help: {
+    en: ['Loads the input stream in full and returns sorted.',
+      'In the 1-argument form, the sorting key is obtained by applying `_body` on the elements of `_source`.',
+      '!The values to be compared must be either all numeric or all strings.'],
+    cz: ['Načte celý vstupní proud a vrátí seřazený.',
+      'Pokud je poskytnuto `_body`, řadicí klíč se získá jeho použitím na každý prvek `_source`.',
+      '!Řazené hodnoty musejí být buď všechny čísla nebo všechny řetězce.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'body?',
+    ex: [['[2,5,1,3].sort', '[1,2,3,5]'],
+      ['"a bcd ef ghi".split(" ").sort(length)', '["a","ef","bcd","ghi"]']]
   }
 });
 
@@ -967,6 +1089,13 @@ R.register(['ddup', 'drep', 'dd'], {
         }
       })()
     );
+  },
+  help: {
+    en: ['If the input stream contains repeated elements, outputs only one copy per run.'],
+    cz: ['Jestliže vstupní proud obsahuje opakující se prvky, vypíše z každých takových po sobě jdoucích pouze jeden.'],
+    cat: catg.streams,
+    ex: [['[1,1,2,2,2,1].ddup', '[1,2,1]']],
+    see: 'uniq'
   }
 });
 
@@ -983,6 +1112,13 @@ R.register('fixed', {
     }
     // not found
     throw new StreamError('no repeated element found');
+  },
+  help: {
+    en: ['Scans the input stream for a direct repetition. Returns this repeated element.'],
+    cz: ['Načítá vstupní proud, dokud se nenalezne stejná hodnota dvakrát za sebou. Tu pak vrátí.'],
+    cat: catg.streams,
+    ex: [['5.nest((#^2).mod(100000))', '[5,25,625,90625,90625,...]'],
+      ['$.fixed', '90625']]
   }
 });
 
@@ -1006,6 +1142,14 @@ R.register('index', {
       const needle = this.args[0].evalAtom(types.S);
       return new Atom(haystack.indexOf(needle) + 1);
     }
+  },
+  help: {
+    en: ['Returns the position of the first entry of `_source` equal to `_value`, or 0 if not found.'],
+    cz: ['Vrátí pozici prvního prvku `_source` rovného `_value`, nebo 0, pokud takový není nalezen.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'value',
+    ex: [['`primes`.index(17)', '7']]
   }
 });
 
@@ -1043,6 +1187,15 @@ R.register('indexes', {
         })()
       );
     }
+  },
+  help: {
+    en: ['Returns a sequence of positions of entries of `_source` equal to `_value`.'],
+    cz: ['Vrátí posloupnost pozic prvků `_source` rovných `_value`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'value',
+    ex: [['"test".`split`.indexes("t")', '[1,4]'],
+      ['`pi`.indexes(0)', '[33,51,55,66,72,...]']]
   }
 });
 
@@ -1060,6 +1213,15 @@ R.register('includes', {
     }
     // not found
     return new Atom(false);
+  },
+  help: {
+    en: ['Returns `true` if `_source` contains `_value`, `false` otherwise.'],
+    cz: ['Vrátí `true`, pokud `_source` obsahuje `_value`, jinak `false`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'value',
+    ex: [['"test string".split.where(element("aeiou".split))', '["e","i"]']],
+    see: 'element'
   }
 });
 
@@ -1077,6 +1239,15 @@ R.register('element', {
     }
     // not found
     return new Atom(false);
+  },
+  help: {
+    en: ['Returns `true` if `_value` is found in `_stream`, `false` otherwise.'],
+    cz: ['Vrátí `true`, pokud `_value` je nalezena ve `_stream`, jinak `false`.'],
+    cat: catg.streams,
+    src: 'value',
+    args: 'stream',
+    ex: [['"The quick brown fox".`lcase`.`split`.includes("d")', 'false']],
+    see: 'includes'
   }
 });
 
@@ -1092,6 +1263,14 @@ R.register('count', {
         count++;
     }
     return new Atom(count);
+  },
+  help: {
+    en: ['Returns the count of occurrences of `_value` in `_source`.'],
+    cz: ['Vrátí počet výskytů prvku `_value` v proudu `_source`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'value',
+    ex: [['"test string".`split`.count("t")', '3']]
   }
 });
 
@@ -1124,6 +1303,18 @@ R.register(['counts', 'tally', 'freq'], {
       })(),
       {len: BigInt(vals.length)}
     );
+  },
+  help: {
+    en: ['Counts occurrences of distinct elements in `_source`. Returns in the format `[[_value,_count],...]`.',
+      'If a second argument is given, counts only those elements and returns them in the same order, otherwise in the order of first appearance.'],
+    cz: ['Počítá výskyty různých prvků v `_source`. Vrací je ve formátu `[[hodnota,počet],...]`.',
+      'Jestliže je poskytnut druhý argument, počítá pouze takové prvky, které se vyskytují v něm, a vrátí v daném pořadí. Jinak v pořadí prvního výskytu.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'values?',
+    ex: [['"abracadabra".`split`.counts', '[["a",5],["b",2],["r",2],["c",1],["d",1]]'],
+      ['"abracadabra".split.counts(["a","b","c"])', '[["a",5],["b",2],["c",1]]']],
+    see: 'unrle'
   }
 });
 
@@ -1145,6 +1336,14 @@ R.register('uniq', {
         }
       })()
     );
+  },
+  help: {
+    en: ['Returns distinct elements from input stream, discarding any duplicities.'],
+    cz: ['Vrátí pouze rozdílné prvky vstupního proudu, všechny duplicity jsou odstraněny.'],
+    cat: catg.streams,
+    ex: [['`binom`(7)', '[1,7,21,35,35,21,7,1]'],
+      ['binom(7).uniq', '[1,7,21,35]']],
+    see: 'ddup'
   }
 });
 
@@ -1171,6 +1370,14 @@ R.register('rle', {
         yield new Node('array', token, null, [prev, new Atom(count)]);
       })()
     );
+  },
+  help: {
+    en: ['Counts lengths of runs of equal elements of the input stream. Returns in the format `[[_value,_count],...]`.'],
+    cz: ['Počítá délky segmentů opakování stejného prvku vstupního proudu. Vrací je ve formátu `[[hodnota,počet],...]`.'],
+    cat: catg.streams,
+    ex: [['[1,1,2,2,2,1].rle', '[[1,2],[2,3],[1,1]]'],
+      ['10000.`factor`.rle', '[[2,4],[5,4]]']],
+    see: 'unrle'
   }
 });
 
@@ -1193,6 +1400,13 @@ R.register(['unrle', 'unfreq', 'untally'], {
         }
       })()
     );
+  },
+  help: {
+    en: ['Expects the input in the format `[[_value,_count],...]`, as given by `counts` or `rle`. Repeats every `_value` `_count` times.'],
+    cz: ['Očekává vstupní proud ve formátu `[[hodnota,počet],...]`, jak jej vrací `counts` nebo `rle`. Ve výstupu zopakuje každou `hodnotu` `počet`-krát.'],
+    cat: catg.streams,
+    ex: [['"abracadabra".`split`.`counts`("abc".split)', '[["a",5],["b",2],["c",1]]'],
+      ['$.unrle.`cat`', '"aaaaabbc"']]
   }
 });
 
@@ -1205,6 +1419,13 @@ R.register('isstream', {
       return nnode;
     const c = nnode.src.eval();
     return new Atom(c.type === types.stream);
+  },
+  help: {
+    en: ['Tests if `_input` is a stream. Returns `true` or `false`.'],
+    cz: ['Testuje, zda `_input` je proudem. Vrací `true` nebo `false`.'],
+    cat: catg.streams,
+    src: 'input',
+    ex: [['[1,[2,3,4],"abc"]:isstream', '[false,true,false]']]
   }
 });
 
@@ -1241,6 +1462,18 @@ R.register('with', {
         arg.prepare({register: innerReg}).eval();
       return body.prepare({...scope, register: innerReg});
     }
+  },
+  help: {
+    en: ['Allows temporary assignments to be made for the scope of `_body`.',
+      '-A symbol can refer to its outer value safely.',
+      '-Useful for reusing a complicated subexpression or for binding the value of `#`, e.g., in `foreach`.'],
+    cz: ['Umožňuje udělat dočasná přiřazení platná v rámci `_body`.',
+      '-Symbol může bezpečně být předefinován pomocí své vnější hodnoty.',
+      '-Užitečné pro stručné pojmenování komplikovaného podvýrazu nebo pro zachycení hodnoty `#`, například ve `foreach`.'],
+    args: 'var=expr...,body',
+    cat: catg.base,
+    ex: [['[2,3,4]:with(a=#,[a,"abcdef".`split`(a)])', '[[2,["ab","cd","ef"]],[3,["abc","def"]],[4,["abcd","ef"]]]'],
+      ['with(a=5,with(b=a*(a+1),c=a*(a-1),[b,c,b-c]))', '[30,20,10]']]
   }
 });
 
@@ -1270,6 +1503,12 @@ R.register('longest', {
       throw new StreamError('empty stream');
     else
       return maxS.eval();
+  },
+  help: {
+    en: ['Expects `_source` to be a stream of streams. Returns the longest of them. In case of a tie, the first of such length.'],
+    cz: ['Očekává `_source` ve formě proudu tvořeného proudy. Vrátí nejdelší z nich. V případě více stejné délky, první z nich.'],
+    src: 'source',
+    cat: catg.streams,
   }
 });
 
@@ -1338,5 +1577,14 @@ R.register(['subs', 'subst', 'replace', 'repl'], {
         skip: sIn.skip
       }
     );
+  },
+  help: {
+    en: ['Expects `_subs` in the format `[[_v1,_v2],...]`. Replaces occurrences of `_v1` by `_v2` in `_source`.'],
+    cz: ['Očekává `_subs` ve formátu `[[_v1,_v2],...]`. Nahradí výskyty `_v1` v `_source` prvkem `_v2`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'subs',
+    ex: [['"abracadabra".`split`.subs([["a","A"],["b","_"]]).`cat`', '"A_rAcAdA_rA"']],
+    see: 'tr'
   }
 });
