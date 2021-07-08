@@ -1,5 +1,6 @@
 import parse from './parser.js';
 import {help} from './help.js';
+import {StreamError} from './errors.js';
 
 class Register extends EventTarget {
   constructor(parent, init = []) {
