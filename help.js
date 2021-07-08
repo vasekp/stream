@@ -1,6 +1,6 @@
 import Enum from './enum.js';
 
-export const catg = Enum.fromArray(['base', 'sources', 'streams']);
+export const catg = Enum.fromArray(['base', 'sources', 'streams', 'strings', 'numbers']);
 
 const catgNames = new Map();
 
@@ -8,6 +8,8 @@ catgNames.set('all', 'All');
 catgNames.set(catg.base, 'Base functions');
 catgNames.set(catg.sources, 'Sources');
 catgNames.set(catg.streams, 'Stream ops');
+catgNames.set(catg.strings, 'Strings');
+catgNames.set(catg.numbers, 'Numbers');
 
 const _map = new Map();
 
@@ -58,11 +60,13 @@ async function populate() {
     sec.id = `id-${name}`;
     sec.dataset.cat = 'all';
     if(obj.cat) {
-      catSet.add(obj.cat);
-      if(obj.cat instanceof Array)
+      if(obj.cat instanceof Array) {
+        obj.cat.forEach(cat => catSet.add(cat));
         sec.dataset.cat += ' ' + obj.cat.join(' ');
-      else
+      } else {
+        catSet.add(obj.cat);
         sec.dataset.cat += ` ${obj.cat}`;
+      }
     }
     for(const n of obj.names) {
       const h = document.createElement('h3');

@@ -27,7 +27,7 @@ R.register(['iota', 'seq'], {
   help: {
     en: ['A stream of consecutive numbers. If `from` or `step` are not given, they default to 1.'],
     cz: ['Posloupnost čísel s daným začátkem a krokem. Pokud `from` nebo `step` nejsou dány, výchozí hodnota pro obě je 1.'],
-    cat: catg.sources,
+    cat: [catg.sources, catg.numbers],
     ex: [['iota', '[1,2,3,4,5,...]'], ['iota(0,2)', '[0,2,4,6,8,...]']],
     args: ['from?,step?']
   }
@@ -89,7 +89,7 @@ R.register(['range', 'ran', 'rng', 'r'], {
       'Posloupnost čísel s daným začátkem, koncem a krokem. Pokud `from` nebo `step` nejsou dány, výchozí hodnota pro obě je 1.',
       '-Jestliže `to` je menší (větší) než `from` a `step` kladné (záporné), vrátí prázdný proud. Jestliže `step` je 0, nekonečný.',
       '-Také funguje se znaky místo čísel. `from` potom nesmí být vynecháno. `step` je číslo. Počítá se v Unicode kódových bodech.'],
-    cat: catg.sources,
+    cat: [catg.sources, catg.strings, catg.numbers],
     ex: [['range(5)', '[1,2,3,4,5]'], ['range("α","γ")', '["α","β","γ"]'], ['range(5,1,-2)', '[5,3,1]']],
     args: 'from?,to,step?'
   }
@@ -121,7 +121,7 @@ R.register(['length', 'len'], {
     cz: ['Počet prvků vstupního proudu.',
       'Funguje také pro řetězce, kde vrátí počet znaků.',
       '-Pro počet znaků dle upravené abecedy použijte `"...".split(abc).length`.'],
-    cat: catg.streams,
+    cat: [catg.streams, catg.strings],
     ex: [['`range`(1,10,3).length', '4'], ['"string".length', '6']]
   }
 });
@@ -356,7 +356,7 @@ R.register(['reverse', 'rev'], {
   help: {
     en: ['Returns the input stream or string in reverse.'],
     cz: ['Vrátí vstupní proud nebo řetězec v obráceném pořadí.'],
-    cat: catg.streams,
+    cat: [catg.streams, catg.strings],
     ex: [['1024.`todigits`.reverse', '[4,2,0,1]'], ['1024.`tobase`(10).reverse', '"4201"']]
   }
 });
@@ -581,7 +581,7 @@ R.register(['padleft', 'pl'], {
   help: {
     en: ['If the input stream is shorter than `_length`, extends to this length by adding copies of `_pad` at the beginning.', 'Also works with strings.'],
     cz: ['Jestliže vstup je kratší než `_length`, rozšíří jej na tuto délku přidáním kopií `_pad` na začátek.', 'Funguje také s řetězci.'],
-    cat: catg.streams,
+    cat: [catg.streams, catg.strings],
     args: 'length,pad',
     ex: [['`range`(3).padleft(5,0)', '[0,0,1,2,3]'],
       ['12.`str`.padleft(5," ")', '"   12"']]
@@ -618,7 +618,7 @@ R.register(['padright', 'pr'], {
   help: {
     en: ['If the input stream is shorter than `_length`, extends to this length by adding copies of `_pad` at the end.', 'Also works with strings.'],
     cz: ['Jestliže vstup je kratší než `_length`, rozšíří jej na tuto délku přidáním kopií `_pad` na konec.', 'Funguje také s řetězci.'],
-    cat: catg.streams,
+    cat: [catg.streams, catg.strings],
     args: 'length,pad',
     ex: [['`range`(5).`group`(3).padright(5,[])', '[[1,2,3],[4,5],[],[],[]]'],
       ['12.`str`.padright(5,"_")', '"12___"']]
@@ -1105,7 +1105,7 @@ R.register('sort', {
     cz: ['Načte celý vstupní proud a vrátí seřazený.',
       'Pokud je poskytnuto `_body`, řadicí klíč se získá jeho použitím na každý prvek `_source`.',
       '!Řazené hodnoty musejí být buď všechny čísla nebo všechny řetězce.'],
-    cat: catg.streams,
+    cat: [catg.streams, catg.strings, catg.numbers],
     src: 'source',
     args: 'body?',
     ex: [['[2,5,1,3].sort', '[1,2,3,5]'],
@@ -1183,12 +1183,15 @@ R.register('index', {
     }
   },
   help: {
-    en: ['Returns the position of the first entry of `_source` equal to `_value`, or 0 if not found.'],
-    cz: ['Vrátí pozici prvního prvku `_source` rovného `_value`, nebo 0, pokud takový není nalezen.'],
-    cat: catg.streams,
+    en: ['Returns the position of the first entry of `_source` equal to `_value`, or 0 if not found.',
+      '-If `_source` is a string, returns the position of the first substring `_value`.'],
+    cz: ['Vrátí pozici prvního prvku `_source` rovného `_value`, nebo 0, pokud takový není nalezen.',
+      '-`_source` také může být řetězec, pak vyhledá pozici výskytu podřetězce `_value`.'],
+    cat: [catg.streams, catg.strings],
     src: 'source',
     args: 'value',
-    ex: [['`primes`.index(17)', '7']]
+    ex: [['`primes`.index(17)', '7'],
+      ['"abracadabra".index("cad")', '5']]
   }
 });
 
@@ -1228,13 +1231,16 @@ R.register(['indexes', 'indices'], {
     }
   },
   help: {
-    en: ['Returns a sequence of positions of entries of `_source` equal to `_value`.'],
-    cz: ['Vrátí posloupnost pozic prvků `_source` rovných `_value`.'],
-    cat: catg.streams,
+    en: ['Returns a sequence of positions of entries of `_source` equal to `_value`.',
+      '-If `_source` is a string, returns positions of substrings `_value`.'],
+    cz: ['Vrátí posloupnost pozic prvků `_source` rovných `_value`.',
+      '-`_source` také může být řetězec, pak vyhledá pozice výskytů podřetězce `_value`.'],
+    cat: [catg.streams, catg.strings],
     src: 'source',
     args: 'value',
-    ex: [['"test".`split`.indexes("t")', '[1,4]'],
-      ['`pi`.indexes(0)', '[33,51,55,66,72,...]']]
+    ex: [['`pi`.indexes(0)', '[33,51,55,66,72,...]'],
+      ['"test".indexes("t")', '[1,4]'],
+      ['"aaaa".indexes("aa")', '[1,2,3]']]
   }
 });
 
