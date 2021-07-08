@@ -656,6 +656,37 @@ R.register(['prepend', 'prep'], {
   }
 });
 
+R.register(['append', 'app'], {
+  reqSource: true,
+  minArg: 1,
+  eval() {
+    const args = this.args.map(arg => arg.eval());
+    args.unshift(this.src.eval());
+    const lens = args.map(arg => arg.isAtom ? 1n : arg.len);
+    const len = lens.some(len => len === undefined) ? undefined
+      : lens.some(len => len === null) ? null
+      : lens.reduce((a,b) => a+b);
+    return new Stream(this,
+      (function*() {
+        for(const arg of args) {
+          if(arg.isAtom)
+            yield arg;
+          else
+            yield* arg;
+        }
+      })(),
+      {len}
+    );
+  },
+  help: {
+    en: ['Returns a stream formed by concatenating the input streams with all the arguments.', 'Non-stream values are treated the same way as in `join`.'],
+    cz: ['Vrátí proud vzniklý navázáním vstupu a všech argumentů.', 'S argumenty, které nejsou proudy, nakládá stejně jako `join`.'],
+    cat: catg.streams,
+    ex: [['16.`nest`(#/2).`while`(#>0).append(0)', '[16,8,4,2,1,0]']],
+    see: 'prepend'
+  }
+});
+
 R.register('nest', {
   reqSource: true,
   numArg: 1,
@@ -734,7 +765,7 @@ R.register('fold', {
   }
 });
 
-R.register('xfold', {
+/*R.register('xfold', {
   reqSource: true,
   numArg: 2,
   prepare(scope) {
@@ -760,9 +791,9 @@ R.register('xfold', {
       })()
     );
   }
-});
+});*/
 
-R.register('xlate', {
+/*R.register('xlate', {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -781,8 +812,16 @@ R.register('xlate', {
         }
       })()
     );
+  },
+  help: {
+    en: ['Works like `foreach` but expects `_body` to return streams, which are concatenated in the output.'],
+    cz: ['Funguje podobně jako `foreach`, ale `_body` musí vracet proudy. Ty jsou pak ve výstupu napojeny.'],
+    cat: catg.streams,
+    ex: [['iota.xlate(if(odd,[#,#,#],[]))', '[1,1,1,3,3,3,5,...]']],
+    src: 'source',
+    args: 'body'
   }
-});
+});*/
 
 R.register('reduce', {
   reqSource: true,
@@ -918,7 +957,7 @@ R.register('if', {
   }
 });
 
-R.register(['select', 'sel', 'where'], {
+R.register(['select', 'sel', 'filter', 'where'], {
   reqSource: true,
   numArg: 1,
   prepare(scope) {
@@ -1153,7 +1192,7 @@ R.register('index', {
   }
 });
 
-R.register('indexes', {
+R.register(['indexes', 'indices'], {
   reqSource: true,
   numArg: 1,
   eval() {
@@ -1477,7 +1516,7 @@ R.register('with', {
   }
 });
 
-R.register('longest', {
+/*R.register('longest', {
   reqSource: true,
   numArg: 0,
   eval() {
@@ -1541,7 +1580,7 @@ R.register('shortest', {
     else
       return minS.eval();
   }
-});
+});*/
 
 R.register(['subs', 'subst', 'replace', 'repl'], {
   reqSource: true,
