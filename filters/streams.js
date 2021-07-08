@@ -164,7 +164,7 @@ R.register('first', {
     args: 'count?',
     cat: catg.streams,
     ex: [['`iota`.first', '1'], ['`primes`.first(5)', '[2,3,5,7,11]']],
-    see: ['last', 'take', 'drop']
+    see: ['last', 'take', 'drop', 'prefix']
   }
 });
 
@@ -220,7 +220,7 @@ R.register('last', {
       ['`range`(1,10,4).last', '9'],
       ['range(100).last(3)', '[98,99,100]'],
       ['`pi`.last', '!infinite stream']],
-    see: ['first', 'droplast']
+    see: ['first', 'droplast', 'postfix']
   }
 });
 
@@ -984,7 +984,7 @@ R.register(['select', 'sel', 'filter', 'where'], {
     src: 'source',
     args: 'condition',
     ex: [['`iota`.where(#.`factor`.`length`=2)', '[4,6,9,10,14,15,21,...]'],
-      ['"one two three".split.select(#<>" ").cat', '"onetwothree"']]
+      ['"one two three".`split`.select(#<>" ").`cat`', '"onetwothree"']]
   }
 });
 
@@ -1265,7 +1265,7 @@ R.register('includes', {
     cat: catg.streams,
     src: 'source',
     args: 'value',
-    ex: [['"test string".split.where(element("aeiou".split))', '["e","i"]']],
+    ex: [['"The quick brown fox".`lcase`.`split`.includes("d")', 'false']],
     see: 'element'
   }
 });
@@ -1291,7 +1291,7 @@ R.register('element', {
     cat: catg.streams,
     src: 'value',
     args: 'stream',
-    ex: [['"The quick brown fox".`lcase`.`split`.includes("d")', 'false']],
+    ex: [['"test string".`split`.`where`(element("aeiou".split))', '["e","i"]']],
     see: 'includes'
   }
 });

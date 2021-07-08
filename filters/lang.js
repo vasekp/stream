@@ -488,8 +488,8 @@ R.register('assign', {
       ['a=a^2', '["a"]'],
       ['[a,b]', '[100,10]'],
       ['c=c', '!symbol "c" undefined'],
-      ['d=##.g(1)', '["d"]'],
-      ['`iota`.d', '[[1],[2],[3],...]']],
+      ['rot13=##.`shift`(13,`abc`)', '["rot13"]'],
+      ['"grfg".rot13', '"test"']],
     args: 'vars..., value',
     see: ['save', 'clear', 'vars']
   }
