@@ -2,6 +2,13 @@ import Enum from './enum.js';
 
 export const catg = Enum.fromArray(['base', 'sources', 'streams']);
 
+const catgNames = new Map();
+
+catgNames.set('all', 'All');
+catgNames.set(catg.base, 'Base functions');
+catgNames.set(catg.sources, 'Sources');
+catgNames.set(catg.streams, 'Stream ops');
+
 const _map = new Map();
 
 export const help = {
@@ -32,8 +39,10 @@ async function populate() {
   const head = document.getElementById('head');
   const nav = document.getElementById('abc');
   const list = document.getElementById('filter-list');
+  const catSet = new Set();
   let lastLett = '';
   for(const name of [..._map.keys()].sort()) {
+    const obj = _map.get(name);
     if(name[0].toUpperCase() !== lastLett) {
       lastLett = name[0].toUpperCase();
       const anchor = document.createElement('div');
@@ -45,9 +54,16 @@ async function populate() {
       navItem.textContent = lastLett;
       nav.append(navItem);
     }
-    const obj = _map.get(name);
     const sec = document.createElement('section');
     sec.id = `id-${name}`;
+    sec.dataset.cat = 'all';
+    if(obj.cat) {
+      catSet.add(obj.cat);
+      if(obj.cat instanceof Array)
+        sec.dataset.cat += ' ' + obj.cat.join(' ');
+      else
+        sec.dataset.cat += ` ${obj.cat}`;
+    }
     for(const n of obj.names) {
       const h = document.createElement('h3');
       if(obj.reqSource)
@@ -121,6 +137,30 @@ async function populate() {
     }
     list.append(sec);
   }
+  /*** Category selection ***/
+  const cats = [...catgNames.keys()].filter(cat => catSet.has(cat) || cat === 'all');
+  for(const cat of cats) {
+    const ckbox = document.createElement('input');
+    ckbox.type = 'radio';
+    ckbox.name = 'category';
+    ckbox.value = cat;
+    ckbox.id = `cat-${cat}`;
+    ckbox.hidden = true;
+    ckbox.checked = cat === 'all';
+    head.parentElement.insertBefore(ckbox, head);
+    const label = document.createElement('label');
+    label.htmlFor = ckbox.id;
+    label.textContent = catgNames.get(cat);
+    head.append(label);
+  }
+  const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"])`).join(', ');
+  const css2 = cats.map(cat => `#cat-${cat}:checked ~ header label[for="cat-${cat}"]`).join(', ');
+  const css = `${css1} { display: none; } ${css2} { background: #eee; border-color: #888; }`;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = URL.createObjectURL(new Blob([css], {type: 'text/css'}));
+  document.head.append(link);
 }
 
 if(typeof window !== 'undefined')

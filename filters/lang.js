@@ -23,7 +23,7 @@ R.register('array', {
   help: {
     en: ['A finite stream made of the arguments. Long form of `[...]`.'],
     cz: ['Konečný proud sestavený z argumentů. Alternativní zápis `[...]`.'],
-    cat: catg.base,
+    cat: [catg.base, catg.sources],
     ex: [['array(1,3,5)', '[1,3,5]']]
   }
 });
