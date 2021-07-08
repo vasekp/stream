@@ -52,6 +52,7 @@ i-pre {
   font-family: monospace;
   background: #EEE;
   padding: 2px;
+  word-wrap: anywhere;
 }
 
 a {
@@ -179,6 +180,7 @@ h3::after {
   width: 100%;
   background: #EEE;
   border-radius: 10px;
+  overflow: auto;
 }
 
 .input, .output, .error {
