@@ -118,11 +118,12 @@ li {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  align-items: center;
 }
 
 #abc a {
   color: inherit;
+  width: 100%;
+  text-align: center;
 }
 
 #filter-list {
@@ -154,7 +155,9 @@ h3 {
 }
 
 h3:first-child {
-  margin-top: 1rem;
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1pt dashed #AAE;
 }
 
 h3::before, h3::after {
