@@ -59,20 +59,22 @@ async function populate() {
     }
     const sec = document.createElement('section');
     sec.id = `id-${name}`;
-    sec.dataset.cat = 'all';
+    sec.dataset.cat = 'all ';
     if(obj.cat) {
       if(obj.cat instanceof Array) {
         obj.cat.forEach(cat => catSet.add(cat));
-        sec.dataset.cat += ' ' + obj.cat.join(' ');
+        sec.dataset.cat += obj.cat.join(' ');
       } else {
         catSet.add(obj.cat);
-        sec.dataset.cat += ` ${obj.cat}`;
+        sec.dataset.cat += obj.cat;
       }
     }
     for(const n of obj.names) {
       const h = document.createElement('h3');
-      if(obj.reqSource)
-        h.dataset.pre = obj.src ? `${obj.src}.` : '(...).';
+      if(obj.src)
+        h.dataset.pre = `${obj.src}.`;
+      else if(obj.reqSource)
+        h.dataset.pre = '(...).';
       if(obj.args)
         h.dataset.post = `(${obj.args})`;
       else if(obj.minArg || obj.maxArg || obj.numArg)
@@ -173,6 +175,18 @@ async function populate() {
   link.type = 'text/css';
   link.href = URL.createObjectURL(new Blob([css], {type: 'text/css'}));
   document.head.append(link);
+  /*** Alter behaviour of links ***/
+  function linkClick(e) {
+    const id = e.currentTarget.href.split('#')[1];
+    if(id.startsWith('id-')) {
+      const cats = document.getElementById(id)?.dataset?.cat;
+      if(cats && !cats.split(' ').some(cat => document.getElementById(`cat-${cat}`).checked))
+        document.getElementById('cat-all').checked = true;
+    }
+    document.getElementById(id)?.scrollIntoView();
+    e.preventDefault();
+  }
+  document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', linkClick));
 }
 
 if(typeof window !== 'undefined')
