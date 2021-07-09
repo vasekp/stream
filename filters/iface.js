@@ -145,6 +145,7 @@ R.register('save', {
       '-An assignment can be put directly into `save`.'],
     cz: ['Uloží dočasnou uživatelskou proměnnou do trvalého registru.',
       '-Přiřazení může být zapsáno přímo jako argument `save`.'],
+    cat: catg.base,
     args: 'vars|assign',
     ex: [['a=3', '["a"]'], ['save(a)', '["a"]'], ['save(b=3)', '["b"]']],
     see: ['restore', 'clear']
@@ -180,6 +181,7 @@ R.register(['restore', 'revert'], {
       '-If a variable has no persistent assignment, it is undefined.'],
     cz: ['Smaže záznam jedné nebo více proměnných v dočasném registru. Pokud má proměnná záznam v trvalém registru, zastíněná hodnota se tak zpřístupní.',
       '-Jestliže trvalý záznam stejného jména neexistuje, proměnná bude nedefinovaná.'],
+    cat: catg.base,
     args: 'vars...',
     ex: [['save(a=1)', '["a"]'], ['a=2', '["a"]'], ['restore(a)', '["a"]'], ['a', '1']],
     see: ['save', 'clear']

@@ -958,6 +958,7 @@ R.register('if', {
       '-The unused argument needs not give a valid stream.'],
     cz: ['Vyhodnotí první argument jako pravdivostní hodnotu. Jestliže je `true`, vrátí druhý argument, jestliže `false`, třetí.',
       '-Nepoužitý argument nemusí dávat validní proud.'],
+    cat: catg.base,
     args: 'test,iftrue,iffalse',
     ex: [['[3,"a"]:if(`isnumber`,`range`(#),#.`ord`)', '[[1,2,3],97]']]
   }

@@ -15,6 +15,8 @@ const _map = new Map();
 
 export const help = {
   register(names, obj) {
+    if(!obj.cat)
+      console.warn(`${names}: no category`);
     if(names instanceof Array) {
       const fname = names[0];
       for(const name of names) {
