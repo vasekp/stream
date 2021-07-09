@@ -134,17 +134,25 @@ async function populate() {
       const exDiv = document.createElement('div');
       exDiv.classList.add('stream-example');
       let hi = 1;
-      for(let [inp, out] of obj.ex) {
-        const html = inp
+      for(let [inp, out, cEn, cCz] of obj.ex) {
+        let html = inp
           .replace(/[<>&]/g, c => entities[c])
-          .replace(/(?<!&)\w+/g, mm => {
-            if(_map.has(mm) && mm !== name)
-              return `<a href="#id-${mm}">${mm}</a>`;
-            else if(mm[0] === '_')
-              return mm.substring(1);
+          .replace(/(?<!&)\w+/g, m => {
+            if(_map.has(m) && m !== name)
+              return `<a href="#id-${m}">${m}</a>`;
             else
-              return mm;
+              return m;
           });
+        if(cEn) {
+          html += ' <span class="comment">; ' + cEn
+            .replace(/[<>&]/g, c => entities[c])
+            .replace(/`([^``]*)`/g, (_, m) => {
+              if(_map.has(m) && m !== name)
+                return `<a href="#id-${m}">${m}</a>`;
+              else
+                return m;
+            }) + '</span>';
+        }
         const d1 = document.createElement('div');
         d1.classList.add('input');
         d1.innerHTML = html;

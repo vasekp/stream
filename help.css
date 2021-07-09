@@ -215,3 +215,7 @@ h3::after {
 .error {
   color: #c00;
 }
+
+.comment {
+  color: #888;
+}

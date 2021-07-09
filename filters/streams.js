@@ -716,7 +716,7 @@ R.register('nest', {
     en: ['Returns the results of iterative applications of `_body` on `_init`.'],
     cz: ['Vrátí výsledky iterovaného použití `_body` na `_init`.'],
     cat: catg.streams,
-    ex: [['10.nest(if(odd,3*#+1,#/2)) ;Collatz sequence', '[10,5,16,8,4,2,1,...]'],
+    ex: [['10.nest(if(odd,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]', 'Collatz sequence', 'Collatzova posloupnost'],
       ['"caesar".nest(shift(1,abc))', '["caesar","dbftbs","ecguct",...]']],
     src: 'init',
     args: 'body'
@@ -896,7 +896,7 @@ R.register('recur', {
     cat: catg.streams,
     src: '[a1,a2,...,an]',
     args: 'body',
-    ex: [['[1,1].recur(plus) ;Fibonacci', '[1,1,2,3,5,8,13,21,...]']]
+    ex: [['[1,1].recur(plus)', '[1,1,2,3,5,8,13,21,...]', 'Fibonacci', 'Fibonacci']]
   }
 });
 
@@ -992,7 +992,7 @@ R.register(['select', 'sel', 'filter', 'where'], {
     cat: catg.streams,
     src: 'source',
     args: 'condition',
-    ex: [['iota.where(#.factor.length=2) ;products of two primes', '[4,6,9,10,14,15,21,...]'],
+    ex: [['iota.where(#.factor.length=2)', '[4,6,9,10,14,15,21,...]', 'products of two primes', 'součiny dvojic prvočísel'],
       ['"one two three".split.select(#<>" ").cat', '"onetwothree"']]
   }
 });
@@ -1201,7 +1201,7 @@ R.register('index', {
     args: 'value',
     ex: [['primes.index(17)', '7'],
       ['"abracadabra".index("cad")', '5'],
-      ['"abc".index("z") ;not an error', '0']]
+      ['"abc".index("z")', '0', 'not an error', 'není chybou']]
   }
 });
 
@@ -1527,7 +1527,7 @@ R.register('with', {
       '-Užitečné pro stručné pojmenování komplikovaného podvýrazu nebo pro zachycení hodnoty `#`, například ve `foreach`.'],
     args: 'var=expr...,body',
     cat: catg.base,
-    ex: [['[2,3,4]:with(a=#,[a,"abcdef".split(a)]) ;split(#) would not work here!', '[[2,["ab","cd","ef"]],[3,["abc","def"]],[4,["abcd","ef"]]]'],
+    ex: [['[2,3,4]:with(a=#,[a,"abcdef".split(a)])', '[[2,["ab","cd","ef"]],[3,["abc","def"]],[4,["abcd","ef"]]]', '`split`(#) would not work here!', '`split`(#) by zde nefungovalo!'],
       ['with(a=5,with(b=a*(a+1),c=a*(a-1),[b,c,b-c]))', '[30,20,10]']]
   }
 });
