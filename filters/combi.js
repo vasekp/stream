@@ -504,7 +504,7 @@ R.register(['perm', 'perms', 'permute'], {
         (function*() {
           for(const arr of helper)
             yield new Node('#permute', thisToken, thisSrc, [],
-              {_vals: vals, _arr: arr});
+              {_vals: vals, _arr: arr.slice()});
         })(),
         {
           len,

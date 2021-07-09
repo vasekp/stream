@@ -9,7 +9,7 @@ catgNames.set(catg.base, 'Base functions');
 catgNames.set(catg.sources, 'Sources');
 catgNames.set(catg.streams, 'Stream ops');
 catgNames.set(catg.strings, 'Strings');
-catgNames.set(catg.numbers, 'Numbers');
+catgNames.set(catg.numbers, 'Mathematical');
 
 const _map = new Map();
 
@@ -38,6 +38,7 @@ async function populate() {
     import('./filters/streams.js'),
     import('./filters/string.js'),
     import('./filters/combi.js'),
+    import('./filters/numeric.js'),
   ]);
   const head = document.getElementById('head');
   const nav = document.getElementById('abc');
@@ -93,7 +94,7 @@ async function populate() {
           line = line.substring(1);
         }
         const html = line.replace(/`([^``]*)`/g, (_, m) => {
-          return '<i-pre>' + m.replace(/\w+/g, mm => {
+          return '<i-pre>' + m.replace(/(?<!&)\w+/g, mm => {
             if(_map.has(mm) && mm !== name)
               return `<a href="#id-${mm}">${mm}</a>`;
             else if(mm[0] === '_')

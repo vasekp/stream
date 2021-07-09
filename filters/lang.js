@@ -64,7 +64,7 @@ R.register('foreach', {
     cz: ['Použije `body` na každý prvek `source`. Alternativní zápis `source:body`.'],
     cat: catg.base,
     ex: [['`iota`.foreach(#^2)', '[1,4,9,16,...]'],
-      ['`iota`:(#^2) ;short form', '[1,4,9,16,...]']],
+      ['`iota`:`power`(2) ;short form', '[1,4,9,16,...]']],
     src: 'source',
     args: 'body'
   }

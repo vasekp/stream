@@ -936,7 +936,9 @@ R.register('map2', {
     src: 'source',
     args: 'body',
     ex: [['[1,4,2,3].map2(`range`(#1,#2,`if`(#2>#1,1,-1)))', '[[1,2,3,4],[4,3,2],[2,3]]'],
-      ['[1,5,9,7,2].map2(`lt`)', '[true,true,false,false]']]
+      ['[1,5,9,7,2].map2(`lt`)', '[true,true,false,false]'],
+      ['[1,10,20,60].map2(#2/#1)', '[10,2,3]']],
+    see: 'diff'
   }
 });
 
