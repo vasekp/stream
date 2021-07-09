@@ -196,6 +196,19 @@ async function populate() {
   link.type = 'text/css';
   link.href = URL.createObjectURL(new Blob([css], {type: 'text/css'}));
   document.head.append(link);
+  /*** Create links in Introduction ***/
+  document.getElementById('intro').querySelectorAll('i-pre').forEach(pre => {
+    const html = pre.textContent
+      .replace(/(?<!&)\w+/g, m => {
+        if(_map.has(m) && m !== name)
+          return `<a href="#id-${m}">${m}</a>`;
+        else if(m[0] === '_')
+          return m.substring(1);
+        else
+          return m;
+      });
+    pre.innerHTML = html;
+  });
   /*** Alter behaviour of links ***/
   function linkClick(e) {
     const id = e.currentTarget.href.split('#')[1];

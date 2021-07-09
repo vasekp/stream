@@ -71,7 +71,11 @@ p {
 }
 
 .example {
-  color: #88F;
+  color: #88D;
+}
+
+.example::before {
+  content: "\2605  ";
 }
 
 i-pre {

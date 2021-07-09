@@ -118,10 +118,10 @@ regReducer('times', '*', (a, b) => a * b, types.N, {
     ['[10,20,30]*[1,2,3,4,5]', '[10,40,90]', 'shortest argument defines the length of output', 'délku výstupu definuje nejkratší argument'],
     ['[1,2,[3,4]]*5', '!expected number or string, got stream [3,4]', 'unpacking works only to first level', 'vstup do proudu funguje jen do první úrovně'],
     ['range(7).reduce(times)', '5040', 'long form used as an operand (also see `product`, `factorial`)', 'textová forma použitá jako operand (viz též `product`, `factorial`)']],
-  see: ['div', 'product']
+  see: ['divide', 'product']
 });
 
-regReducer('div', '/',
+regReducer(['divide', 'div'], '/',
   (a, b) => {
     if(b === 0n)
       throw new StreamError('division by zero');
@@ -397,7 +397,7 @@ R.register('mod', {
     args: 'modulus,base?',
     ex: [['range(-5,5):mod(3)', '[1,2,0,1,2,0,1,2,0,1,2]', 'remainder is calculated ≥ 0 even for negative numbers', 'zbytek je vrácen ≥ 0 i pro záporné argumenty'],
       ['10.mod(5,1)', '5', 'with base=1 returns 5 instead of 0', 's base=1 vrátí 5 namísto 0']],
-    see: ['div', 'divmod', 'add']
+    see: ['divide', 'divmod', 'add']
   }
 });
 

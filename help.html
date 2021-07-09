@@ -19,7 +19,7 @@
         <li><em>Numbers</em> – integer numbers. The language imposes to intrinsic limit on magnitude. Numbers are input in base ten.<br/>
           <span class="example">Examples:</span> <i-pre>3</i-pre>, <i-pre>-1</i-pre>, <i-pre>100000000000000000</i-pre>.</li>
         <li><em>Strings</em> – textual strings, including single characters. Strings are input in double quotes. The occurrences of the character <i-pre>"</i-pre> within a string must be preceded by a backslash (<i-pre>\</i-pre>). A backslash itself must appear as <i-pre>\\</i-pre>.<br/>
-          <span class="example">Examples:</span> <i-pre>"string"</i-pre>, <i-pre>"x"</i-pre>, <i-pre>"this is how you include \" and \\."</i-pre>.</li>
+          <span class="example">Examples:</span> <i-pre>"_string"</i-pre>, <i-pre>"x"</i-pre>, <i-pre>"_this _is _how _you _include \" _and \\."</i-pre>.</li>
         <li><em>Booleans</em> – <i-pre>true</i-pre> or <i-pre>false</i-pre>.</li>
         <li><em>Streams</em> – finite or inifinite sequences of arbitrary kinds of objects, even mixed.<br>
           <span class="example">Examples:</span> <i-pre>[1,2,3]</i-pre>, <i-pre>[]</i-pre>, <i-pre>["a",[1,2]]</i-pre>.</li>
@@ -50,9 +50,9 @@
       <h2>Special characters</h2>
       <p>The following special characters are recognized:</p>
       <ul>
-        <li><i-pre>+</i-pre>, <i-pre>-</i-pre>, <i-pre>*</i-pre>, <i-pre>/</i-pre>, <i-pre>^</i-pre> – mathematical operators (plus, minus, multiply, divide, power)
+        <li><i-pre>+</i-pre>, <i-pre>-</i-pre>, <i-pre>*</i-pre>, <i-pre>/</i-pre>, <i-pre>^</i-pre> – mathematical operators (<i-pre>plus</i-pre>, <i-pre>minus</i-pre>, <i-pre>times</i-pre>, <i-pre>divide</i-pre>, <i-pre>power</i-pre>)
           <p class="info">The arithmetic is always integral: in division only the quotient is kept. Also, <i-pre>0^0</i-pre> is defined as 1.</p></li>
-        <li><i-pre>&amp;</i-pre>, <i-pre>|</i-pre> – logical operators (AND, OR).</li>
+        <li><i-pre>&amp;</i-pre>, <i-pre>|</i-pre> – logical operators (<i-pre>and</i-pre>, <i-pre>or</i-pre>).</li>
         <li><i-pre>=</i-pre>, <i-pre>&lt;</i-pre>, <i-pre>&gt;</i-pre>, <i-pre>&lt;=</i-pre>, <i-pre>&gt;=</i-pre>, <i-pre>&lt;&gt;</i-pre> – comparison operators.
           <p class="warn">The sign <i-pre>=</i-pre> at top level also means assignment to a <a href="#vars">variable</a>. An interpretation as comparison can be enforced using <i-pre>==</i-pre>.</p></li>
         <li><i-pre>#</i-pre> – represents the source. In chaining it is a no-operation, e.g., <i-pre>[1,1].#.length = [1,1].length = 2</i-pre>. It is useful in arguments or in compound operations.<br/>
@@ -78,7 +78,7 @@
       <p>As usual, parentheses <i-pre>(</i-pre>, <i-pre>)</i-pre> can be used to achieve a different order of evaluation.</p>
       <h2 id="block">Blocks</h2>
       <p>A <em>block</em> is a compound filter that can take its own source and/or arguments. Within a block, these are referred to via <i-pre>##</i-pre> and <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ..., respectively.</p>
-      <p>A block can be created manually by enclosing some code in a pair of curly brackets, <i-pre>{</i-pre>, <i-pre>}</i-pre>. It is also created automatically in several situations: in the body argument of <i-pre>fold</i-pre>, <i-pre>xfold</i-pre>, <i-pre>reduce</i-pre>, <i-pre>recur</i-pre>, <i-pre>map2</i-pre> and in <a href="#vars">variable assignment</a>.</p>
+      <p>A block can be created manually by enclosing some code in a pair of curly brackets, <i-pre>{</i-pre>, <i-pre>}</i-pre>. It is also created automatically in several situations: in the body argument of <i-pre>fold</i-pre>, <i-pre>reduce</i-pre>, <i-pre>recur</i-pre>, <i-pre>map2</i-pre> and in <a href="#vars">variable assignment</a>.</p>
       <p><span class="example">Example:</span> <i-pre>{range(#1-#2,#1+#2)}(5,1) = [4,5,6]</i-pre>.</p>
       <h2 id="vars">User variables</h2>
       <p>Created streams or even custom filters may be saved for later reuse as a variable.</p>
