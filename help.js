@@ -34,6 +34,8 @@ async function populate() {
     import('./filters/lang.js'),
     import('./filters/iface.js'),
     import('./filters/streams.js'),
+    import('./filters/string.js'),
+    import('./filters/combi.js'),
   ]);
   const head = document.getElementById('head');
   const nav = document.getElementById('abc');

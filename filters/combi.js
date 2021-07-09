@@ -2,6 +2,7 @@ import {StreamError} from '../errors.js';
 import {Node, Atom, Stream, types, debug, compareStreams} from '../base.js';
 import watchdog from '../watchdog.js';
 import R from '../register.js';
+import {catg} from '../help.js';
 
 const defSort = (a, b) => a < b ? -1 : a > b ? +1 : 0;
 const revSort = (a, b) => a < b ? +1 : a > b ? -1 : 0;
@@ -21,6 +22,15 @@ R.register(['factorial', 'fact', 'fac'], {
       return nnode;
     const inp = nnode.src.evalNum({min: 0n});
     return new Atom(fact(inp));
+  },
+  help: {
+    en: ['Factorial of `_n`.'],
+    cz: ['Faktoriál čísla `_n`.'],
+    cat: catg.numbers,
+    src: 'n',
+    ex: [['`iota`:factorial', '[1,2,6,24,120,720,...]'],
+      ['100.factorial', '9332621544394415268169...']],
+    see: 'dfactorial'
   }
 });
 
@@ -39,6 +49,15 @@ R.register(['dfactorial', 'dfact', 'dfac'], {
       return nnode;
     const inp = nnode.src.evalNum({min: -1n});
     return new Atom(dfact(inp));
+  },
+  help: {
+    en: ['Double factorial of `_n`, i.e., `n*(n-2)*...`.'],
+    cz: ['Dvojitý faktoriál čísla `_n`, tj. `n*(n-2)*...`.'],
+    cat: catg.numbers,
+    src: 'n',
+    ex: [['`iota`:dfactorial', '[1,2,3,8,15,48,105,...]'],
+      ['7*5*3*1', '105']],
+    see: 'factorial'
   }
 });
 
@@ -84,6 +103,18 @@ R.register('binom', {
       })(),
       {len: n}
     );
+  },
+  help: {
+    en: ['Binomial coefficient `_n` choose `_k`.',
+      'If `_k` is not given, lists the entire `_n`-th row.'],
+    cz: ['Binomický koeficient `_n` nad `_k`.',
+      'Jestliže `_k` není dáno, vypíše celý `_n`-tý řádek.'],
+    cat: catg.numbers,
+    args: 'n,k?',
+    ex: [['binom(6,3)', '20'],
+      ['`range`(6).`subsets`(3).`length`', '20'],
+      ['binom(6)', '[1,6,15,20,15,6,1]']],
+    see: 'comb'
   }
 });
 
@@ -120,6 +151,15 @@ R.register('comb', {
       return nnode;
     const ks = nnode.args.map(arg => arg.evalNum({min: 0n}));
     return new Atom(comb(ks));
+  },
+  help: {
+    en: ['Multinomial coefficient `_k1+_k2+...` choose `_k1`, `_k2`, ...'],
+    cz: ['Multinomický koeficient `_k1+_k2+...` nad `_k1`, `_k2`, ...'],
+    cat: catg.numbers,
+    args: 'k1,k2,...',
+    ex: [['comb(2,2,1)', '30'],
+      ['`range`(5).`subsets`(2,2).`length`', '30']],
+    see: ['binom', 'rcomb']
   }
 });
 
@@ -131,6 +171,15 @@ R.register('rcomb', {
       return nnode;
     const ks = nnode.args.map(arg => arg.evalNum({min: 0n}));
     return new Atom(comb(ks, true));
+  },
+  help: {
+    en: ['Similar as `comb(k1,k2,...)` but further divided by factorials of numbers of repetitions between the `_k` values.'],
+    cz: ['Podobné `comb(k1,k2,...)`, ale dále vydělené faktoriály počtů opakování mezi hodnotami `_k`.'],
+    cat: catg.numbers,
+    args: 'k1,k2,...',
+    ex: [['rcomb(2,2,1)', '15'],
+      ['`range`(5).`subsets`(2,2):`sort`(`first`).`uniq`.`length`', '15']],
+    see: 'comb'
   }
 });
 
@@ -237,6 +286,16 @@ R.register('tuples', {
         }
       }
     );
+  },
+  help: {
+    en: ['1-argument form: `_n`-tuples of values taken from `_source`.',
+      'Multi-argument form: tuples where `_i`-th value is taken from the `_i`-th argument.'],
+    cz: ['Forma s jedním argumentem: `_n`-tice prvků z proudu `_source`.',
+      'Forma s několika argumenty: `_n`-tice, kde `_i`-tý prvek je braný z `_i`-tého argumentu.'],
+    cat: catg.streams,
+    src: 'source?',
+    ex: [['[1,2,3].tuples(2)', '[[1,1],[1,2],[1,3],[2,1],...]'],
+      ['tuples([1,2],["a","b"])', '[[1,"a"],[1,"b"],[2,"a"],[2,"b"]]']]
   }
 });
 
@@ -451,6 +510,17 @@ R.register(['perm', 'perms', 'permute'], {
         }
       );
     }
+  },
+  help: {
+    en: ['Lists all distinct permutations of `_source`.',
+      '-Also works with infinite streams.'],
+    cz: ['Všechny různé permutace proudu `_source.',
+      '-Funguje i pro nekonečné proudy.'],
+    cat: catg.streams,
+    src: 'source',
+    ex: [['"abba".`split`.perm:`cat`', '["abba","baba","bbaa","aabb","abab","baab"]'],
+      ['`iota`.perm[10^10]', '[14,7,10,9,12,5,1,3,11,4,...]'],
+      ['`range`(10).perm.`rnd`', '[3,2,9,6,5,8,1,4,10,7]']]
   }
 });
 
@@ -560,5 +630,18 @@ R.register(['subsets', 'ss', 'choose'], {
         }
       );
     }
+  },
+  help: {
+    en: ['0-argument form: all possible subsets of `_source`.',
+      'One- or multi-argument form: subsets of fixed size(s).',
+      '!If the elements of `_source` are not distinct, the listed sets can repeat.'],
+    cz: ['Forma bez argumentů: všechny možné podmnožiny `_source`.',
+      'Forma s jedním nebo více argumenty: podmnožiny pevné velikosti (či pevných velikostí).',
+      '!Pokud prvky `_source` nejsou rozdílné, vypsané množiny se mohou opakovat.'],
+    cat: catg.streams,
+    src: 'source',
+    ex: [['range(3).subsets', '[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]'],
+      ['range(3).subsets(2)', '[[1,2],[1,3],[2,3]]'],
+      ['range(3).subsets(2,1)', '[[[1,2],[3]],[[1,3],[2]],[[2,3],[1]]]']]
   }
 });
