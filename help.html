@@ -8,7 +8,8 @@
     <script type="module" src="help.js"></script>
   </head>
   <body id="help">
-    <main id="intro" hidden>
+    <header id="head"></header>
+    <main id="intro">
       <h1>Introduction</h1>
       <p><em>Stream</em> is a domain-specific language for simple, terse, mostly single-line programs creating or manipulating simple data.</p>
       <p>Its main purpose is to serve the <a href="https://vasekp.github.io/spa3/" target="_blank">Puzzlehunt Assistant</a> in creating custom decoders for input information.</p>
@@ -58,7 +59,7 @@
           <span class="example">Examples:</span> <i-pre>iota:(#^2) = [1,4,9,16,...]</i-pre>; <i-pre>[3,0,2].range(#.min,#.max) = range([3,0,2].min,[3,0,2].max) = range(0,3) = [0,1,2,3]</i-pre>.</li>
         <li><i-pre>##</i-pre>, <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ... – represents the source and the arguments of the current <a href="#block">block</a>.</li>
         <li><i-pre>$</i-pre>, <i-pre>$1</i-pre>, <i-pre>$2</i-pre>, ...</i-pre> – represents the results of prior commands. <i-pre>$</i-pre> is the most recent output.</li>
-        <li><i-pre>;</i-pre> – starts a comment, the rest of the input line is ignored (command-line prompt only).
+        <li><i-pre>;</i-pre> – starts a comment, the rest of the input line is ignored (command-line prompt only).</li>
       </ul>
       <h2>Operator precedence</h2>
       <p>The input is always read from left to right. The operators are bound to their arguments in the following precedence rules:</p>
@@ -87,10 +88,9 @@
       <p>A chain of filters assigned to a variable behaves as a block, i.e., the variable can then take a source or arguments, which are accessed using <i-pre>##</i-pre>, <i-pre>#1</i-pre>, ....</p>
       <p><span class="example">Example:</span> <i-pre>myrange=range(#1-#2,#1+#2)</i-pre> followed by <i-pre>myrange(5,2)</i-pre> gives <i-pre>[3,4,5,6,7]</i-pre>.</p>
     </main>
-    <div id="filters">
-      <header id="head"></header>
+    <main id="filters">
+      <div id="filter-list"></div>
       <nav id="abc"></nav>
-      <main id="filter-list"></main>
-    </div>
+    </main>
   </body>
 </html>

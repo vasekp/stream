@@ -4,7 +4,8 @@ export const catg = Enum.fromArray(['base', 'sources', 'streams', 'strings', 'nu
 
 const catgNames = new Map();
 
-catgNames.set('all', 'All');
+catgNames.set('intro', 'Introduction');
+catgNames.set('all', 'All filters');
 catgNames.set(catg.base, 'Base functions');
 catgNames.set(catg.sources, 'Sources');
 catgNames.set(catg.streams, 'Stream ops');
@@ -172,7 +173,7 @@ async function populate() {
     list.append(sec);
   }
   /*** Category selection ***/
-  const cats = [...catgNames.keys()].filter(cat => catSet.has(cat) || cat === 'all');
+  const cats = [...catgNames.keys()].filter(cat => catSet.has(cat) || cat === 'all' || cat === 'intro');
   for(const cat of cats) {
     const ckbox = document.createElement('input');
     ckbox.type = 'radio';
@@ -180,7 +181,7 @@ async function populate() {
     ckbox.value = cat;
     ckbox.id = `cat-${cat}`;
     ckbox.hidden = true;
-    ckbox.checked = cat === 'all';
+    ckbox.checked = cat === 'intro';
     head.parentElement.insertBefore(ckbox, head);
     const label = document.createElement('label');
     label.htmlFor = ckbox.id;
