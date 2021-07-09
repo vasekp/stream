@@ -255,7 +255,7 @@ R.register(['lcase', 'lc'], {
   prepare(scope) {
     const pnode = this.prepareAll(scope);
     if(scope.partial)
-      return nnode;
+      return pnode;
     const str = pnode.src.evalAtom(types.S);
     return new Atom(str.toLowerCase());
   },
