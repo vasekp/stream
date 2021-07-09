@@ -173,8 +173,10 @@ R.register('rcomb', {
     return new Atom(comb(ks, true));
   },
   help: {
-    en: ['Similar as `comb(k1,k2,...)` but further divided by factorials of numbers of repetitions between the `_k` values.'],
-    cz: ['Podobné `comb(k1,k2,...)`, ale dále vydělené faktoriály počtů opakování mezi hodnotami `_k`.'],
+    en: ['Similar as `comb(k1,k2,...)` but further divided by factorials of numbers of repetitions between the `_k` values.',
+      '(The number of ways `k1+k2+...` elements can be split into indistinguishable subsets of sizes `_k1`, `_k2`, ...)'],
+    cz: ['Podobné `comb(k1,k2,...)`, ale dále vydělené faktoriály počtů opakování mezi hodnotami `_k`.',
+      '(Počet způsobů, jak rozdělit `k1+k2+...` prvků do nerozlišitelných skupin o velikostech `_k1`, `_k2`, ...)'],
     cat: catg.numbers,
     args: 'k1,k2,...',
     ex: [['rcomb(2,2,1)', '15'],
@@ -634,10 +636,10 @@ R.register(['subsets', 'ss', 'choose'], {
   help: {
     en: ['0-argument form: all possible subsets of `_source`.',
       'One- or multi-argument form: subsets of fixed size(s).',
-      '!If the elements of `_source` are not distinct, the listed sets can repeat.'],
+      '!For performance reasons, all elements of `_source` are treated as distinct. If this is not the case, the listed sets will repeat. `uniq` can be used to remove the duplicates.'],
     cz: ['Forma bez argumentů: všechny možné podmnožiny `_source`.',
       'Forma s jedním nebo více argumenty: podmnožiny pevné velikosti (či pevných velikostí).',
-      '!Pokud prvky `_source` nejsou rozdílné, vypsané množiny se mohou opakovat.'],
+      '!Z důvodů výpočetní náročnosti jsou všechny prvky `_source` brány jako rozdílné. Pokud tomu tak není, vypsané množiny se mohou opakovat. Duplikáty mohou být odfiltrovány použitím `uniq`.'],
     cat: catg.streams,
     src: 'source',
     ex: [['range(3).subsets', '[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]'],

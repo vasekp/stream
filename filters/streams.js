@@ -269,7 +269,9 @@ R.register(['take', 'takedrop', 'td'], {
       'Jestliže poslední instrukce je brát, skončí po ní. Jestliže zahodit, vypíše i celý zbytek vstupu.'],
     cat: catg.streams,
     args: 'n1,n2,...',
-    ex: [['`iota`.take(5)', '[1,2,3,4,5]'], ['iota.take([1,2].`cycle`)', '[1,4,7,10,...']],
+    ex: [['`iota`.take(5)', '[1,2,3,4,5]'],
+      ['iota.take(2,5)', '[1,2,8,9,10,11,...]'],
+      ['iota.take([1,2].`cycle`)', '[1,4,7,10,...]']],
     see: 'drop'
   }
 });
@@ -300,7 +302,9 @@ R.register(['drop', 'droptake', 'dt'], {
       'Jestliže poslední instrukce je brát, skončí po ní. Jestliže zahodit, vypíše i celý zbytek vstupu.'],
     cat: catg.streams,
     args: 'n1,n2,...',
-    ex: [['`iota`.drop(5)', '[6,7,8,9,10,...]'], ['iota.drop([1,2].`cycle`)', '[2,3,5,6,8,...]']],
+    ex: [['`iota`.drop(5)', '[6,7,8,9,10,...]'],
+      ['`iota`.drop(5,2)', '[6,7]'],
+      ['iota.drop([1,2].`cycle`)', '[2,3,5,6,8,...]']],
     see: ['take', 'droplast']
   }
 });
@@ -712,7 +716,7 @@ R.register('nest', {
     en: ['Returns the results of iterative applications of `_body` on `_init`.'],
     cz: ['Vrátí výsledky iterovaného použití `_body` na `_init`.'],
     cat: catg.streams,
-    ex: [['10.nest(`if`(`odd`,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]'],
+    ex: [['10.nest(`if`(`odd`,3*#+1,#/2)) ;Collatz sequence', '[10,5,16,8,4,2,1,...]'],
       ['"caesar".nest(`shift`(1,`abc`))', '["caesar","dbftbs","ecguct",...]']],
     src: 'init',
     args: 'body'
@@ -853,7 +857,8 @@ R.register('reduce', {
     ex: [['`lt`.`over`([1,3,5],[2,4,5])', '[true,true,false]'],
       ['$.reduce(`and`)', 'false']],
     src: 'source',
-    args: 'body,init?'
+    args: 'body,init?',
+    see: ['total', 'product']
   }
 });
 
@@ -891,7 +896,7 @@ R.register('recur', {
     cat: catg.streams,
     src: '[a1,a2,...,an]',
     args: 'body',
-    ex: [['[1,1].recur(plus)', '[1,1,2,3,5,8,13,21,...]']]
+    ex: [['[1,1].recur(plus) ;Fibonacci', '[1,1,2,3,5,8,13,21,...]']]
   }
 });
 
@@ -930,7 +935,8 @@ R.register('map2', {
     cat: catg.streams,
     src: 'source',
     args: 'body',
-    ex: [['[1,5,9,7,2].map2(`lt`)', '[true,true,false,false]']]
+    ex: [['[1,4,2,3].map2(`range`(#1,#2,`if`(#2>#1,1,-1)))', '[[1,2,3,4],[4,3,2],[2,3]]'],
+      ['[1,5,9,7,2].map2(`lt`)', '[true,true,false,false]']]
   }
 });
 
@@ -983,7 +989,7 @@ R.register(['select', 'sel', 'filter', 'where'], {
     cat: catg.streams,
     src: 'source',
     args: 'condition',
-    ex: [['`iota`.where(#.`factor`.`length`=2)', '[4,6,9,10,14,15,21,...]'],
+    ex: [['`iota`.where(#.`factor`.`length`=2) ;products of two primes', '[4,6,9,10,14,15,21,...]'],
       ['"one two three".`split`.select(#<>" ").`cat`', '"onetwothree"']]
   }
 });
@@ -1191,7 +1197,8 @@ R.register('index', {
     src: 'source',
     args: 'value',
     ex: [['`primes`.index(17)', '7'],
-      ['"abracadabra".index("cad")', '5']]
+      ['"abracadabra".index("cad")', '5'],
+      ['"abc".index("z") ;not an error', '0']]
   }
 });
 
@@ -1517,7 +1524,7 @@ R.register('with', {
       '-Užitečné pro stručné pojmenování komplikovaného podvýrazu nebo pro zachycení hodnoty `#`, například ve `foreach`.'],
     args: 'var=expr...,body',
     cat: catg.base,
-    ex: [['[2,3,4]:with(a=#,[a,"abcdef".`split`(a)])', '[[2,["ab","cd","ef"]],[3,["abc","def"]],[4,["abcd","ef"]]]'],
+    ex: [['[2,3,4]:with(a=#,[a,"abcdef".`split`(a)]) ;split(#) would not work here!', '[[2,["ab","cd","ef"]],[3,["abc","def"]],[4,["abcd","ef"]]]'],
       ['with(a=5,with(b=a*(a+1),c=a*(a-1),[b,c,b-c]))', '[30,20,10]']]
   }
 });
@@ -1624,12 +1631,14 @@ R.register(['subs', 'subst', 'replace', 'repl'], {
     );
   },
   help: {
-    en: ['Expects `_subs` in the format `[[_v1,_v2],...]`. Replaces occurrences of `_v1` by `_v2` in `_source`.'],
-    cz: ['Očekává `_subs` ve formátu `[[_v1,_v2],...]`. Nahradí výskyty `_v1` v `_source` prvkem `_v2`.'],
+    en: ['Expects `_subs` in the format `[[_v1,_v2],...]`. Replaces occurrences of `_v1` by `_v2` in `_source`.',
+      '-Character to character replacement in a string is easier using `tr`.'],
+    cz: ['Očekává `_subs` ve formátu `[[_v1,_v2],...]`. Nahradí výskyty `_v1` v `_source` prvkem `_v2`.',
+      '-Pro náhradu jednotlivých znaků v řetězci je snazší použít `tr`.'],
     cat: catg.streams,
     src: 'source',
     args: 'subs',
-    ex: [['"abracadabra".`split`.subs([["a","A"],["b","_"]]).`cat`', '"A_rAcAdA_rA"']],
+    ex: [['"abracadabra".`split`.subs([["a","aa"],["b",""]]).`cat`', '"aaraacaadaaraa"']],
     see: 'tr'
   }
 });

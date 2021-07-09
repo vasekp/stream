@@ -244,7 +244,7 @@ R.register('ords', {
     cat: catg.strings,
     src: 'string',
     args: 'alphabet',
-    ex: [['abch=`abc`.`take`(8)~"ch"~abc.`drop`(8)', '["abch"]'],
+    ex: [['abch=`abc`.`take`(8)~"ch"~abc.`drop`(8) ;Czech alphabet without diacritics', '["abch"]'],
       ['"czech".ords(abch)', '[3,27,5,9]']]
   }
 });
@@ -264,7 +264,7 @@ R.register(['lcase', 'lc'], {
     cz: ['Vrátí řetězec `_string` převedený na malá písmena.'],
     cat: catg.strings,
     src: 'string',
-    ex: ['"Слово".lcase', '"слово"'],
+    ex: [['"Слово".lcase ;also works for non-Latin characters', '"слово"']],
     see: 'ucase'
   }
 });
@@ -284,7 +284,7 @@ R.register(['ucase', 'uc'], {
     cz: ['Vrátí řetězec `_string` převedený na velká písmena.'],
     cat: catg.strings,
     src: 'string',
-    ex: ['"Слово".lcase', '"СЛОВО"'],
+    ex: [['"Слово".lcase ;also works for non-Latin characters', '"СЛОВО"']],
     see: 'lcase'
   }
 });

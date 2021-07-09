@@ -58,6 +58,7 @@
           <span class="example">Examples:</span> <i-pre>iota:(#^2) = [1,4,9,16,...]</i-pre>; <i-pre>[3,0,2].range(#.min,#.max) = range([3,0,2].min,[3,0,2].max) = range(0,3) = [0,1,2,3]</i-pre>.</li>
         <li><i-pre>##</i-pre>, <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ... – represents the source and the arguments of the current <a href="#block">block</a>.</li>
         <li><i-pre>$</i-pre>, <i-pre>$1</i-pre>, <i-pre>$2</i-pre>, ...</i-pre> – represents the results of prior commands. <i-pre>$</i-pre> is the most recent output.</li>
+        <li><i-pre>;</i-pre> – starts a comment, the rest of the input line is ignored (command-line prompt only).
       </ul>
       <h2>Operator precedence</h2>
       <p>The input is always read from left to right. The operators are bound to their arguments in the following precedence rules:</p>

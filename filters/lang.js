@@ -63,7 +63,8 @@ R.register('foreach', {
     en: ['Applies `body` on each element of `source`. Long form of `source:body`.'],
     cz: ['Použije `body` na každý prvek `source`. Alternativní zápis `source:body`.'],
     cat: catg.base,
-    ex: [['`iota`:(#^2)', '[1,4,9,16,...]']],
+    ex: [['`iota`.foreach(#^2)', '[1,4,9,16,...]'],
+      ['`iota`:(#^2) ;short form', '[1,4,9,16,...]']],
     src: 'source',
     args: 'body'
   }
@@ -173,7 +174,8 @@ R.register('zip', {
       'Čte všechny argumenty souběžně a vrací jejich prvky v n-ticích. Alternativní zápis `x%y%...`.',
       'Délka výstupu odpovídá nejkratšímu z argumentů.'],
     cat: catg.base,
-    ex: [['`abc`~`iota`', '[["a",1],["b",2],["c",3],...]']],
+    ex: [['`abc`%`iota`', '[["a",1],["b",2],["c",3],...]'],
+      ['zip(iota,`primes`) ;long form', '[[1,2],[2,3],[3,5],[4,7],...]']],
     args: 'x,y,...'
   }
 });
@@ -253,14 +255,12 @@ R.register('part', {
   help: {
     en: [
       'Returns one or more parts of `_source`. Long form of `_source[...]`.',
-      'One or more parts may be given, or a stream.',
-      '-Returns a single value in the `_source[_part]` case but a stream otherwise.'],
+      'One or more parts may be given, or a stream.'],
     cz: [
       'Vrátí jeden nebo více prvků `_source`. Alternativní zápis `_source[...]`.',
-      'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.',
-      '-V případě `_source[_part]` vrací jednu hodnotu, ale v ostatních proud.'],
+      'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.'],
     cat: catg.base,
-    ex: [['`abc`[3]', '"c"'], ['abc[3,1]', '["c","a"]'], ['abc[`range`(1,5,2)]', '["a","c","e"]']],
+    ex: [['`abc`[3] ;returns a single value', '"c"'], ['abc[3,1] ;returns a stream', '["c","a"]'], ['abc[`range`(1,5,2)]', '["a","c","e"]']],
     args: 'source,...'
   }
 });
@@ -386,7 +386,9 @@ R.register('equal', {
       'Testuje rovnost dvou nebo více hodnot. Výsledkem je `true` nebo `false`. Alternativní zápis `x=y`.',
       '-I proudy mohou být porovnávány, pokud jsou konečné.'],
     cat: catg.base,
-    ex: [['1=2', 'false'], ['[1,2,3]+1 = [2,3,4]', 'true'], ['`range`(3,1) = [] = []~[] = []%[]', 'true']],
+    ex: [['1=2', 'false'], ['[1,2,3]+1 = [2,3,4]', 'true'],
+      ['`range`(3,1) = [] = []~[] = []%[]', 'true'],
+      ['equal([],[]) ;long form', 'true']],
     see: 'ineq'
   }
 });
