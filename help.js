@@ -165,7 +165,7 @@ async function populate() {
     label.textContent = catgNames.get(cat);
     head.append(label);
   }
-  const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"])`).join(', ');
+  const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"]) > *`).join(', ');
   const css2 = cats.map(cat => `#cat-${cat}:checked ~ header label[for="cat-${cat}"]`).join(', ');
   const css = `${css1} { display: none; } ${css2} { background: #eee; border-color: #888; }`;
   const link = document.createElement('link');

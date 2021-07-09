@@ -149,6 +149,10 @@ li {
   margin: .5rem 0 .5rem 1rem;
 }
 
+section:target > * {
+  display: block !important;
+}
+
 h3 {
   margin: 0;
   margin-left: -1rem;
