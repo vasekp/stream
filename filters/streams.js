@@ -122,7 +122,7 @@ R.register(['length', 'len'], {
       'Funguje také pro řetězce, kde vrátí počet znaků.',
       '-Pro počet znaků dle upravené abecedy použijte `"...".split(abc).length`.'],
     cat: [catg.streams, catg.strings],
-    ex: [['`range`(1,10,3).length', '4'], ['"string".length', '6']]
+    ex: [['range(1,10,3).length', '4'], ['"string".length', '6']]
   }
 });
 
@@ -163,7 +163,7 @@ R.register('first', {
       'Forma s argumentem vrátí `_count` prvních prvků.'],
     args: 'count?',
     cat: catg.streams,
-    ex: [['`iota`.first', '1'], ['`primes`.first(5)', '[2,3,5,7,11]']],
+    ex: [['iota.first', '1'], ['primes.first(5)', '[2,3,5,7,11]']],
     see: ['last', 'take', 'drop', 'prefix']
   }
 });
@@ -217,9 +217,9 @@ R.register('last', {
     args: 'count?',
     cat: catg.streams,
     ex: [
-      ['`range`(1,10,4).last', '9'],
+      ['range(1,10,4).last', '9'],
       ['range(100).last(3)', '[98,99,100]'],
-      ['`pi`.last', '!infinite stream']],
+      ['pi.last', '!infinite stream']],
     see: ['first', 'droplast', 'postfix']
   }
 });
@@ -269,9 +269,9 @@ R.register(['take', 'takedrop', 'td'], {
       'Jestliže poslední instrukce je brát, skončí po ní. Jestliže zahodit, vypíše i celý zbytek vstupu.'],
     cat: catg.streams,
     args: 'n1,n2,...',
-    ex: [['`iota`.take(5)', '[1,2,3,4,5]'],
+    ex: [['iota.take(5)', '[1,2,3,4,5]'],
       ['iota.take(2,5)', '[1,2,8,9,10,11,...]'],
-      ['iota.take([1,2].`cycle`)', '[1,4,7,10,...]']],
+      ['iota.take([1,2].cycle)', '[1,4,7,10,...]']],
     see: 'drop'
   }
 });
@@ -302,9 +302,9 @@ R.register(['drop', 'droptake', 'dt'], {
       'Jestliže poslední instrukce je brát, skončí po ní. Jestliže zahodit, vypíše i celý zbytek vstupu.'],
     cat: catg.streams,
     args: 'n1,n2,...',
-    ex: [['`iota`.drop(5)', '[6,7,8,9,10,...]'],
-      ['`iota`.drop(5,2)', '[6,7]'],
-      ['iota.drop([1,2].`cycle`)', '[2,3,5,6,8,...]']],
+    ex: [['iota.drop(5)', '[6,7,8,9,10,...]'],
+      ['iota.drop(5,2)', '[6,7]'],
+      ['iota.drop([1,2].cycle)', '[2,3,5,6,8,...]']],
     see: ['take', 'droplast']
   }
 });
@@ -336,7 +336,7 @@ R.register(['droplast', 'dl'], {
     cz: ['Zahodí `_count` posledních prvků. Jestliže `_count` není uveden, zahodí jeden.'],
     args: 'count?',
     cat: catg.streams,
-    ex: [['`range`(5).droplast', '[1,2,3,4]']],
+    ex: [['range(5).droplast', '[1,2,3,4]']],
     see: 'drop'
   }
 });
@@ -361,7 +361,7 @@ R.register(['reverse', 'rev'], {
     en: ['Returns the input stream or string in reverse.'],
     cz: ['Vrátí vstupní proud nebo řetězec v obráceném pořadí.'],
     cat: [catg.streams, catg.strings],
-    ex: [['1024.`todigits`.reverse', '[4,2,0,1]'], ['1024.`tobase`(10).reverse', '"4201"']]
+    ex: [['1024.todigits.reverse', '[4,2,0,1]'], ['1024.tobase(10).reverse', '"4201"']]
   }
 });
 
@@ -509,7 +509,7 @@ R.register(['group', 'g'], {
       '-Jestliže jsou délky dány seznamem, proud skončí po poslední skupině.'],
     cat: catg.streams,
     ex: [
-      ['`iota`.group(3)', '[[1,2,3],[4,5,6],[7,8,9],...]'],
+      ['iota.group(3)', '[[1,2,3],[4,5,6],[7,8,9],...]'],
       ['iota.group(3,2)', '[[1,2,3],[4,5]]'],
       ['iota.group(iota)', '[[1],[2,3],[4,5,6],...]']],
     src: 'source'
@@ -546,7 +546,7 @@ R.register(['flatten', 'fl'], {
     cz: ['Zploští všechny prvky `_source`, které jsou samy proudy, do jednoho dlouhého proudu.',
       'Jestliže je dáno `_depth`, zploští vnořené proudy pouze do této hloubky.'],
     cat: catg.streams,
-    ex: [['[1].`nest`([#]).flatten', '[1,1,1,1,1,1,...]'],
+    ex: [['[1].nest([#]).flatten', '[1,1,1,1,1,1,...]'],
       ['[1].nest([#]).flatten(3)', '[1,1,1,[1],[[1]],...']]
   }
 });
@@ -587,8 +587,8 @@ R.register(['padleft', 'pl'], {
     cz: ['Jestliže vstup je kratší než `_length`, rozšíří jej na tuto délku přidáním kopií `_pad` na začátek.', 'Funguje také s řetězci.'],
     cat: [catg.streams, catg.strings],
     args: 'length,pad',
-    ex: [['`range`(3).padleft(5,0)', '[0,0,1,2,3]'],
-      ['12.`str`.padleft(5," ")', '"   12"']]
+    ex: [['range(3).padleft(5,0)', '[0,0,1,2,3]'],
+      ['12.str.padleft(5," ")', '"   12"']]
   }
 });
 
@@ -624,8 +624,8 @@ R.register(['padright', 'pr'], {
     cz: ['Jestliže vstup je kratší než `_length`, rozšíří jej na tuto délku přidáním kopií `_pad` na konec.', 'Funguje také s řetězci.'],
     cat: [catg.streams, catg.strings],
     args: 'length,pad',
-    ex: [['`range`(5).`group`(3).padright(5,[])', '[[1,2,3],[4,5],[],[],[]]'],
-      ['12.`str`.padright(5,"_")', '"12___"']]
+    ex: [['range(5).group(3).padright(5,[])', '[[1,2,3],[4,5],[],[],[]]'],
+      ['12.str.padright(5,"_")', '"12___"']]
   }
 });
 
@@ -655,7 +655,7 @@ R.register(['prepend', 'prep'], {
     en: ['Returns a stream formed by concatenating all the arguments, followed by the input stream.', 'Non-stream values are treated the same way as in `join`.'],
     cz: ['Vrátí proud vzniklý navázáním všech argumentů a nakonec vstupu.', 'S argumenty, které nejsou proudy, nakládá stejně jako `join`.'],
     cat: catg.streams,
-    ex: [['1.`nest`(#*2).prepend(0)', '[0,1,2,4,8,16,...]']],
+    ex: [['1.nest(#*2).prepend(0)', '[0,1,2,4,8,16,...]']],
     see: 'append'
   }
 });
@@ -686,7 +686,7 @@ R.register(['append', 'app'], {
     en: ['Returns a stream formed by concatenating the input streams with all the arguments.', 'Non-stream values are treated the same way as in `join`.'],
     cz: ['Vrátí proud vzniklý navázáním vstupu a všech argumentů.', 'S argumenty, které nejsou proudy, nakládá stejně jako `join`.'],
     cat: catg.streams,
-    ex: [['16.`nest`(#/2).`while`(#>0).append(0)', '[16,8,4,2,1,0]']],
+    ex: [['16.nest(#/2).while(#>0).append(0)', '[16,8,4,2,1,0]']],
     see: 'prepend'
   }
 });
@@ -716,8 +716,8 @@ R.register('nest', {
     en: ['Returns the results of iterative applications of `_body` on `_init`.'],
     cz: ['Vrátí výsledky iterovaného použití `_body` na `_init`.'],
     cat: catg.streams,
-    ex: [['10.nest(`if`(`odd`,3*#+1,#/2)) ;Collatz sequence', '[10,5,16,8,4,2,1,...]'],
-      ['"caesar".nest(`shift`(1,`abc`))', '["caesar","dbftbs","ecguct",...]']],
+    ex: [['10.nest(if(odd,3*#+1,#/2)) ;Collatz sequence', '[10,5,16,8,4,2,1,...]'],
+      ['"caesar".nest(shift(1,abc))', '["caesar","dbftbs","ecguct",...]']],
     src: 'init',
     args: 'body'
   }
@@ -762,7 +762,7 @@ R.register('fold', {
       'Jestliže jsou dány tři argumenty, výstup tvoří hodnoty `_bodyOut` (ale pro další výpočet je použit výsledek `_body`).',
       '-Zpracovávané hodnoty jsou do `_body` vloženy jako argumenty. Můžete použít samotný symbol nebo blok, v němž jsou pak viditelné jako `#1`, `#2`.'],
     cat: catg.streams,
-    ex: [['`iota`.fold(`times`)', '[1,2,6,24,120,...]'],
+    ex: [['iota.fold(times)', '[1,2,6,24,120,...]'],
       ['iota.fold([#1,#2])', '[1,[1,2],[[1,2],3],...]']],
     src: 'source',
     args: 'body,bodyOut??,init?'
@@ -854,8 +854,8 @@ R.register('reduce', {
     cz: ['Vrátí hodnotu `_body(...(_body(_body(_init,_source[1]),_source[2]),...)`.',
       'Ekvivalentní `_source.fold(_body,_init?).last`.'],
     cat: catg.streams,
-    ex: [['`lt`.`over`([1,3,5],[2,4,5])', '[true,true,false]'],
-      ['$.reduce(`and`)', 'false']],
+    ex: [['lt.over([1,3,5],[2,4,5])', '[true,true,false]'],
+      ['$.reduce(and)', 'false']],
     src: 'source',
     args: 'body,init?',
     see: ['total', 'product']
@@ -935,8 +935,8 @@ R.register('map2', {
     cat: catg.streams,
     src: 'source',
     args: 'body',
-    ex: [['[1,4,2,3].map2(`range`(#1,#2,`if`(#2>#1,1,-1)))', '[[1,2,3,4],[4,3,2],[2,3]]'],
-      ['[1,5,9,7,2].map2(`lt`)', '[true,true,false,false]'],
+    ex: [['[1,4,2,3].map2(range(#1,#2,if(#2>#1,1,-1)))', '[[1,2,3,4],[4,3,2],[2,3]]'],
+      ['[1,5,9,7,2].map2(lt)', '[true,true,false,false]'],
       ['[1,10,20,60].map2(#2/#1)', '[10,2,3]']],
     see: 'diff'
   }
@@ -962,7 +962,7 @@ R.register('if', {
       '-Nepoužitý argument nemusí dávat validní proud.'],
     cat: catg.base,
     args: 'test,iftrue,iffalse',
-    ex: [['[3,"a"]:if(`isnumber`,`range`(#),#.`ord`)', '[[1,2,3],97]']]
+    ex: [['[3,"a"]:if(isnumber,range(#),#.ord)', '[[1,2,3],97]']]
   }
 });
 
@@ -992,8 +992,8 @@ R.register(['select', 'sel', 'filter', 'where'], {
     cat: catg.streams,
     src: 'source',
     args: 'condition',
-    ex: [['`iota`.where(#.`factor`.`length`=2) ;products of two primes', '[4,6,9,10,14,15,21,...]'],
-      ['"one two three".`split`.select(#<>" ").`cat`', '"onetwothree"']]
+    ex: [['iota.where(#.factor.length=2) ;products of two primes', '[4,6,9,10,14,15,21,...]'],
+      ['"one two three".split.select(#<>" ").cat', '"onetwothree"']]
   }
 });
 
@@ -1025,7 +1025,7 @@ R.register(['iwhere', 'ixwhere'], {
     cat: catg.streams,
     src: 'source',
     args: 'condition',
-    ex: [['"a1b2c3".`split`.iwhere(`isdigit`)', '[2,4,6]']]
+    ex: [['"a1b2c3".split.iwhere(isdigit)', '[2,4,6]']]
   }
 });
 
@@ -1199,7 +1199,7 @@ R.register('index', {
     cat: [catg.streams, catg.strings],
     src: 'source',
     args: 'value',
-    ex: [['`primes`.index(17)', '7'],
+    ex: [['primes.index(17)', '7'],
       ['"abracadabra".index("cad")', '5'],
       ['"abc".index("z") ;not an error', '0']]
   }
@@ -1248,7 +1248,7 @@ R.register(['indexes', 'indices'], {
     cat: [catg.streams, catg.strings],
     src: 'source',
     args: 'value',
-    ex: [['`pi`.indexes(0)', '[33,51,55,66,72,...]'],
+    ex: [['pi.indexes(0)', '[33,51,55,66,72,...]'],
       ['"test".indexes("t")', '[1,4]'],
       ['"aaaa".indexes("aa")', '[1,2,3]']]
   }
@@ -1275,7 +1275,7 @@ R.register('includes', {
     cat: catg.streams,
     src: 'source',
     args: 'value',
-    ex: [['"The quick brown fox".`lcase`.`split`.includes@["d","f"]', '[false,true]']],
+    ex: [['"The quick brown fox".lcase.split.includes@["d","f"]', '[false,true]']],
     see: 'element'
   }
 });
@@ -1301,7 +1301,7 @@ R.register('element', {
     cat: catg.streams,
     src: 'value',
     args: 'stream',
-    ex: [['"test string".`split`.`where`(element("aeiou".split))', '["e","i"]']],
+    ex: [['"test string".split.where(element("aeiou".split))', '["e","i"]']],
     see: 'includes'
   }
 });
@@ -1325,7 +1325,7 @@ R.register('count', {
     cat: catg.streams,
     src: 'source',
     args: 'value',
-    ex: [['"test string".`split`.count("t")', '3']]
+    ex: [['"test string".split.count("t")', '3']]
   }
 });
 
@@ -1367,7 +1367,7 @@ R.register(['counts', 'tally', 'freq'], {
     cat: catg.streams,
     src: 'source',
     args: 'values?',
-    ex: [['"abracadabra".`split`.counts', '[["a",5],["b",2],["r",2],["c",1],["d",1]]'],
+    ex: [['"abracadabra".split.counts', '[["a",5],["b",2],["r",2],["c",1],["d",1]]'],
       ['"abracadabra".split.counts(["a","b","c"])', '[["a",5],["b",2],["c",1]]']],
     see: 'unrle'
   }
@@ -1396,7 +1396,7 @@ R.register('uniq', {
     en: ['Returns distinct elements from input stream, discarding any duplicities.'],
     cz: ['Vrátí pouze rozdílné prvky vstupního proudu, všechny duplicity jsou odstraněny.'],
     cat: catg.streams,
-    ex: [['`binom`(7)', '[1,7,21,35,35,21,7,1]'],
+    ex: [['binom(7)', '[1,7,21,35,35,21,7,1]'],
       ['binom(7).uniq', '[1,7,21,35]']],
     see: 'ddup'
   }
@@ -1431,7 +1431,7 @@ R.register('rle', {
     cz: ['Počítá délky segmentů opakování stejného prvku vstupního proudu. Vrací je ve formátu `[[hodnota,počet],...]`.'],
     cat: catg.streams,
     ex: [['[1,1,2,2,2,1].rle', '[[1,2],[2,3],[1,1]]'],
-      ['10000.`factor`.rle', '[[2,4],[5,4]]']],
+      ['10000.factor.rle', '[[2,4],[5,4]]']],
     see: 'unrle'
   }
 });
@@ -1460,8 +1460,8 @@ R.register(['unrle', 'unfreq', 'untally'], {
     en: ['Expects the input in the format `[[_value,_count],...]`, as given by `counts` or `rle`. Repeats every `_value` `_count` times.'],
     cz: ['Očekává vstupní proud ve formátu `[[hodnota,počet],...]`, jak jej vrací `counts` nebo `rle`. Ve výstupu zopakuje každou `hodnotu` `počet`-krát.'],
     cat: catg.streams,
-    ex: [['"abracadabra".`split`.`counts`("abc".split)', '[["a",5],["b",2],["c",1]]'],
-      ['$.unrle.`cat`', '"aaaaabbc"']]
+    ex: [['"abracadabra".split.counts("abc".split)', '[["a",5],["b",2],["c",1]]'],
+      ['$.unrle.cat', '"aaaaabbc"']]
   }
 });
 
@@ -1527,7 +1527,7 @@ R.register('with', {
       '-Užitečné pro stručné pojmenování komplikovaného podvýrazu nebo pro zachycení hodnoty `#`, například ve `foreach`.'],
     args: 'var=expr...,body',
     cat: catg.base,
-    ex: [['[2,3,4]:with(a=#,[a,"abcdef".`split`(a)]) ;split(#) would not work here!', '[[2,["ab","cd","ef"]],[3,["abc","def"]],[4,["abcd","ef"]]]'],
+    ex: [['[2,3,4]:with(a=#,[a,"abcdef".split(a)]) ;split(#) would not work here!', '[[2,["ab","cd","ef"]],[3,["abc","def"]],[4,["abcd","ef"]]]'],
       ['with(a=5,with(b=a*(a+1),c=a*(a-1),[b,c,b-c]))', '[30,20,10]']]
   }
 });
@@ -1641,7 +1641,7 @@ R.register(['subs', 'subst', 'replace', 'repl'], {
     cat: catg.streams,
     src: 'source',
     args: 'subs',
-    ex: [['"abracadabra".`split`.subs([["a","aa"],["b",""]]).`cat`', '"aaraacaadaaraa"']],
+    ex: [['"abracadabra".split.subs([["a","aa"],["b",""]]).cat', '"aaraacaadaaraa"']],
     see: 'tr'
   }
 });

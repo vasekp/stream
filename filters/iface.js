@@ -86,7 +86,7 @@ R.register('desc', {
     en: ['Provides a valid input-form description of the input stream.'],
     cz: ['Popíše proud na vstupu formou validního vstupního příkazu.'],
     cat: catg.base,
-    ex: [['`iota`:`range`(#):desc', '["r(1)","r(2)","r(3)",...]']]
+    ex: [['iota:range(#):desc', '["r(1)","r(2)","r(3)",...]']]
   }
 });
 

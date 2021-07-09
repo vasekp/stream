@@ -88,7 +88,7 @@ regReducer('plus', '+',
       ['[1,2,3]+4', '[5,6,7]'],
       ['[10,20,30]+[1,2,3,4,5] ;shortest argument defines the length of output', '[11,22,33]'],
       ['[1,2,[3,4]]+5 ;unpacking works only to first level', '!expected number or string, got stream [3,4]'],
-      ['`iota`.`fold`(plus) ;long form used as an operand (also see `accum`)', '[1,3,6,10,15,...]']],
+      ['iota.fold(plus) ;long form used as an operand (also see `accum`)', '[1,3,6,10,15,...]']],
     see: ['add', 'minus', 'accum', 'total']
   }
 );
@@ -103,7 +103,7 @@ regReducer('minus', '-', (a, b) => a - b, types.N, {
     ['[1,2,3]-4', '[-3,-2,-1]'],
     ['[10,20,30]-[1,2,3,4,5] ;shortest argument defines the length of output', '[9,18,27]'],
     ['[1,2,[3,4]]-5 ;unpacking works only to first level', '!expected number or string, got stream [3,4]'],
-    ['1.`repeat`.`fold`(minus) ;long form used as an operand', '[[1,0,-1,-2,-3,...]']],
+    ['1.repeat.fold(minus) ;long form used as an operand', '[[1,0,-1,-2,-3,...]']],
   see: ['plus', 'diff']
 });
 
@@ -117,7 +117,7 @@ regReducer('times', '*', (a, b) => a * b, types.N, {
     ['[1,2,3]*4', '[4,8,12]'],
     ['[10,20,30]*[1,2,3,4,5] ;shortest argument defines the length of output', '[10,40,90]'],
     ['[1,2,[3,4]]*5 ;unpacking works only to first level', '!expected number or string, got stream [3,4]'],
-    ['range(7).`reduce`(times) ;long form used as an operand (also see `product`, `factorial`', '5040']],
+    ['range(7).reduce(times) ;long form used as an operand (also see `product`, `factorial`)', '5040']],
   see: ['div', 'product']
 });
 
@@ -151,7 +151,7 @@ regReducer('and', '&', (a, b) => a && b, types.B, {
   cz: ['Počítá logický součin svých argumentů, tj. `true` právě tehdy, pokud všechny jsou `true`. Alternativní zápis `x&y&...`.',
     'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.'],
   cat: catg.numbers,
-  ex: [['`range`(10).`select`(#.odd & #<6)', '[1,3,5]']],
+  ex: [['range(10).select(#.odd & #<6)', '[1,3,5]']],
   see: ['or', 'not', 'every']
 });
 
@@ -161,7 +161,7 @@ regReducer('or', '|', (a, b) => a || b, types.B, {
   cz: ['Počítá logický součet svých argumentů, tj. `true` právě tehdy, pokud alespoň jeden z nich je `true`. Alternativní zápis `x|y|...`.',
     'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.'],
   cat: catg.numbers,
-  ex: [['`range`(10).`select`(#.odd | #<6)', '[1,2,3,4,5,7,9]']],
+  ex: [['range(10).select(#.odd | #<6)', '[1,2,3,4,5,7,9]']],
   see: ['and', 'not', 'some']
 });
 
@@ -212,7 +212,7 @@ regReducerS('gcd', gcd, {min: 1n}, {
   cat: catg.numbers,
   src: 'stream?',
   args: 'list?',
-  ex: [['`range`(4,8,2).gcd ;input stream', '2'],
+  ex: [['range(4,8,2).gcd ;input stream', '2'],
     ['gcd(100,125,145) ;arguments', '5']],
   see: 'lcm'
 });
@@ -223,7 +223,7 @@ regReducerS('lcm', (a, b) => a * (b / gcd(a, b)), {min: 1n}, {
   cat: catg.numbers,
   src: 'stream?',
   args: 'list?',
-  ex: [['`range`(4,8,2).lcm ;input stream', '24'],
+  ex: [['range(4,8,2).lcm ;input stream', '24'],
     ['lcm(10,12,15) ;arguments', '60']],
   see: 'gcd'
 });
@@ -248,7 +248,7 @@ R.register(['accum', 'acc', 'ac'], {
     en: ['Calculates the running total of the input stream.'],
     cz: ['Postupně přičítá hodnoty ze vstupního proudu.'],
     cat: [catg.streams, catg.numbers],
-    ex: [['`range`(5).accum', '[1,3,6,10,15]']]
+    ex: [['range(5).accum', '[1,3,6,10,15]']]
   }
 });
 
@@ -266,7 +266,7 @@ R.register(['total', 'tot', 'sum'], {
     en: ['Calculates the total of the input stream.'],
     cz: ['Součet celého vstupního proudu.'],
     cat: catg.numbers,
-    ex: [['`range`(5).total', '15']]
+    ex: [['range(5).total', '15']]
   }
 });
 
@@ -300,7 +300,7 @@ R.register('diff', {
     en: ['Returns the differences of consecutive elements of the input stream.'],
     cz: ['Vrací rozdíly mezi sousedními dvojicemi prvků vstupního proudu.'],
     cat: [catg.numbers, catg.streams],
-    ex: [['`iota`:`power`(2).diff', '[3,5,7,9,11,...]']]
+    ex: [['iota:power(2).diff', '[3,5,7,9,11,...]']]
   }
 });
 
@@ -321,7 +321,7 @@ R.register(['product', 'prod'], {
     en: ['Calculates the produce of all elements of the input stream.'],
     cz: ['Součin všech prvků vstupního proudu.'],
     cat: catg.numbers,
-    ex: [['`range`(5).product', '120']]
+    ex: [['range(5).product', '120']]
   }
 });
 
@@ -367,7 +367,7 @@ R.register(['power', 'pow'], {
     cat: [catg.numbers, catg.streams],
     args: 'base?,power',
     ex: [['2^64', '18446744073709551616'],
-      ['`iota`:power(3)', '[1,8,27,64,125,...]']],
+      ['iota:power(3)', '[1,8,27,64,125,...]']],
     see: 'sqrt'
   }
 });
@@ -395,7 +395,7 @@ R.register('mod', {
     cat: catg.numbers,
     source: 'n',
     args: 'modulus,base?',
-    ex: [['`range`(-5,5):mod(3) ;remainder is calculated ≥ 0 even for negative numbers', '[1,2,0,1,2,0,1,2,0,1,2]'],
+    ex: [['range(-5,5):mod(3) ;remainder is calculated ≥ 0 even for negative numbers', '[1,2,0,1,2,0,1,2,0,1,2]'],
       ['10.mod(5,1) ;with base=1 returns 5 instead of 0', '5']],
     see: ['div', 'divmod', 'add']
   }
@@ -431,9 +431,9 @@ R.register('modinv', {
       'Může být použito ve formě `modinv(_n,_modulus)` nebo `_n.modinv(_modulus)`.'],
     cat: catg.numbers,
     args: 'n?,modulus',
-    ex: [['`range`(1,6):modinv(7)', '[1,4,5,2,3,6]'],
+    ex: [['range(1,6):modinv(7)', '[1,4,5,2,3,6]'],
       ['range(1,6)*$', '[1,8,15,8,15,36]'],
-      ['$:`mod`(7)', '[1,1,1,1,1,1]'],
+      ['$:mod(7)', '[1,1,1,1,1,1]'],
       ['10.modinv(6)', '!10 and 6 are not coprime']]
   }
 });
@@ -465,7 +465,7 @@ R.register('add', {
     cat: catg.numbers,
     src: 'n',
     args: 'add,modulus?,base?',
-    ex: [['`range`(10,20):add(10,26,1)', '[20,21,22,23,24,25,26,1,2,3,4]']],
+    ex: [['range(10,20):add(10,26,1)', '[20,21,22,23,24,25,26,1,2,3,4]']],
     see: ['plus', 'mod']
   }
 });
@@ -484,7 +484,7 @@ R.register('abs', {
     cz: ['Absolutní hodnota `_n`.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['`range`(-3,3):abs', '[3,2,1,0,1,2,3]']]
+    ex: [['range(-3,3):abs', '[3,2,1,0,1,2,3]']]
   }
 });
 
@@ -502,7 +502,7 @@ R.register(['sign', 'sgn'], {
     cz: ['Znaménko `_n`: -1, 0 nebo 1.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['`range`(-3,3):sign', '[-1,-1,-1,0,1,1,1]']]
+    ex: [['range(-3,3):sign', '[-1,-1,-1,0,1,1,1]']]
   }
 });
 
@@ -523,8 +523,8 @@ R.register('odd', {
       'Nečíselný vstup způsobí chybu.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['`range`(10).`select`(odd)', '[1,3,5,7,9]'],
-      ['10.`nest`(`if`(odd,3*#+1,#/2)) ;Collatz sequence', '[10,5,16,8,4,2,1,...]']],
+    ex: [['range(10).select(odd)', '[1,3,5,7,9]'],
+      ['10.nest(if(odd,3*#+1,#/2)) ;Collatz sequence', '[10,5,16,8,4,2,1,...]']],
     see: 'even'
   }
 });
@@ -546,7 +546,7 @@ R.register('even', {
       'Nečíselný vstup způsobí chybu.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['`range`(10).`select`(even)', '[2,4,6,8,10]']],
+    ex: [['range(10).select(even)', '[2,4,6,8,10]']],
     see: 'odd'
   }
 });
@@ -573,7 +573,7 @@ R.register('not', {
       'Může být použito ve formě `_value.not` i `not(_value)`.'],
     cat: catg.numbers,
     args: 'value?',
-    ex: [['`range`(10).`select`(not(`isprime`)))', '[1,4,6,8,9,10]']],
+    ex: [['range(10).select(not(isprime)))', '[1,4,6,8,9,10]']],
     see: ['and', 'or']
   }
 });
@@ -675,34 +675,34 @@ function regComparer(name, sign, fun, help) {
 }
 
 regComparer('lt', '<', (a, b) => a < b, {
-  en: ['Checks if the arguments are numbers in strictly increasing order. Long form of `x&lt;y&lt;...`.'],
-  cz: ['Testuje, zda argumenty jsou čísla tvořící ostře rostoucí posloupnost. Alternativní zápis `x&lt;y&lt;...`.'],
+  en: ['Checks if the arguments are numbers in strictly increasing order. Long form of `x<y<...`.'],
+  cz: ['Testuje, zda argumenty jsou čísla tvořící ostře rostoucí posloupnost. Alternativní zápis `x<y<...`.'],
   cat: catg.numbers,
-  ex: [['1&lt;3&lt;5&lt;6', 'true'], ['1&lt;3&lt;4&lt;4', 'false']],
+  ex: [['1<3<5<6', 'true'], ['1<3<4<4', 'false']],
   see: ['le', 'gt']
 });
 
 regComparer('gt', '>', (a, b) => a > b, {
-  en: ['Checks if the arguments are numbers in strictly decreasing order. Long form of `x&gt;y...`.'],
-  cz: ['Testuje, zda argumenty jsou čísla tvořící ostře klesající posloupnost. Alternativní zápis `x&gt;y...`.'],
+  en: ['Checks if the arguments are numbers in strictly decreasing order. Long form of `x>y...`.'],
+  cz: ['Testuje, zda argumenty jsou čísla tvořící ostře klesající posloupnost. Alternativní zápis `x>y...`.'],
   cat: catg.numbers,
-  ex: [['7&gt;5&gt;3', 'true'], ['7&gt;5&gt;5&gt;3', 'false']],
+  ex: [['7>5>3', 'true'], ['7>5>5>3', 'false']],
   see: ['ge', 'lt']
 });
 
 regComparer('le', '<=', (a, b) => a <= b, {
-  en: ['Checks if the arguments are numbers in nondecreasing order. Long form of `x&lt;=y...`.'],
-  cz: ['Testuje, zda argumenty jsou čísla tvořící neklesající posloupnost. Alternativní zápis `x&lt;=y...`.'],
+  en: ['Checks if the arguments are numbers in nondecreasing order. Long form of `x<=y...`.'],
+  cz: ['Testuje, zda argumenty jsou čísla tvořící neklesající posloupnost. Alternativní zápis `x<=y...`.'],
   cat: catg.numbers,
-  ex: [['1&lt;=3&lt;=5&lt;=6', 'true'], ['1&lt;=3&lt;=4&lt;=4', 'true']],
+  ex: [['1<=3<=5<=6', 'true'], ['1<=3<=4<=4', 'true']],
   see: ['lt', 'ge']
 });
 
 regComparer('ge', '>=', (a, b) => a >= b, {
-  en: ['Checks if the arguments are numbers in nonincreasing order. Long form of `x&gt;=y...`.'],
-  cz: ['Testuje, zda argumenty jsou čísla tvořící nerostoucí posloupnost. Alternativní zápis `x&gt;=y...`.'],
+  en: ['Checks if the arguments are numbers in nonincreasing order. Long form of `x>=y...`.'],
+  cz: ['Testuje, zda argumenty jsou čísla tvořící nerostoucí posloupnost. Alternativní zápis `x>=y...`.'],
   cat: catg.numbers,
-  ex: [['7&gt;=5&gt;=3', 'true'], ['7&gt;=5&gt;=5&gt;=3', 'true']],
+  ex: [['7>=5>=3', 'true'], ['7>=5>=5>=3', 'true']],
   see: ['gt', 'le']
 });
 
@@ -1277,8 +1277,8 @@ R.register(['mantexp', 'manexp'], {
     return new Node('array', this.token, null, [new Atom(rem), new Atom(exp)]);
   },
   help: {
-    en: ['Returns a pair comprising the mantissa and exponent of `_n` in base `_base`, such that `_n = _mantissa * _base^_exponent` and `_mantissa.mod(_base) &lt;&gt; 0`.'],
-    cz: ['Vrátí dvojici obsahující mantisu a exponent čísla `_n` v bázi `_base` takové, že `_n = _mantissa * _base^_exponent` a `_mantissa.mod(_base) &lt;&gt; 0`.'],
+    en: ['Returns a pair comprising the mantissa and exponent of `_n` in base `_base`, such that `_n = _mantissa * _base^_exponent` and `_mantissa.mod(_base) <> 0`.'],
+    cz: ['Vrátí dvojici obsahující mantisu a exponent čísla `_n` v bázi `_base` takové, že `_n = _mantissa * _base^_exponent` a `_mantissa.mod(_base) <> 0`.'],
     cat: catg.numbers,
     src: 'n',
     args: 'base',
@@ -1353,8 +1353,8 @@ R.register('trirem', {
     return new Node('array', this.token, null, [new Atom(row), new Atom(inp - row * (row + 1n) / 2n)]);
   },
   help: {
-    en: ['Returns a pair `[_k,_l]` such that `_n = _k*(_k-1) + _l` and `_k &lt;= _n`.'],
-    cz: ['Vrátí dvojici čísel `[_k,_l]` takových, že `_n = _k*(_k-1) + _l` a `_k &lt;= _n`.'],
+    en: ['Returns a pair `[_k,_l]` such that `_n = _k*(_k-1) + _l` and `_k <= _n`.'],
+    cz: ['Vrátí dvojici čísel `[_k,_l]` takových, že `_n = _k*(_k-1) + _l` a `_k <= _n`.'],
     cat: catg.numbers,
     src: 'n',
     ex: [['iota.trirem', '[[1,0],[1,1],[2,0],[2,1],[2,2],...]'],

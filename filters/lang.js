@@ -63,8 +63,8 @@ R.register('foreach', {
     en: ['Applies `body` on each element of `source`. Long form of `source:body`.'],
     cz: ['Použije `body` na každý prvek `source`. Alternativní zápis `source:body`.'],
     cat: catg.base,
-    ex: [['`iota`.foreach(#^2)', '[1,4,9,16,...]'],
-      ['`iota`:`power`(2) ;short form', '[1,4,9,16,...]']],
+    ex: [['iota.foreach(#^2)', '[1,4,9,16,...]'],
+      ['iota:power(2) ;short form', '[1,4,9,16,...]']],
     src: 'source',
     args: 'body'
   }
@@ -126,7 +126,7 @@ R.register('join', {
     cat: catg.base,
     ex: [
       ['join([1,2],3,"a",[[]])', '[1,2,3,"a",[]]'],
-      ['-1~`iota`', '[-1,1,2,3,4,...]']],
+      ['-1~iota', '[-1,1,2,3,4,...]']],
     args: 'x,y,...',
     see: 'plus'
   }
@@ -174,8 +174,8 @@ R.register('zip', {
       'Čte všechny argumenty souběžně a vrací jejich prvky v n-ticích. Alternativní zápis `x%y%...`.',
       'Délka výstupu odpovídá nejkratšímu z argumentů.'],
     cat: catg.base,
-    ex: [['`abc`%`iota`', '[["a",1],["b",2],["c",3],...]'],
-      ['zip(iota,`primes`) ;long form', '[[1,2],[2,3],[3,5],[4,7],...]']],
+    ex: [['abc%iota', '[["a",1],["b",2],["c",3],...]'],
+      ['zip(iota,primes) ;long form', '[[1,2],[2,3],[3,5],[4,7],...]']],
     args: 'x,y,...'
   }
 });
@@ -260,7 +260,7 @@ R.register('part', {
       'Vrátí jeden nebo více prvků `_source`. Alternativní zápis `_source[...]`.',
       'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.'],
     cat: catg.base,
-    ex: [['`abc`[3] ;returns a single value', '"c"'], ['abc[3,1] ;returns a stream', '["c","a"]'], ['abc[`range`(1,5,2)]', '["a","c","e"]']],
+    ex: [['abc[3] ;returns a single value', '"c"'], ['abc[3,1] ;returns a stream', '["c","a"]'], ['abc[range(1,5,2)]', '["a","c","e"]']],
     args: 'source,...'
   }
 });
@@ -346,7 +346,7 @@ R.register('over', {
     cz: ['Čte všechny argumenty souběžně a n-tice jejich prvků používá jako argumenty pro `body`. Alternativní zápis `body@args`.'],
     cat: catg.base,
     ex: [['{#1^#2} @ ([3,4,5], [1,2,3])', '[3,16,125]'],
-      ['`range`@range(3)', '[[1],[1,2],[1,2,3]]']],
+      ['range@range(3)', '[[1],[1,2],[1,2,3]]']],
     src: 'body'
   }
 });
@@ -388,7 +388,7 @@ R.register('equal', {
       '-I proudy mohou být porovnávány, pokud jsou konečné.'],
     cat: catg.base,
     ex: [['1=2', 'false'], ['[1,2,3]+1 = [2,3,4]', 'true'],
-      ['`range`(3,1) = [] = []~[] = []%[]', 'true'],
+      ['range(3,1) = [] = []~[] = []%[]', 'true'],
       ['equal([],[]) ;long form', 'true']],
     see: 'ineq'
   }
@@ -491,7 +491,7 @@ R.register('assign', {
       ['a=a^2', '["a"]'],
       ['[a,b]', '[100,10]'],
       ['c=c', '!symbol "c" undefined'],
-      ['rot13=##.`shift`(13,`abc`)', '["rot13"]'],
+      ['rot13=##.shift(13,abc)', '["rot13"]'],
       ['"grfg".rot13', '"test"']],
     args: 'vars..., value',
     see: ['save', 'clear', 'vars']

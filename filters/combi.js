@@ -28,7 +28,7 @@ R.register(['factorial', 'fact', 'fac'], {
     cz: ['Faktoriál čísla `_n`.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['`iota`:factorial', '[1,2,6,24,120,720,...]'],
+    ex: [['iota:factorial', '[1,2,6,24,120,720,...]'],
       ['100.factorial', '9332621544394415268169...']],
     see: 'dfactorial'
   }
@@ -55,7 +55,7 @@ R.register(['dfactorial', 'dfact', 'dfac'], {
     cz: ['Dvojitý faktoriál čísla `_n`, tj. `n*(n-2)*...`.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['`iota`:dfactorial', '[1,2,3,8,15,48,105,...]'],
+    ex: [['iota:dfactorial', '[1,2,3,8,15,48,105,...]'],
       ['7*5*3*1', '105']],
     see: 'factorial'
   }
@@ -112,7 +112,7 @@ R.register('binom', {
     cat: catg.numbers,
     args: 'n,k?',
     ex: [['binom(6,3)', '20'],
-      ['`range`(6).`subsets`(3).`length`', '20'],
+      ['range(6).subsets(3).length', '20'],
       ['binom(6)', '[1,6,15,20,15,6,1]']],
     see: 'comb'
   }
@@ -158,7 +158,7 @@ R.register('comb', {
     cat: catg.numbers,
     args: 'k1,k2,...',
     ex: [['comb(2,2,1)', '30'],
-      ['`range`(5).`subsets`(2,2).`length`', '30']],
+      ['range(5).subsets(2,2).length', '30']],
     see: ['binom', 'rcomb']
   }
 });
@@ -180,7 +180,7 @@ R.register('rcomb', {
     cat: catg.numbers,
     args: 'k1,k2,...',
     ex: [['rcomb(2,2,1)', '15'],
-      ['`range`(5).`subsets`(2,2):`sort`(`first`).`uniq`.`length`', '15']],
+      ['range(5).subsets(2,2):sort(first).uniq.length', '15']],
     see: 'comb'
   }
 });
@@ -520,9 +520,9 @@ R.register(['perm', 'perms', 'permute'], {
       '-Funguje i pro nekonečné proudy.'],
     cat: catg.streams,
     src: 'source',
-    ex: [['"abba".`split`.perm:`cat`', '["abba","baba","bbaa","aabb","abab","baab"]'],
-      ['`iota`.perm[10^10]', '[14,7,10,9,12,5,1,3,11,4,...]'],
-      ['`range`(10).perm.`rnd`', '[3,2,9,6,5,8,1,4,10,7]']]
+    ex: [['"abba".split.perm:cat', '["abba","baba","bbaa","aabb","abab","baab"]'],
+      ['iota.perm[10^10]', '[14,7,10,9,12,5,1,3,11,4,...]'],
+      ['range(10).perm.random', '[3,2,9,6,5,8,1,4,10,7]']]
   }
 });
 

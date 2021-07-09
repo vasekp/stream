@@ -106,7 +106,7 @@ R.register(['split', 'chars'], {
     ex: [['"test string".split()', '["t","e","s","t"," ",...]'],
       ['"test string".split(3)', '["tes","t s","tri","ng"]'],
       ['"test string".split(" ")', '["test","string"]'],
-      ['"test string".split(`abc`~"st")', '["t","e","st"," ","st",...]']]
+      ['"test string".split(abc~"st")', '["t","e","st"," ","st",...]']]
   }
 });
 
@@ -123,9 +123,9 @@ R.register('cat', {
       '-If `_glue` is given, it is used between consecutive strings.'],
     cz: ['Sloučí proud řetězců do jednoho řetězce.'],
     cat: catg.strings,
-    ex: [['"one two three".`split`(" ").cat(",")', '"one,two,three"'],
-      ['`abc`[`pi`.`while`(#>0)].cat', '"cadaeibfecehigicbchdfbfdcchcbgie"'],
-      ['abc.`perm`.`rnd`.cat', '"izsqefyhmlwjkrgdcptauxbvno"']],
+    ex: [['"one two three".split(" ").cat(",")', '"one,two,three"'],
+      ['abc[pi.while(#>0)].cat', '"cadaeibfecehigicbchdfbfdcchcbgie"'],
+      ['abc.perm.random.cat', '"izsqefyhmlwjkrgdcptauxbvno"']],
     args: 'glue?',
     see: 'plus'
   }
@@ -157,8 +157,8 @@ R.register('ord', {
     cat: catg.strings,
     src: 'char',
     args: 'alphabet?',
-    ex: [['"😀".ord.`tobase`(16)', '"1f600"'],
-      ['"test".`split`:ord(`abc`)', '[20,5,19,20]']],
+    ex: [['"😀".ord.tobase(16)', '"1f600"'],
+      ['"test".split:ord(abc)', '[20,5,19,20]']],
     see: ['ords', 'chr']
   }
 });
@@ -190,8 +190,8 @@ R.register('chr', {
     cat: catg.strings,
     src: 'index',
     args: 'alphabet?',
-    ex: [['`range`(127761,127768):chr', '["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"]'],
-      ['[20,5,19,20]:chr(`abc`)', '["t","e","s","t"]']],
+    ex: [['range(127761,127768):chr', '["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"]'],
+      ['[20,5,19,20]:chr(abc)', '["t","e","s","t"]']],
     see: ['ord', 'chrm']
   }
 });
@@ -217,9 +217,9 @@ R.register('chrm', {
     cat: catg.strings,
     src: 'index',
     args: 'alphabet',
-    ex: [['"test".`ords`(`abc`)+13', '[33,18,32,33]'],
-      ['$:chrm(abc).`cat`', '"grfg"'],
-      ['`range`(24,28):chrm(abc)', '["x","y","z","a","b"]']]
+    ex: [['"test".ords(abc)+13', '[33,18,32,33]'],
+      ['$:chrm(abc).cat', '"grfg"'],
+      ['range(24,28):chrm(abc)', '["x","y","z","a","b"]']]
   }
 });
 
@@ -244,7 +244,7 @@ R.register('ords', {
     cat: catg.strings,
     src: 'string',
     args: 'alphabet',
-    ex: [['abch=`abc`.`take`(8)~"ch"~abc.`drop`(8) ;Czech alphabet without diacritics', '["abch"]'],
+    ex: [['abch=abc.take(8)~"ch"~abc.drop(8) ;Czech alphabet without diacritics', '["abch"]'],
       ['"czech".ords(abch)', '[3,27,5,9]']]
   }
 });
@@ -510,7 +510,7 @@ R.register('ends', {
     cat: catg.strings,
     src: 'string',
     args: 'postfix',
-    ex: [['"this is a test".`split`(" ").`select`(ends("s"))', '["this","is"]']],
+    ex: [['"this is a test".split(" ").select(ends("s"))', '["this","is"]']],
     see: 'starts'
   }
 });
@@ -532,7 +532,7 @@ R.register('starts', {
     cat: catg.strings,
     src: 'string',
     args: 'prefix',
-    ex: [['"this is a test".`split`(" ").`select`(starts("t"))', '["this","test"]']],
+    ex: [['"this is a test".split(" ").select(starts("t"))', '["this","test"]']],
     see: 'ends'
   }
 });
@@ -565,8 +565,8 @@ R.register('shift', {
     cat: catg.strings,
     src: 'string',
     args: 'count,alphabet',
-    ex: [['"caesar".`nest`(shift(1,`abc`))', '["caesar","dbftbs","ecguct",...]'],
-      ['"grfg".shift(13,`abc`)', '"test"']]
+    ex: [['"caesar".nest(shift(1,abc))', '["caesar","dbftbs","ecguct",...]'],
+      ['"grfg".shift(13,abc)', '"test"']]
   }
 });
 

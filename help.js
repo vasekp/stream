@@ -29,6 +29,11 @@ export const help = {
   }
 };
 
+const entities = {
+  '<': '&lt;',
+  '>': '&gt;',
+  '&': '&amp;'};
+
 async function populate() {
   if(document.body.id !== 'help')
     return;
@@ -93,15 +98,17 @@ async function populate() {
           p.classList.add('warn');
           line = line.substring(1);
         }
-        const html = line.replace(/`([^``]*)`/g, (_, m) => {
-          return '<i-pre>' + m.replace(/(?<!&)\w+/g, mm => {
-            if(_map.has(mm) && mm !== name)
-              return `<a href="#id-${mm}">${mm}</a>`;
-            else if(mm[0] === '_')
-              return mm.substring(1);
-            else
-              return mm;
-          }) + '</i-pre>';
+        const html = line
+          .replace(/[<>&]/g, c => entities[c])
+          .replace(/`([^``]*)`/g, (_, m) => {
+            return '<i-pre>' + m.replace(/(?<!&)\w+/g, mm => {
+              if(_map.has(mm) && mm !== name)
+                return `<a href="#id-${mm}">${mm}</a>`;
+              else if(mm[0] === '_')
+                return mm.substring(1);
+              else
+                return mm;
+            }) + '</i-pre>';
         });
         p.innerHTML = html;
         sec.append(p);
@@ -128,12 +135,16 @@ async function populate() {
       exDiv.classList.add('stream-example');
       let hi = 1;
       for(let [inp, out] of obj.ex) {
-        const html = inp.replace(/`([^``]*)`/g, (_, m) => {
-          if(_map.has(m))
-            return `<a href="#id-${m}">${m}</a>`;
-          else
-            return m;
-        });
+        const html = inp
+          .replace(/[<>&]/g, c => entities[c])
+          .replace(/(?<!&)\w+/g, mm => {
+            if(_map.has(mm) && mm !== name)
+              return `<a href="#id-${mm}">${mm}</a>`;
+            else if(mm[0] === '_')
+              return mm.substring(1);
+            else
+              return mm;
+          });
         const d1 = document.createElement('div');
         d1.classList.add('input');
         d1.innerHTML = html;
