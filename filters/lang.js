@@ -399,7 +399,7 @@ R.register('ineq', {
   numArg: 2,
   prepare(scope) {
     const nnode = this.prepareAll(scope);
-    if(nnode.args.every(arg => arg.isAtom))
+    if(!scope.partial && nnode.args.every(arg => arg.isAtom))
       return new Atom(!compareStreams(...nnode.args));
     else
       return nnode;
