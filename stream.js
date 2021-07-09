@@ -23,7 +23,11 @@ await fs.readFile('.stream_vars')
 
 const prompt = repl.start({eval: str => {
   try {
+    if(str.includes(';'))
+      str = str.substring(0, str.indexOf(';'));
     str = str.replace(/[\n\r]+$/, '');
+    if(!str.replace(/[ \t\n\r]/g, ''))
+      return;
     let node = parse(str);
     if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
       node = node.toAssign();
