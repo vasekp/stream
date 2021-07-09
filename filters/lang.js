@@ -321,7 +321,7 @@ R.register('over', {
           if(rs.some(r => r.done))
             break;
           const vs = rs.map(r => r.value);
-          yield body.apply(vs);
+          yield body.applyOver(vs);
         }
       })(),
       {len}
@@ -345,7 +345,8 @@ R.register('over', {
     en: ['Reads all arguments concurrently and uses their elements as arguments for `body`. Long form of `body@args`.'],
     cz: ['Čte všechny argumenty souběžně a n-tice jejich prvků používá jako argumenty pro `body`. Alternativní zápis `body@args`.'],
     cat: catg.base,
-    ex: [['{#1^#2} @ ([3,4,5], [1,2,3])', '[3,16,125]']],
+    ex: [['{#1^#2} @ ([3,4,5], [1,2,3])', '[3,16,125]'],
+      ['`range`@range(3)', '[[1],[1,2],[1,2,3]]']],
     src: 'body'
   }
 });

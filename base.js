@@ -174,6 +174,12 @@ export class Node extends Base {
     return this.bare ? this.modify({args}).prepare({}) : this.prepare({outer: {args}});
   }
 
+  applyOver(args) {
+    if(this.args.length)
+      throw new StreamError(`already has arguments`);
+    return this.modify({args}).prepare({});
+  }
+
   check(skipCheck = false) {
     if(skipCheck)
       return this;
@@ -324,12 +330,6 @@ export class Block extends Node {
     const pnode = this.prepareAll(scope);
     const pbody = this.body.prepare({...scope, outer: {src: pnode.src || scope.src, args: pnode.args, partial: scope.partial}});
     return scope.partial ? pnode.modify({body: pbody}) : pbody;
-  }
-
-  apply(args) {
-    if(this.args.length)
-      throw new StreamError(`already has arguments`);
-    return this.modify({args}).prepare({});
   }
 
   toString() {

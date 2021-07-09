@@ -1272,7 +1272,7 @@ R.register('includes', {
     cat: catg.streams,
     src: 'source',
     args: 'value',
-    ex: [['"The quick brown fox".`lcase`.`split`.includes("d")', 'false']],
+    ex: [['"The quick brown fox".`lcase`.`split`.includes@["d","f"]', '[false,true]']],
     see: 'element'
   }
 });
