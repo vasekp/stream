@@ -506,7 +506,7 @@ R.register(['sign', 'sgn'], {
   }
 });
 
-R.register('odd', {
+R.register(['odd', 'isodd'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
@@ -529,7 +529,7 @@ R.register('odd', {
   }
 });
 
-R.register('even', {
+R.register(['even', 'iseven'], {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
