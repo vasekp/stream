@@ -580,7 +580,7 @@ R.register('not', {
 
 R.register(['every', 'each', 'all'], {
   reqSource: true,
-  numArg: 1,
+  maxArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
@@ -590,25 +590,27 @@ R.register(['every', 'each', 'all'], {
     const sIn = this.src.evalStream({finite: true});
     const cond = this.args[0];
     for(const value of sIn)
-      if(!cond.prepare({src: value}).evalAtom('boolean'))
+      if(!(cond ? cond.prepare({src: value}) : value).evalAtom('boolean'))
         return new Atom(false);
     return new Atom(true);
   },
   help: {
-    en: ['Returns `true` only if evaluating `_condition` on every element of `_source` gives `true`, `false` otherwise.'],
-    cz: ['Vrátí `true` pokud podmínka `_condition` vyhodnocená v každém prvku proudu `_source` dává `true`, jinak `false`.'],
+    en: ['Returns `true` only if evaluating `_condition` on every element of `_source` gives `true`, `false` otherwise.',
+      'If `_condition` is omitted, the elements of `_source` must be boolean values themselves.'],
+    cz: ['Vrátí `true` pokud podmínka `_condition` vyhodnocená v každém prvku proudu `_source` dává `true`, jinak `false`.',
+      'Jestliže `_condition` není poskytnuta, prvky `_source` musí samy být pravdivostními hodnotami.'],
     cat: catg.numbers,
     src: 'source',
-    args: 'condition',
+    args: 'condition?',
     ex: [['[5,7,1,9].all(odd)', 'true'],
-      ['ineq@([2,3,4,1],range(4)).all(#)', 'true', 'no number in its right place?', 'žádné číslo na svém místě?']],
+      ['ineq@([2,3,4,1],range(4)).all', 'true', 'no number in its right place?', 'žádné číslo na svém místě?']],
     see: 'some'
   }
 });
 
 R.register(['some', 'any'], {
   reqSource: true,
-  numArg: 1,
+  maxArg: 1,
   prepare(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
@@ -618,18 +620,20 @@ R.register(['some', 'any'], {
     const sIn = this.src.evalStream({finite: true});
     const cond = this.args[0];
     for(const value of sIn)
-      if(cond.prepare({src: value}).evalAtom('boolean'))
+      if((cond ? cond.prepare({src: value}) : value).evalAtom('boolean'))
         return new Atom(true);
     return new Atom(false);
   },
   help: {
-    en: ['Returns `true` if evaluating `_condition` on some element of `_source` gives `true`, `false` otherwise.'],
-    cz: ['Vrátí `true` pokud podmínka `_condition` vyhodnocená na některém prvku proudu `_source` dává `true`, jinak `false`.'],
+    en: ['Returns `true` if evaluating `_condition` on some element of `_source` gives `true`, `false` otherwise.',
+      'If `_condition` is omitted, the elements of `_source` must be boolean values themselves.'],
+    cz: ['Vrátí `true` pokud podmínka `_condition` vyhodnocená na některém prvku proudu `_source` dává `true`, jinak `false`.',
+      'Jestliže `_condition` není poskytnuta, prvky `_source` musí samy být pravdivostními hodnotami.'],
     cat: catg.numbers,
     src: 'source',
-    args: 'condition',
+    args: 'condition?',
     ex: [['[4,6,1,8].some(odd)', 'true'],
-      ['equal@([2,3,1,4],range(4)).some(#)', 'true', 'does some number appear in its place?', 'je některé číslo na svém místě?']],
+      ['equal@([2,3,1,4],range(4)).some', 'true', 'does some number appear in its place?', 'je některé číslo na svém místě?']],
     see: 'every'
   }
 });
