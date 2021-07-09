@@ -107,9 +107,16 @@ async function populate() {
       const p = document.createElement('p');
       let html = obj.en ? 'See also ' : 'See ';
       if(obj.see instanceof Array)
-        html += obj.see.map(ident => `<i-pre><a href="#id-${ident}">${ident}</a></i-pre>`).join(', ');
-      else
+        html += obj.see.map(ident => {
+          if(!_map.has(ident))
+            console.warn(`Broken help link ${obj.names[0]} => ${ident}`);
+          return `<i-pre><a href="#id-${ident}">${ident}</a></i-pre>`
+        }).join(', ');
+      else {
+        if(!_map.has(obj.see))
+          console.warn(`Broken help link ${obj.names[0]} => ${obj.see}`);
         html += `<i-pre><a href="#id-${obj.see}">${obj.see}</a></i-pre>`;
+      }
       p.innerHTML = html + '.';
       sec.append(p);
     }
