@@ -514,15 +514,19 @@ R.register(['perm', 'perms', 'permute'], {
     }
   },
   help: {
-    en: ['Lists all distinct permutations of `_source`.',
-      '-Also works with infinite streams.'],
-    cz: ['Všechny různé permutace proudu `_source.',
-      '-Funguje i pro nekonečné proudy.'],
+    en: ['Without `_order`: lists all distinct permutations of `_source`.',
+      'If `_order` is given, it must be a valid permutation of `range(_order.length)`. Returns a permutation of `_source` where the first `_order.length` elements are taken in the given order and the rest is left unchanged.',
+      '-Both forms also work with infinite streams.'],
+    cz: ['Bez argumentu `_order`: všechny různé permutace proudu `_source.',
+      'Jestliže je `_order_ dáno, musí se jednat o validní permutaci `range(_order.length)`. `perm` potom vrátí permutaci `_source`, kde prvních `_order.length` prvků je bráno v daném pořadí a zbytek ponechán nezměněn.',
+      '-Obě formy fungují i pro nekonečné proudy.'],
     cat: catg.streams,
     src: 'source',
+    args: 'order?',
     ex: [['"abba".split.perm:cat', '["abba","baba","bbaa","aabb","abab","baab"]'],
       ['iota.perm[10^10]', '[14,7,10,9,12,5,1,3,11,4,...]'],
-      ['range(10).perm.random', '[3,2,9,6,5,8,1,4,10,7]']]
+      ['range(10).perm.random', '[3,2,9,6,5,8,1,4,10,7]'],
+      ['abc.perm([6,1,2,5,4,3]).cat', '"fabedcghijklmnopqrstuvwxyz"']]
   }
 });
 
