@@ -8,12 +8,8 @@ R.register('clear', {
   reqSource: false,
   minArg: 1,
   prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    this.args.forEach(arg => arg.checkType(types.symbol));
-    const mod = {src: null};
-    if(scope.register)
-      mod.meta = {...this.meta, _register: scope.register};
-    return this.modify(mod).check(scope.partial);
+    return this.prepareBase(scope, {}, null, {_register: scope.register},
+      arg => arg.checkType(types.symbol));
   },
   eval() {
     const reg = this.meta._register;
@@ -44,10 +40,7 @@ R.register('vars', {
   reqSource: false,
   numArg: 0,
   prepare(scope) {
-    const mod = {src: null};
-    if(scope.register)
-      mod.meta = {...this.meta, _register: scope.register};
-    return this.modify(mod).check(scope.partial);
+    return this.prepareBase(scope, {}, null, {_register: scope.register});
   },
   eval() {
     const reg = this.meta._register;
@@ -73,14 +66,10 @@ R.register('desc', {
   reqSource: true,
   numArg: 0,
   prepare(scope) {
-    const src = this.src
-      ? this.src.prepare({...scope, partial: true, expand: !scope.partial})
-      : scope.src;
-    const nnode = this.modify({src}).check(scope.partial);
-    if(scope.partial)
-      return nnode;
-    else
-      return new Atom(nnode.src.toString());
+    return this.prepareBase(scope, {partial: true, expand: !scope.partial}, null);
+  },
+  preeval() {
+    return new Atom(this.src.toString());
   },
   help: {
     en: ['Provides a valid input-form description of the input stream.'],
@@ -105,20 +94,18 @@ R.register('desc', {
 R.register('save', {
   minArg: 1,
   prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.map(arg => {
       arg.checkType([types.symbol, types.expr]);
       if(arg.type === types.symbol)
         return arg;
-      else if(arg.token.value !== '=')
-        throw new StreamError(`expected assignment, found ${arg.desc()}`);
+      else if(arg.token.value === '=')
+        return arg.toAssign();
       else
-        return arg.toAssign().prepare({...scope, src, partial: true, expand: !scope.partial});
+        throw new StreamError(`expected assignment, found ${arg.desc()}`);
     });
-    const mod = {src: null, args};
-    if(scope.register)
-      mod.meta = {...this.meta, _register: scope.register};
-    return this.modify(mod).check(scope.partial);
+    return this
+      .modify({args})
+      .prepareBase(scope, {}, {partial: true, expand: !scope.partial}, {_register: scope.register});
   },
   eval() {
     const innerReg = this.meta._register;
@@ -155,12 +142,8 @@ R.register('save', {
 R.register(['restore', 'revert'], {
   minArg: 1,
   prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.checkType(types.symbol));
-    const mod = {src: null, args};
-    if(scope.register)
-      mod.meta = {...this.meta, _register: scope.register};
-    return this.modify(mod).check(scope.partial);
+    return this.prepareBase(scope, {}, null, {_register: scope.register},
+      arg => arg.checkType(types.symbol));
   },
   eval() {
     const innerReg = this.meta._register;

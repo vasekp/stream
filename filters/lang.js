@@ -298,9 +298,7 @@ R.register('over', {
   reqSource: true,
   minArg: 1,
   prepare(scope) {
-    const src = this.src ? this.src.prepare({...scope, partial: true}) : scope.src;
-    const args = this.args.map(arg => arg.prepare(scope));
-    return this.modify({src, args}).check(scope.partial);
+    return this.prepareBase(scope, {partial: true}, {src: scope.src});
   },
   eval() {
     const body = this.src.checkType([types.symbol, types.expr]);
@@ -425,17 +423,18 @@ R.register('assign', {
   reqSource: false,
   minArg: 2,
   prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.slice();
-    if(args.length) {
-      const body = args.pop().prepare({...scope, src, partial: true, expand: !scope.partial});
-      args.forEach(arg => arg.checkType(types.symbol));
-      args.push(body);
-    }
-    const mod = {src: null, args};
-    if(scope.register)
-      mod.meta = {...this.meta, _register: scope.register};
-    return this.modify(mod).check(scope.partial);
+    return this.prepareBase(scope, {},
+      (arg, ix, arr) => {
+        if(ix === arr.length - 1) // body
+          return {partial: true, expand: !scope.partial};
+        else // identifiers
+          return null;
+      },
+      {_register: scope.register},
+      (arg, ix, arr) => {
+        if(ix < arr.length - 1)
+          arg.checkType(types.symbol);
+      });
   },
   eval() {
     const args = this.args.slice();

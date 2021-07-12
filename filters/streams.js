@@ -925,18 +925,11 @@ R.register('map2', {
 R.register('if', {
   numArg: 3,
   prepare(scope) {
-    // can't replace by Node.prototype.prepareForeach
-    // because src is not kept in pnode (and thus not exposed)
-    // unless we have reqSource (which 'if' shouldn't have).
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    const pnode = this.modify({src, args}).check(scope.partial);
-    if(scope.partial)
-      return pnode;
-    else {
-      const val = pnode.args[0].prepare({...scope, src}).evalAtom('boolean');
-      return pnode.args[val ? 1 : 2].prepare({...scope, src});
-    }
+    return this.prepareBase(scope, {}, {partial: true});
+  },
+  preeval() {
+    const val = this.args[0].prepare({}).evalAtom('boolean');
+    return this.args[val ? 1 : 2].prepare({});
   },
   help: {
     en: ['Evaluates first argument as a boolean value. If this produces `true`, returns second, if `false`, third argument.',
@@ -1451,36 +1444,36 @@ R.register('isstream', {
 R.register('with', {
   minArg: 2,
   prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.slice();
-    if(args.length) {
-      const body = args.pop().prepare({...scope, src, register: undefined, partial: true});
-      args.forEach((arg, ix) => {
-        if(arg.token.value !== '=')
+    const args = this.args.map((arg, ix, arr) => {
+      if(ix < arr.length - 1) {
+        if(arg.token.value === '=')
+          return arg.toAssign();
+        else
           throw new StreamError(`expected assignment, found ${arg.desc()}`);
-        args[ix] = arg.toAssign().prepare({...scope, src, partial: true, expand: !scope.partial});
-      });
-      args.push(body);
-    }
-    const mod = {src: null, args};
-    if(scope.register)
-      mod.meta = {...this.meta, _register: scope.register};
-    const pnode = this.modify(mod).check(scope.partial);
-    if(debug)
-      console.log(`prepare ${this.toString()} stage 1 => ${pnode.toString()}`);
-    if(scope.partial)
-      return pnode;
-    else {
-      const outerReg = pnode.meta._register;
-      if(!outerReg)
-        throw new Error('register not defined');
-      const innerReg = outerReg.child();
-      const args = pnode.args.slice();
-      const body = args.pop();
-      for(const arg of args)
-        arg.prepare({register: innerReg}).eval();
-      return body.prepare({...scope, register: innerReg});
-    }
+      } else
+        return arg;
+    });
+    return this
+      .modify({args})
+      .prepareBase(scope, {},
+        (arg, ix, arr) => {
+          if(ix === arr.length - 1) // body
+            return {register: undefined, partial: true};
+          else // assignments
+            return {partial: true, expand: !scope.partial};
+        },
+        {_register: scope.register});
+  },
+  preeval() {
+    const outerReg = this.meta._register;
+    if(!outerReg)
+      throw new Error('register not defined');
+    const innerReg = outerReg.child();
+    const args = this.args.slice();
+    const body = args.pop();
+    for(const arg of args)
+      arg.prepare({register: innerReg}).eval();
+    return body.prepare({register: innerReg});
   },
   help: {
     en: ['Allows temporary assignments to be made for the scope of `_body`.',

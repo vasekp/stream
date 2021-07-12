@@ -182,32 +182,45 @@ export class Node extends Base {
       return this;
   }
 
-  prepareDefault(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src}));
+  prepareBase(scope, srcOpts, argOpts, metaAdd = {}, extraChecks) {
+    let src = this.src ? this.src.prepare({...scope, ...srcOpts}) : scope.src;
+    const argOptsFn = typeof argOpts === 'function' ? argOpts : _ => argOpts;
+    const args = this.args.map((arg, ...aa) => {
+      const argsAdd = argOptsFn(arg, ...aa);
+      if(argsAdd !== null)
+        return arg.prepare({...scope, src, ...argsAdd});
+      else
+        return arg;
+    });
+    if(!scope.partial && this.reqSource === false)
+      src = null;
+    const meta = Object.keys(metaAdd).some(key => metaAdd[key] !== undefined) ? {...this.meta} : this.meta;
+    for(const key in metaAdd)
+      if(metaAdd[key] !== undefined)
+        meta[key] = metaAdd[key];
     const mnode = this
-      .modify({src: !scope.partial && this.reqSource === false ? null : src, args})
+      .modify({src, args, meta})
       .check(scope.partial);
-    if(!scope.partial && mnode.preeval)
+    if(scope.partial)
+      return mnode;
+    if(extraChecks)
+      mnode.args.forEach((...aa) => extraChecks(...aa));
+    if(mnode.preeval)
       return mnode.preeval();
     else
       return mnode;
+  }
+
+  prepareDefault(scope) {
+    return this.prepareBase(scope, {}, {});
   }
 
   prepareForeach(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    const mnode = this.modify({src, args}).check(scope.partial);
-    if(!scope.partial && mnode.preeval)
-      return mnode.preeval();
-    else
-      return mnode;
+    return this.prepareBase(scope, {}, {src: undefined, partial: true});
   }
 
   prepareFold(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
+    return this.prepareBase(scope, {}, {src: undefined, outer: undefined, partial: true});
   }
 
   apply(args) {
@@ -229,7 +242,10 @@ export class Node extends Base {
       throw new StreamError(`requires source`);
     if(this.numArg === 0 && this.args.length > 0)
       throw new StreamError(`does not allow arguments`);
-    if(this.numArg !== undefined && this.args.length !== this.numArg)
+    if(this.numArg instanceof Array) {
+      if(!this.numArg.includes(this.args.length))
+        throw new StreamError(`${this.numArg.join(' or ')} arguments required`);
+    } else if(this.numArg !== undefined && this.args.length !== this.numArg)
       throw new StreamError(`exactly ${this.numArg} argument(s) required`);
     if(this.minArg !== undefined && this.args.length < this.minArg)
       throw new StreamError(`at least ${this.minArg} argument(s) required`);

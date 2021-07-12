@@ -998,20 +998,16 @@ R.register(['random', 'rnd', 'sample'], {
   maxArg: 3,
   sourceOrArgs: 2,
   prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src}));
-    const nnode = this.modify({src, args,
-      meta: scope.seed ? {...this.meta, _seed: scope.seed} : this.meta
-    }).check(scope.partial);
-    if(scope.partial)
-      return nnode;
-    if(nnode.args.length === 2) {
-      /*** 2-arg: min, max - resolve in prepare() ***/
-      const min = nnode.args[0].evalNum();
-      const max = nnode.args[1].evalNum();
-      return new Atom(rnd1(nnode.meta._seed, min, max));
+    return this.prepareBase(scope, {}, {}, {_seed: scope.seed});
+  },
+  preeval() {
+    if(this.args.length === 2) {
+      /*** 2-arg: min, max - resolve in preeval() ***/
+      const min = this.args[0].evalNum();
+      const max = this.args[1].evalNum();
+      return new Atom(rnd1(this.meta._seed, min, max));
     } else
-      return nnode;
+      return this;
   },
   eval() {
     if(this.args.length === 3) {
@@ -1100,18 +1096,10 @@ R.register(['random', 'rnd', 'sample'], {
 });
 
 R.register(['rndstream', 'rnds'], {
-  minArg: 0,
-  maxArg: 2,
-  sourceOrArgs: 2,
+  numArg: [0, 2],
+  sourceOrArgs: 1,
   prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src}));
-    const nnode = this.modify({src, args,
-      meta: scope.seed ? {...this.meta, _seed: scope.seed} : this.meta
-    }).check(scope.partial);
-    if(!scope.partial && nnode.args.length === 1)
-      throw new StreamError('zero or two arguments required');
-    return nnode;
+    return this.prepareBase(scope, {}, {}, {_seed: scope.seed});
   },
   eval() {
     if(this.args.length === 2) {
