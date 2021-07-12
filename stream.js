@@ -32,7 +32,7 @@ const prompt = repl.start({eval: str => {
     if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
       node = node.toAssign();
     node = node.timed(n => n.prepare({history, register: sessReg, seed: RNG.seed()}));
-    const out = node.timed(n => n.writeout());
+    const out = node.timed(n => n.eval().writeout());
     console.log(`$${history.add(node)}: ${out}`);
   } catch(e) {
     if(e instanceof ParseError) {

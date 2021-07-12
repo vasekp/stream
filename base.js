@@ -78,6 +78,18 @@ class Base {
   static timed(func, limit = DEFTIME) {
     return Base.prototype.timed(func, limit);
   }
+
+  writeout(maxLen = DEFLEN) {
+    let d = '';
+    for(const s of this.writeout_gen()) {
+      d += s;
+      if(d.length > maxLen) {
+        d = d.substring(0, maxLen - 3) + '...';
+        break;
+      }
+    }
+    return d;
+  }
 }
 
 export class Node extends Base {
@@ -233,74 +245,8 @@ export class Node extends Base {
     return ret;
   }
 
-  writeout(maxLen = DEFLEN) {
-    let d = '';
-    for(const s of this.writeout_gen()) {
-      d += s;
-      if(d.length > maxLen) {
-        d = d.substring(0, maxLen - 3) + '...';
-        break;
-      }
-    }
-    return d;
-  }
-
   *writeout_gen() {
-    const str = this.eval();
-    if(str.isAtom)
-      yield str.toString();
-    else {
-      yield '[';
-      let first = true;
-      for(const value of str) {
-        if(!first)
-          yield ',';
-        first = false;
-        yield* value.writeout_gen();
-      }
-      yield ']';
-    }
-  }
-}
-
-export class Atom extends Node {
-  constructor(val, meta = {}) {
-    super(null, null, null, [], meta);
-    this.isAtom = true;
-    this.value = val = typeof val === 'number' ? BigInt(val) : val;
-    this.type = typeof val === 'bigint' ? 'number' : typeof val; // displayed to user
-  }
-
-  modify() {
-    return this;
-  }
-
-  prepare() {
-    return this;
-  }
-
-  eval() {
-    return this;
-  }
-
-  toString() {
-    switch(this.type) {
-      case types.N:
-      case types.B:
-        return this.value.toString();
-      case types.S:
-        return `"${this.value.replace(/"|"|\\/g, '\\$&')}"`; // " included once confuses Vim
-      default:
-        throw new Error(`unknown atom type ${typeof this.value}`);
-    }
-  }
-
-  numValue(opts = {}) {
-    return checkBounds(this.checkType(types.N).value, opts);
-  }
-
-  static format(v) {
-    return (new Atom(v)).toString();
+    throw new Error('Node.prototype.writeout_gen()');
   }
 }
 
@@ -369,6 +315,51 @@ export class CustomNode extends Block {
   }
 }
 
+export class Atom extends Node {
+  constructor(val, meta = {}) {
+    super(null, null, null, [], meta);
+    this.isAtom = true;
+    this.value = val = typeof val === 'number' ? BigInt(val) : val;
+    this.type = typeof val === 'bigint' ? 'number' : typeof val; // displayed to user
+  }
+
+  modify() {
+    return this;
+  }
+
+  prepare() {
+    return this;
+  }
+
+  eval() {
+    return this;
+  }
+
+  toString() {
+    switch(this.type) {
+      case types.N:
+      case types.B:
+        return this.value.toString();
+      case types.S:
+        return `"${this.value.replace(/"|"|\\/g, '\\$&')}"`; // " included once confuses Vim
+      default:
+        throw new Error(`unknown atom type ${typeof this.value}`);
+    }
+  }
+
+  numValue(opts = {}) {
+    return checkBounds(this.checkType(types.N).value, opts);
+  }
+
+  *writeout_gen() {
+    yield this.toString();
+  }
+
+  static format(v) {
+    return (new Atom(v)).toString();
+  }
+}
+
 export class Stream extends Base {
   constructor(node, iter, opts) {
     super();
@@ -407,6 +398,18 @@ export class Stream extends Base {
     if(this.len === null)
       throw new StreamError('infinite stream');
     return this;
+  }
+
+  *writeout_gen() {
+    yield '[';
+    let first = true;
+    for(const value of this) {
+      if(!first)
+        yield ',';
+      first = false;
+      yield* value.eval().writeout_gen();
+    }
+    yield ']';
   }
 }
 
