@@ -104,7 +104,7 @@ export class Node extends Base {
     this.type = this.bare ? types.symbol : types.expr;
     const rec = ident ? mainReg.find(this.ident) : null;
     if(rec) {
-      this.known = true;
+      this.prepare = this.prepareDefault;
       Object.assign(this, rec);
       if(this.sourceOrArgs !== undefined)
         this.reqSource = this.args.length < this.sourceOrArgs;
@@ -137,6 +137,15 @@ export class Node extends Base {
           return nnode;
         };
       }
+      const pPE = this.preeval;
+      if(pPE) {
+        this.preeval = _ => {
+          const nnode = pPE.call(this);
+          if(nnode !== this)
+            console.log(`preeval ${this.toString()} => ${nnode.toString()}`);
+          return nnode;
+        };
+      }
     }
   }
 
@@ -159,10 +168,9 @@ export class Node extends Base {
     return this.modify({...what, src, args}, ...opt);
   }
 
+  // overwritten in constructor for known symbols
   prepare(scope) {
-    if(this.known)
-      return this.prepareAll(scope);
-    else if(scope.register) {
+    if(scope.register) {
       const rec = scope.register.find(this.ident);
       if(rec)
         return new CustomNode(this.ident, this.token, rec.body,
@@ -174,10 +182,32 @@ export class Node extends Base {
       return this;
   }
 
-  prepareAll(scope) {
+  prepareDefault(scope) {
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.map(arg => arg.prepare({...scope, src}));
-    return this.modify({src: !scope.partial && this.reqSource === false ? null : src, args}).check(scope.partial);
+    const mnode = this
+      .modify({src: !scope.partial && this.reqSource === false ? null : src, args})
+      .check(scope.partial);
+    if(!scope.partial && mnode.preeval)
+      return mnode.preeval();
+    else
+      return mnode;
+  }
+
+  prepareForeach(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
+    const mnode = this.modify({src, args}).check(scope.partial);
+    if(!scope.partial && mnode.preeval)
+      return mnode.preeval();
+    else
+      return mnode;
+  }
+
+  prepareFold(scope) {
+    const src = this.src ? this.src.prepare(scope) : scope.src;
+    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
+    return this.modify({src, args}).check(scope.partial);
   }
 
   apply(args) {
@@ -273,8 +303,11 @@ export class Block extends Node {
   }
 
   prepare(scope) {
-    const pnode = this.prepareAll(scope);
-    const pbody = this.body.prepare({...scope, outer: {src: pnode.src || scope.src, args: pnode.args, partial: scope.partial}});
+    const pnode = this.prepareDefault(scope);
+    const pbody = this.body.prepare({...scope, outer: {
+      src: pnode.src || scope.src,
+      args: pnode.args,
+      partial: scope.partial}});
     return scope.partial ? pnode.modify({body: pbody}) : pbody;
   }
 

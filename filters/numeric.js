@@ -9,12 +9,11 @@ function regReducer(name, sign, fun, type, help) {
   R.register(name, {
     reqSource: false,
     minArg: 2,
-    prepare(scope) {
-      const nnode = this.prepareAll(scope);
-      if(!scope.partial && nnode.args.every(arg => arg.isAtom))
-        return new Atom(nnode.args.map(arg => arg.checkType(type).value).reduce(fun));
+    preeval() {
+      if(this.args.every(arg => arg.isAtom))
+        return new Atom(this.args.map(arg => arg.checkType(type).value).reduce(fun));
       else
-        return nnode;
+        return this;
     },
     eval() {
       const is = this.args
@@ -168,16 +167,13 @@ regReducer('or', '|', (a, b) => a || b, types.B, {
 function regReducerS(name, fun, numOpts, help) {
   R.register(name, {
     sourceOrArgs: 1,
-    prepare(scope) {
-      const nnode = this.prepareAll(scope);
-      if(scope.partial)
-        return nnode;
-      if(nnode.args.length > 0) {
-        const ins = nnode.args.map(arg => arg.evalNum());
+    preeval() {
+      if(this.args.length > 0) {
+        const ins = this.args.map(arg => arg.evalNum());
         const res = ins.reduce(fun);
         return new Atom(res);
       } else {
-        const sIn = nnode.src.evalStream({finite: true});
+        const sIn = this.src.evalStream({finite: true});
         let res = null;
         for(const s of sIn) {
           const curr = s.evalNum(numOpts);
@@ -329,17 +325,14 @@ R.register(['power', 'pow'], {
   minArg: 1,
   maxArg: 2,
   sourceOrArgs: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    if(nnode.args.length === 1) {
-      const base = nnode.src.evalNum();
-      const pow = nnode.args[0].evalNum({min: 0n});
+  preeval() {
+    if(this.args.length === 1) {
+      const base = this.src.evalNum();
+      const pow = this.args[0].evalNum({min: 0n});
       return new Atom(base ** pow);
     } else {
-      const base = nnode.args[0].evalNum();
-      const pow = nnode.args[1].evalNum({min: 0n});
+      const base = this.args[0].evalNum();
+      const pow = this.args[1].evalNum({min: 0n});
       return new Atom(base ** pow);
     }
   },
@@ -376,13 +369,10 @@ R.register('mod', {
   reqSource: true,
   minArg: 1,
   maxArg: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum();
-    const mod = nnode.args[0].evalNum({min: 1n});
-    const base = nnode.args[1] ? nnode.args[1].evalNum() : 0n;
+  preeval() {
+    const inp = this.src.evalNum();
+    const mod = this.args[0].evalNum({min: 1n});
+    const base = this.args[1] ? this.args[1].evalNum() : 0n;
     const res0 = (inp - base) % mod;
     const res = (res0 >= 0n ? res0 : res0 + mod) + base;
     return new Atom(res);
@@ -405,11 +395,8 @@ R.register('modinv', {
   minArg: 1,
   maxArg: 2,
   sourceOrArgs: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const [val, mod] = (nnode.args[1] ? [nnode.args[0], nnode.args[1]] : [nnode.src, nnode.args[0]])
+  preeval() {
+    const [val, mod] = (this.args[1] ? [this.args[0], this.args[1]] : [this.src, this.args[0]])
       .map(arg => arg.evalNum({min: 1n}));
     let [a, b, c, d] = [1n, 0n, 0n, 1n];
     let [x, y] = [val, mod];
@@ -442,15 +429,12 @@ R.register('add', {
   reqSource: true,
   minArg: 1,
   maxArg: 3,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum();
-    const add = nnode.args[0].evalNum();
-    if(nnode.args.length > 1) {
-      const mod = nnode.args[1].evalNum({min: 1n});
-      const base = nnode.args[2] ? nnode.args[2].evalNum() : 0n;
+  preeval() {
+    const inp = this.src.evalNum();
+    const add = this.args[0].evalNum();
+    if(this.args.length > 1) {
+      const mod = this.args[1].evalNum({min: 1n});
+      const base = this.args[2] ? this.args[2].evalNum() : 0n;
       const res0 = (inp + add - base) % mod;
       const res = (res0 >= 0n ? res0 : res0 + mod) + base;
       return new Atom(res);
@@ -472,11 +456,8 @@ R.register('add', {
 
 R.register('abs', {
   reqSource: true,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum();
+  preeval() {
+    const inp = this.src.evalNum();
     return new Atom(inp >= 0n ? inp : -inp);
   },
   help: {
@@ -490,11 +471,8 @@ R.register('abs', {
 
 R.register(['sign', 'sgn'], {
   reqSource: true,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum();
+  preeval() {
+    const inp = this.src.evalNum();
     return new Atom(inp > 0n ? 1 : inp < 0n ? -1 : 0);
   },
   help: {
@@ -509,11 +487,8 @@ R.register(['sign', 'sgn'], {
 R.register(['odd', 'isodd'], {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const val = nnode.src.evalNum();
+  preeval() {
+    const val = this.src.evalNum();
     return new Atom((val & 1n) === 1n);
   },
   help: {
@@ -532,11 +507,8 @@ R.register(['odd', 'isodd'], {
 R.register(['even', 'iseven'], {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const val = nnode.src.evalNum();
+  preeval() {
+    const val = this.src.evalNum();
     return new Atom((val & 1n) === 0n);
   },
   help: {
@@ -554,15 +526,12 @@ R.register(['even', 'iseven'], {
 R.register('not', {
   maxArg: 1,
   sourceOrArgs: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    if(nnode.args[0]) {
-      const val = nnode.args[0].evalAtom(types.B);
+  preeval() {
+    if(this.args[0]) {
+      const val = this.args[0].evalAtom(types.B);
       return new Atom(!val);
     } else {
-      const val = nnode.src.evalAtom(types.B);
+      const val = this.src.evalAtom(types.B);
       return new Atom(!val);
     }
   },
@@ -581,11 +550,7 @@ R.register('not', {
 R.register(['every', 'each', 'all'], {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     const sIn = this.src.evalStream({finite: true});
     const cond = this.args[0];
@@ -611,11 +576,7 @@ R.register(['every', 'each', 'all'], {
 R.register(['some', 'any'], {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     const sIn = this.src.evalStream({finite: true});
     const cond = this.args[0];
@@ -642,18 +603,15 @@ function regComparer(name, sign, fun, help) {
   R.register(name, {
     reqSource: false,
     minArg: 2,
-    prepare(scope) {
-      const nnode = this.prepareAll(scope);
-      if(scope.partial)
-        return nnode;
-      if(nnode.args.every(arg => arg.isAtom)) {
-        const vals = nnode.args.map(arg => arg.numValue());
+    preeval() {
+      if(this.args.every(arg => arg.isAtom)) {
+        const vals = this.args.map(arg => arg.numValue());
         let res = true;
         for(let i = 1; i < vals.length; i++)
           res = res && fun(vals[i-1], vals[i]);
         return new Atom(res);
       } else
-        return nnode;
+        return this;
     },
     eval() {
       const vals = this.args.map(arg => arg.evalNum());
@@ -713,13 +671,10 @@ regComparer('ge', '>=', (a, b) => a >= b, {
 R.register(['tobase', 'tbase', 'tb', 'str'], {
   reqSource: true,
   maxArg: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    let val = nnode.src.evalNum();
-    const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
-    const minl = nnode.args[1] ? Number(nnode.args[1].evalNum({min: 1n})) : 0;
+  preeval() {
+    let val = this.src.evalNum();
+    const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    const minl = this.args[1] ? Number(this.args[1].evalNum({min: 1n})) : 0;
     const digit = c => c < 10 ? String.fromCharCode(c + 48) : String.fromCharCode(c + 97 - 10);
     let ret = val < 0 ? '-' : val > 0 ? '' : '0';
     if(val < 0)
@@ -753,12 +708,9 @@ R.register(['tobase', 'tbase', 'tb', 'str'], {
 R.register(['frombase', 'fbase', 'fb', 'num'], {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const str = nnode.src.evalAtom('string');
-    const base = nnode.args[0] ? nnode.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+  preeval() {
+    const str = this.src.evalAtom('string');
+    const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
       throw new StreamError(`invalid input "${str}"`);
     const digit = c => {
@@ -897,11 +849,8 @@ R.register('primes', {
 R.register('isprime', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const val = nnode.src.evalNum();
+  preeval() {
+    const val = this.src.evalNum();
     if(val <= 1n)
       return new Atom(false);
     for(const p of primes()) {
@@ -957,11 +906,8 @@ R.register('factor', {
 R.register(['isnumber', 'isnum'], {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const c = nnode.src.eval();
+  preeval() {
+    const c = this.src.eval();
     return new Atom(c.type === types.N);
   },
   help: {
@@ -1241,12 +1187,9 @@ R.register(['rndstream', 'rnds'], {
 R.register(['divmod', 'quotrem'], {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum();
-    const mod = nnode.args[0].evalNum({min: 1n});
+  preeval() {
+    const inp = this.src.evalNum();
+    const mod = this.args[0].evalNum({min: 1n});
     let rem = inp % mod;
     if(rem < 0n)
       rem += mod;
@@ -1267,12 +1210,9 @@ R.register(['divmod', 'quotrem'], {
 R.register(['mantexp', 'manexp'], {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum({min: 1n});
-    const base = nnode.args[0].evalNum({min: 1n});
+  preeval() {
+    const inp = this.src.evalNum({min: 1n});
+    const base = this.args[0].evalNum({min: 1n});
     let exp = 0n, rem = inp;
     while(rem % base === 0n) {
       rem /= base;
@@ -1306,11 +1246,8 @@ function sqrt(n) {
 R.register('sqrt', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum({min: 0n});
+  preeval() {
+    const inp = this.src.evalNum({min: 0n});
     return new Atom(sqrt(inp));
   },
   help: {
@@ -1326,11 +1263,8 @@ R.register('sqrt', {
 R.register('sqrem', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum({min: 0n});
+  preeval() {
+    const inp = this.src.evalNum({min: 0n});
     const sqr = sqrt(inp);
     return new Node('array', this.token, null, [new Atom(sqr), new Atom(inp - sqr * sqr)]);
   },
@@ -1348,11 +1282,8 @@ R.register('sqrem', {
 R.register('trirem', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum({min: 0n});
+  preeval() {
+    const inp = this.src.evalNum({min: 0n});
     const row = (sqrt(1n + 8n * inp) - 1n) / 2n;
     return new Node('array', this.token, null, [new Atom(row), new Atom(inp - row * (row + 1n) / 2n)]);
   },

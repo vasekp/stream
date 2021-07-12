@@ -16,11 +16,8 @@ function fact(n) {
 
 R.register(['factorial', 'fact', 'fac'], {
   reqSource: true,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum({min: 0n});
+  preeval() {
+    const inp = this.src.evalNum({min: 0n});
     return new Atom(fact(inp));
   },
   help: {
@@ -43,11 +40,8 @@ function dfact(n) {
 
 R.register(['dfactorial', 'dfact', 'dfac'], {
   reqSource: true,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const inp = nnode.src.evalNum({min: -1n});
+  preeval() {
+    const inp = this.src.evalNum({min: -1n});
     return new Atom(dfact(inp));
   },
   help: {
@@ -83,16 +77,13 @@ function* binomRow(n) {
 R.register('binom', {
   minArg: 1,
   maxArg: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    if(nnode.args.length === 2) {
-      const n = nnode.args[0].evalNum({min: 0n});
-      const k = nnode.args[1].evalNum({min: 0n});
+  preeval() {
+    if(this.args.length === 2) {
+      const n = this.args[0].evalNum({min: 0n});
+      const k = this.args[1].evalNum({min: 0n});
       return new Atom(binom(n, k));
     } else
-      return nnode;
+      return this;
   },
   eval() {
     const n = this.args[0].evalNum({min: 0n});
@@ -145,11 +136,8 @@ function comb(ks, r = false) {
 
 R.register('comb', {
   minArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const ks = nnode.args.map(arg => arg.evalNum({min: 0n}));
+  preeval() {
+    const ks = this.args.map(arg => arg.evalNum({min: 0n}));
     return new Atom(comb(ks));
   },
   help: {
@@ -165,11 +153,8 @@ R.register('comb', {
 
 R.register('rcomb', {
   minArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const ks = nnode.args.map(arg => arg.evalNum({min: 0n}));
+  preeval() {
+    const ks = this.args.map(arg => arg.evalNum({min: 0n}));
     return new Atom(comb(ks, true));
   },
   help: {

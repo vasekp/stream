@@ -134,13 +134,10 @@ R.register('cat', {
 R.register('ord', {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const c = nnode.src.evalAtom(types.S);
-    if(nnode.args[0]) {
-      const abc = nnode.args[0].evalAlphabet();
+  preeval() {
+    const c = this.src.evalAtom(types.S);
+    if(this.args[0]) {
+      const abc = this.args[0].evalAlphabet();
       const ix = abc.indexOf(c);
       if(ix < 0)
         throw new StreamError(`character "${c}" not in alphabet`);
@@ -166,19 +163,16 @@ R.register('ord', {
 R.register('chr', {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    if(nnode.args[0]) {
-      const ix = nnode.src.evalNum({min: 1n});
-      const abc = nnode.args[0].evalAlphabet();
+  preeval() {
+    if(this.args[0]) {
+      const ix = this.src.evalNum({min: 1n});
+      const abc = this.args[0].evalAlphabet();
       if(ix > abc.length)
         throw new StreamError(`index ${ix} beyond end`);
       else
         return new Atom(abc[Number(ix) - 1]);
     } else {
-      const cp = nnode.src.evalNum({min: 0n});
+      const cp = this.src.evalNum({min: 0n});
       return new Atom(String.fromCodePoint(Number(cp)));
     }
   },
@@ -199,12 +193,9 @@ R.register('chr', {
 R.register('chrm', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    let ix = nnode.src.evalNum() - 1n;
-    const abc = nnode.args[0].evalAlphabet();
+  preeval() {
+    let ix = this.src.evalNum() - 1n;
+    const abc = this.args[0].evalAlphabet();
     ix = Number(ix % BigInt(abc.length));
     if(ix < 0) ix += abc.length;
     return new Atom(abc[ix]);
@@ -252,11 +243,8 @@ R.register('ords', {
 R.register(['lcase', 'lc'], {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const pnode = this.prepareAll(scope);
-    if(scope.partial)
-      return pnode;
-    const str = pnode.src.evalAtom(types.S);
+  preeval() {
+    const str = this.src.evalAtom(types.S);
     return new Atom(str.toLowerCase());
   },
   help: {
@@ -272,11 +260,8 @@ R.register(['lcase', 'lc'], {
 R.register(['ucase', 'uc'], {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const pnode = this.prepareAll(scope);
-    if(scope.partial)
-      return pnode;
-    const str = pnode.src.evalAtom(types.S);
+  preeval() {
+    const str = this.src.evalAtom(types.S);
     return new Atom(str.toUpperCase());
   },
   help: {
@@ -318,11 +303,8 @@ R.register('abc', {
 R.register(['isstring', 'isstr'], {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const c = nnode.src.eval();
+  preeval() {
+    const c = this.src.eval();
     return new Atom(c.type === types.S);
   },
   help: {
@@ -337,11 +319,8 @@ R.register(['isstring', 'isstr'], {
 R.register('isdigit', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const r = nnode.src.eval();
+  preeval() {
+    const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
     const c = r.value;
@@ -359,16 +338,13 @@ R.register('isdigit', {
 R.register('isletter', {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const r = nnode.src.eval();
+  preeval() {
+    const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
     const c = r.value;
-    if(nnode.args[0]) {
-      const abc = nnode.args[0].evalAlphabet()
+    if(this.args[0]) {
+      const abc = this.args[0].evalAlphabet()
         .map(a => a.evalAtom(types.S).toLowerCase());
       return new Atom(abc.includes(c.toLowerCase()));
     } else
@@ -388,16 +364,13 @@ R.register('isletter', {
 R.register(['isupper', 'isucase', 'isuc'], {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const r = nnode.src.eval();
+  preeval() {
+    const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
     const c = r.value;
-    if(nnode.args[0]) {
-      const abc = nnode.args[0].evalAlphabet()
+    if(this.args[0]) {
+      const abc = this.args[0].evalAlphabet()
         .map(a => a.evalAtom(types.S).toUpperCase());
       return new Atom(abc.includes(c));
     } else
@@ -417,16 +390,13 @@ R.register(['isupper', 'isucase', 'isuc'], {
 R.register(['islower', 'islcase', 'islc'], {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const r = nnode.src.eval();
+  preeval() {
+    const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
     const c = r.value;
-    if(nnode.args[0]) {
-      const abc = nnode.args[0].evalAlphabet()
+    if(this.args[0]) {
+      const abc = this.args[0].evalAlphabet()
         .map(a => a.evalAtom(types.S).toLowerCase());
       return new Atom(abc.includes(c));
     } else
@@ -446,12 +416,9 @@ R.register(['islower', 'islcase', 'islc'], {
 R.register('prefix', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const str = nnode.src.evalAtom(types.S);
-    const len = nnode.args[0].evalNum();
+  preeval() {
+    const str = this.src.evalAtom(types.S);
+    const len = this.args[0].evalNum();
     return new Atom(str.slice(0, Number(len))); // works for ≥ 0 as well as < 0
   },
   help: {
@@ -471,12 +438,9 @@ R.register('prefix', {
 R.register('postfix', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const str = nnode.src.evalAtom(types.S);
-    const len = nnode.args[0].evalNum();
+  preeval() {
+    const str = this.src.evalAtom(types.S);
+    const len = this.args[0].evalNum();
     return len === 0n ? new Atom("") : new Atom(str.slice(Number(-len)));
   },
   help: {
@@ -496,12 +460,9 @@ R.register('postfix', {
 R.register('ends', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const str = nnode.src.evalAtom(types.S);
-    const pfx = nnode.args[0].evalAtom(types.S);
+  preeval() {
+    const str = this.src.evalAtom(types.S);
+    const pfx = this.args[0].evalAtom(types.S);
     return new Atom(str.endsWith(pfx));
   },
   help: {
@@ -518,12 +479,9 @@ R.register('ends', {
 R.register('starts', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const str = nnode.src.evalAtom(types.S);
-    const pfx = nnode.args[0].evalAtom(types.S);
+  preeval() {
+    const str = this.src.evalAtom(types.S);
+    const pfx = this.args[0].evalAtom(types.S);
     return new Atom(str.startsWith(pfx));
   },
   help: {
@@ -540,13 +498,10 @@ R.register('starts', {
 R.register('shift', {
   reqSource: true,
   numArg: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const str = nnode.src.evalAtom(types.S);
-    let shift = nnode.args[0].evalNum();
-    const abc = nnode.args[1].evalAlphabet();
+  preeval() {
+    const str = this.src.evalAtom(types.S);
+    let shift = this.args[0].evalNum();
+    const abc = this.args[1].evalAlphabet();
     shift = Number(shift % BigInt(abc.length));
     if(shift < 0)
       shift += abc.length;
@@ -574,15 +529,12 @@ R.register('tr', {
   reqSource: true,
   minArg: 2,
   maxArg: 3,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const str = nnode.src.evalAtom(types.S);
-    const from = nnode.args[0].evalAtom(types.S);
-    const to = nnode.args[1].evalAtom(types.S);
-    if(nnode.args[2]) {
-      const abc = nnode.args[2].evalAlphabet();
+  preeval() {
+    const str = this.src.evalAtom(types.S);
+    const from = this.args[0].evalAtom(types.S);
+    const to = this.args[1].evalAtom(types.S);
+    if(this.args[2]) {
+      const abc = this.args[2].evalAlphabet();
       const fArr = [...splitABC(from, abc)].map(([ch, _]) => ch);
       const tArr = [...splitABC(to, abc)].map(([ch, _]) => ch);
       if(fArr.length !== tArr.length)

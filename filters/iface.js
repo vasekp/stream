@@ -94,7 +94,7 @@ R.register('desc', {
   sourceOrArgs: 1,
   maxArg: 1,
   prepare(scope) {
-    const nnode = this.prepareAll(scope);
+    const nnode = this.prepareDefault(scope);
     if(scope.partial)
       return nnode;
     const src = (nnode.args[0] || nnode.src).evalAtom(types.S);

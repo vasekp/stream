@@ -31,11 +31,7 @@ R.register('array', {
 R.register('foreach', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     const sIn = this.src.evalStream();
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -73,11 +69,8 @@ R.register('foreach', {
 R.register('#id', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    return this.src?.prepare(scope) || scope.src || this;
-  },
-  eval() {
-    throw new StreamError('out of scope');
+  preeval() {
+    return this.src;
   },
   toString() {
     let ret = '';
@@ -356,12 +349,11 @@ R.register('over', {
 R.register('equal', {
   reqSource: false,
   minArg: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(!scope.partial && nnode.args.every(arg => arg.isAtom))
-      return new Atom(compareStreams(...nnode.args));
+  preeval() {
+    if(this.args.every(arg => arg.isAtom))
+      return new Atom(compareStreams(...this.args));
     else
-      return nnode;
+      return this;
   },
   eval() {
     return new Atom(compareStreams(...this.args));
@@ -399,12 +391,11 @@ R.register('equal', {
 R.register('ineq', {
   reqSource: false,
   numArg: 2,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(!scope.partial && nnode.args.every(arg => arg.isAtom))
-      return new Atom(!compareStreams(...nnode.args));
+  preeval() {
+    if(this.args.every(arg => arg.isAtom))
+      return new Atom(!compareStreams(...this.args));
     else
-      return nnode;
+      return this;
   },
   eval() {
     return new Atom(!compareStreams(...this.args));

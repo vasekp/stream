@@ -694,11 +694,7 @@ R.register(['append', 'app'], {
 R.register('nest', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     let curr = this.src;
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -727,11 +723,7 @@ R.register('fold', {
   reqSource: true,
   minArg: 1,
   maxArg: 3,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareFold,
   eval() {
     const sIn = this.src.evalStream();
     const bodyMem = this.args[0].checkType([types.symbol, types.expr]);;
@@ -831,11 +823,7 @@ R.register('reduce', {
   reqSource: true,
   minArg: 1,
   maxArg: 2,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareFold,
   eval() {
     const sIn = this.src.evalStream({finite: true});
     const body = this.args[0].checkType([types.symbol, types.expr]);;
@@ -865,11 +853,7 @@ R.register('reduce', {
 R.register('recur', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareFold,
   eval() {
     const sIn = this.src.evalStream({finite: true});
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -903,11 +887,7 @@ R.register('recur', {
 R.register('map2', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareFold,
   eval() {
     const sIn = this.src.evalStream();
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -945,6 +925,9 @@ R.register('map2', {
 R.register('if', {
   numArg: 3,
   prepare(scope) {
+    // can't replace by Node.prototype.prepareForeach
+    // because src is not kept in pnode (and thus not exposed)
+    // unless we have reqSource (which 'if' shouldn't have).
     const src = this.src ? this.src.prepare(scope) : scope.src;
     const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
     const pnode = this.modify({src, args}).check(scope.partial);
@@ -969,11 +952,7 @@ R.register('if', {
 R.register(['select', 'sel', 'filter', 'where'], {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     const sIn = this.src.evalStream();
     const cond = this.args[0];
@@ -1000,11 +979,7 @@ R.register(['select', 'sel', 'filter', 'where'], {
 R.register(['iwhere', 'ixwhere'], {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     const sIn = this.src.evalStream();
     const cond = this.args[0];
@@ -1032,11 +1007,7 @@ R.register(['iwhere', 'ixwhere'], {
 R.register('while', {
   reqSource: true,
   numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     const sIn = this.src.evalStream();
     const cond = this.args[0];
@@ -1083,11 +1054,7 @@ function usort(arr, fn = x => x) {
 R.register('sort', {
   reqSource: true,
   maxArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
+  prepare: Node.prototype.prepareForeach,
   eval() {
     const sIn = this.src.evalStream({finite: true});
     if(this.args[0]) {
@@ -1468,11 +1435,8 @@ R.register(['unrle', 'unfreq', 'untally'], {
 R.register('isstream', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    const nnode = this.prepareAll(scope);
-    if(scope.partial)
-      return nnode;
-    const c = nnode.src.eval();
+  preeval() {
+    const c = this.src.eval();
     return new Atom(c.type === types.stream);
   },
   help: {
