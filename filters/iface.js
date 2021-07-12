@@ -8,6 +8,8 @@ R.register('clear', {
   reqSource: false,
   minArg: 1,
   prepare(scope) {
+    if(!scope.partial && scope.referrer !== this)
+      throw new StreamError('cannot appear here');
     return this.prepareBase(scope, {}, null, {_register: scope.register},
       arg => arg.checkType(types.symbol));
   },
@@ -82,6 +84,8 @@ R.register('desc', {
 R.register('save', {
   minArg: 1,
   prepare(scope) {
+    if(!scope.partial && scope.referrer !== this)
+      throw new StreamError('cannot appear here');
     const args = this.args.map(arg => {
       arg.checkType([types.symbol, types.expr]);
       if(arg.type === types.symbol)
@@ -101,7 +105,7 @@ R.register('save', {
       throw new Error('register not defined');
     const outerReg = innerReg.parent;
     if(outerReg === R || outerReg.parent !== R)
-      throw new Error('must be called in outer scope');
+      throw new Error('register mismatch');
     const ret = [];
     this.args.forEach(arg => {
       if(arg.type === types.symbol) {
@@ -111,7 +115,7 @@ R.register('save', {
           ret.push(new Atom(arg.ident));
         }
       } else
-        ret.push(...arg.prepare({register: outerReg}).eval());
+        ret.push(...arg.prepare({register: outerReg, referrer: arg}).eval());
     });
     return new Stream(this, ret.values());
   },
@@ -130,6 +134,8 @@ R.register('save', {
 R.register(['restore', 'revert'], {
   minArg: 1,
   prepare(scope) {
+    if(!scope.partial && scope.referrer !== this)
+      throw new StreamError('cannot appear here');
     return this.prepareBase(scope, {}, null, {_register: scope.register},
       arg => arg.checkType(types.symbol));
   },

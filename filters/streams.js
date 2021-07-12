@@ -1414,7 +1414,7 @@ R.register('with', {
     const args = this.args.slice();
     const body = args.pop();
     for(const arg of args)
-      arg.prepare({register: innerReg}).eval();
+      arg.prepare({register: innerReg, referrer: arg}).eval();
     return body.prepare({register: innerReg});
   },
   help: {

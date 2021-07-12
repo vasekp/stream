@@ -423,6 +423,8 @@ R.register('assign', {
   reqSource: false,
   minArg: 2,
   prepare(scope) {
+    if(!scope.partial && scope.referrer !== this)
+      throw new StreamError('cannot appear here');
     return this.prepareBase(scope, {},
       (arg, ix, arr) => {
         if(ix === arr.length - 1) // body
