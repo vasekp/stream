@@ -79,18 +79,6 @@ R.register('desc', {
   }
 });
 
-/*R.register('parse', {
-  sourceOrArgs: 1,
-  maxArg: 1,
-  prepare(scope) {
-    const nnode = this.prepareDefault(scope);
-    if(scope.partial)
-      return nnode;
-    const src = (nnode.args[0] || nnode.src).evalAtom(types.S);
-    return parse(src).prepare({...scope, src: undefined, args: undefined});
-  }
-});*/
-
 R.register('save', {
   minArg: 1,
   prepare(scope) {

@@ -761,64 +761,6 @@ R.register('fold', {
   }
 });
 
-/*R.register('xfold', {
-  reqSource: true,
-  numArg: 2,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
-  eval() {
-    const sIn = this.src.evalStream();
-    const body = this.args[0].checkType([types.symbol, types.expr]);;
-    let curr = this.args[1].prepare({src: this.src});
-    return new Stream(this,
-      (function*() {
-        for(const next of sIn) {
-          const ret = body.apply([curr, next]).evalStream();
-          const add = ret.next().value?.evalStream();
-          curr = ret.next().value;
-          if(!add || !curr || !ret.next().done)
-            throw new StreamError('body must return in the format [[add...], mem]');
-          yield* add;
-        }
-        yield curr;
-      })()
-    );
-  }
-});*/
-
-/*R.register('xlate', {
-  reqSource: true,
-  numArg: 1,
-  prepare(scope) {
-    const src = this.src ? this.src.prepare(scope) : scope.src;
-    const args = this.args.map(arg => arg.prepare({...scope, src: undefined, outer: undefined, partial: true}));
-    return this.modify({src, args}).check(scope.partial);
-  },
-  eval() {
-    const sIn = this.src.evalStream();
-    const body = this.args[0].checkType([types.symbol, types.expr]);;
-    return new Stream(this,
-      (function*() {
-        for(const value of sIn) {
-          const add = body.prepare({src: value}).evalStream();
-          yield* add;
-        }
-      })()
-    );
-  },
-  help: {
-    en: ['Works like `foreach` but expects `_body` to return streams, which are concatenated in the output.'],
-    cz: ['Funguje podobně jako `foreach`, ale `_body` musí vracet proudy. Ty jsou pak ve výstupu napojeny.'],
-    cat: catg.streams,
-    ex: [['iota.xlate(if(odd,[#,#,#],[]))', '[1,1,1,3,3,3,5,...]']],
-    src: 'source',
-    args: 'body'
-  }
-});*/
-
 R.register('reduce', {
   reqSource: true,
   minArg: 1,
@@ -1488,72 +1430,6 @@ R.register('with', {
       ['with(a=5,with(b=a*(a+1),c=a*(a-1),[b,c,b-c]))', '[30,20,10]']]
   }
 });
-
-/*R.register('longest', {
-  reqSource: true,
-  numArg: 0,
-  eval() {
-    const sIn = this.src.evalStream({finite: true});
-    let maxS = null, maxL = -1n;
-    for(const read of sIn) {
-      const sRead = read.evalStream();
-      let len = 0n;
-      if(sRead.len === null) // infinite, auto winner
-        return read.eval();
-      else if(typeof sRead.len === 'bigint')
-        len = sRead.len;
-      else {
-        for(const i of sRead)
-          len++;
-      }
-      if(len > maxL) {
-        maxL = len;
-        maxS = read;
-      }
-    }
-    if(maxS === null)
-      throw new StreamError('empty stream');
-    else
-      return maxS.eval();
-  },
-  help: {
-    en: ['Expects `_source` to be a stream of streams. Returns the longest of them. In case of a tie, the first of such length.'],
-    cz: ['Očekává `_source` ve formě proudu tvořeného proudy. Vrátí nejdelší z nich. V případě více stejné délky, první z nich.'],
-    src: 'source',
-    cat: catg.streams,
-  }
-});
-
-R.register('shortest', {
-  reqSource: true,
-  numArg: 0,
-  eval() {
-    const sIn = this.src.evalStream({finite: true});
-    let minS = null, minL = null;
-    for(const read of sIn) {
-      const sRead = read.evalStream();
-      let len = 0n;
-      if(sRead.len === null)
-        continue;
-      else if(sRead.len === 0n) // can't be shorter
-        return read.eval();
-      else if(typeof sRead.len === 'bigint')
-        len = sRead.len;
-      else {
-        for(const i of sRead)
-          len++;
-      }
-      if(minL === null || len < minL) {
-        minL = len;
-        minS = read;
-      }
-    }
-    if(minS === null)
-      throw new StreamError('empty stream');
-    else
-      return minS.eval();
-  }
-});*/
 
 R.register(['subs', 'subst', 'replace', 'repl'], {
   reqSource: true,
