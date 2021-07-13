@@ -38,6 +38,7 @@ const entities = {
 async function populate() {
   if(document.body.id !== 'help')
     return;
+  document.getElementById('intro').innerHTML = await fetch('./help-intro-en.html').then(r => r.text());
   await Promise.all([
     import('./filters/lang.js'),
     import('./filters/iface.js'),
