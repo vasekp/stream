@@ -436,11 +436,11 @@ R.register(['perm', 'perms', 'permute'], {
       const arr = [...sArg].map(arg => Number(arg.evalNum({min: 1n}) - 1n));
       const vals = [];
       for(let i = 0; i < arr.length; i++) {
-        vals[i] = sIn.next().value;
+        vals.push(sIn.next().value);
         if(!vals[i])
           throw new StreamError(`requested part ${i+1} beyond end`);
         if(!arr.includes(i))
-          throw new StreamError('malformed argument list');
+          throw new StreamError('malformed argument');
       }
       return new Stream(this,
         (function*() {
@@ -453,9 +453,9 @@ R.register(['perm', 'perms', 'permute'], {
         }
       );
     } else {
-      let sIn = this.src.evalStream();
       const vals = [];
       const helperSrc = function*() {
+        const sIn = this.src.evalStream();
         A: for(const r of sIn) {
           for(const ix of vals.keys())
             if(compareStreams(r, vals[ix])) {
@@ -466,8 +466,9 @@ R.register(['perm', 'perms', 'permute'], {
           vals.push(r);
           yield vals.length - 1;
         }
-      };
+      }.bind(this);
       let len;
+      const sIn = this.src.evalStream();
       if(sIn.len === null)
         len = null;
       else if(sIn.len !== undefined) {
@@ -479,8 +480,6 @@ R.register(['perm', 'perms', 'permute'], {
           counts[ix] = (counts[ix] || 0n) + 1n;
           len = len * total / counts[ix];
         }
-        // sIn is consumed, need to reset
-        sIn = this.src.evalStream();
       }
       const helper = permHelper(helperSrc());
       const thisSrc = this.src;
@@ -489,7 +488,7 @@ R.register(['perm', 'perms', 'permute'], {
         (function*() {
           for(const arr of helper)
             yield new Node('#permute', thisToken, thisSrc, [],
-              {_vals: vals, _arr: arr.slice()});
+              {_vals: vals, _arr: arr.slice(), _helper: helperSrc});
         })(),
         {
           len,
@@ -533,9 +532,20 @@ R.register('#permute', {
     );
   },
   toString() {
+    // We need to reconstruct a valid 'permute' node that gives the same result as this (vastly more efficient) internal symbol.
+    // For nonrepeating elements, this would simply be src.permute(meta._arr.map(i => i + 1).join(',')). However, _arr can contain
+    // repeating elements which is not tolerated by 'permute'. So we need to make a new helper sweep to assign correct indices into src.
+    const ixs = [];
+    let i = 0;
+    for(const v of this.meta._helper()) {
+      if(!ixs[v])
+        ixs[v] = [++i];
+      else
+        ixs[v].push(++i);
+    }
     return this.src
       + '.permute(['
-      + this.meta._arr.map(i => i + 1).join(',')
+      + this.meta._arr.map(v => ixs[v].shift()).join(',')
       + '])';
   }
 });
