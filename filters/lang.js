@@ -432,16 +432,12 @@ R.register('assign', {
         else // identifiers
           return null;
       },
-      {_register: scope.register},
-      (arg, ix, arr) => {
-        if(ix < arr.length - 1)
-          arg.checkType(types.symbol);
-      });
+      {_register: scope.register});
   },
-  eval() {
+  preeval() {
     const args = this.args.slice();
     const body = args.pop();
-    const idents = args.map(arg => arg.ident);
+    const idents = args.map(arg => arg.checkType(types.symbol).ident);
     const reg = this.meta._register;
     if(!reg)
       throw new StreamError('out of scope');
@@ -450,7 +446,7 @@ R.register('assign', {
       reg.register(ident, {body});
       ret.push(new Atom(ident));
     }
-    return new Stream(this, ret.values());
+    return new Node('array', this.token, null, ret);
   },
   toString() {
     let ret = '';

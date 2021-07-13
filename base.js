@@ -182,7 +182,7 @@ export class Node extends Base {
       return this;
   }
 
-  prepareBase(scope, srcOpts, argOpts, metaAdd = {}, extraChecks) {
+  prepareBase(scope, srcOpts, argOpts, metaAdd = {}) {
     let src = this.src ? this.src.prepare({...scope, ...srcOpts}) : scope.src;
     const argOptsFn = typeof argOpts === 'function' ? argOpts : _ => argOpts;
     const args = this.args.map((arg, ...aa) => {
@@ -201,11 +201,7 @@ export class Node extends Base {
     const mnode = this
       .modify({src, args, meta})
       .check(scope.partial);
-    if(scope.partial)
-      return mnode;
-    if(extraChecks)
-      mnode.args.forEach((...aa) => extraChecks(...aa));
-    if(mnode.preeval)
+    if(!scope.partial && mnode.preeval)
       return mnode.preeval();
     else
       return mnode;
