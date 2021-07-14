@@ -1,0 +1,77 @@
+<h1>Úvod</h1>
+<p><em>Stream</em> je jednoduchý účelový jazyk pro tvorbu stručných, vesměs jednořádkových programů pro manipulaci s jednoduchými daty.</p>
+<p>Vzniknul pro účely <a href="https://vasekp.github.io/spa3/" target="_blank">Šifrovacích pomůcek Absolutno 3</a> jako nástroj pro tvorbu vlastních dekodérů.</p>
+<h2>Základní objekty</h2>
+<p><em>Stream</em> rozlišuje následující druhy objektů:</p>
+<ul>
+  <li><em>Čísla</em> – celá čísla libovolné velikosti. Čísla se zapisují v desítkové soustavě.</p>
+    <span class="example">Příklady:</span> <i-pre>3</i-pre>, <i-pre>-1</i-pre>, <i-pre>100000000000000000</i-pre>.</li>
+  <li><em>Řetězce</em> – textové řetězce, včetně jednotlivých znaků. Řetězce se zapisují mezi dvojitými uvozovkami. Výskyty znaku <i-pre>"</i-pre> uvnitř řetězce musejí být uvozeny zpětným lomítkem (<i-pre>\</i-pre>). Zpětné lomítko samo, pokud je potřeba, musí být zapsáno jako <i-pre>\\</i-pre>.<br/>
+    <span class="example">Příklady:</span> <i-pre>"řetězec"</i-pre>, <i-pre>"x"</i-pre>, <i-pre>"takto _se zapisuje \" _a \\."</i-pre>.</li>
+  <li><em>Pravdivostní hodnoty</em> – <i-pre>true</i-pre> a <i-pre>false</i-pre>.</li>
+  <li><em>Proudy</em> – konečné i nekonečné posloupnosti libovolných objektů, ne nutně stejného druhu.<br>
+    <span class="example">Příklady:</span> <i-pre>[1,2,3]</i-pre>, <i-pre>[]</i-pre>, <i-pre>["a",[1,2]]</i-pre>.</li>
+</ul>
+<h2>Filtry a jejich řetězení</h2>
+<p>Prvky zpracující data a proudy se nazývají <em>filtry</em>.</p>
+<p>Kromě vstupu může filtr mít ještě případné argumenty. Ty se zapisují v závorkách a oddělují čárkou. <span class="example">Příklad:</span> <i-pre>range(1,10)</i-pre>.</p>
+<p>Základním mechanizmem navazování filtrů je <em>tečka</em>. <span class="example">Příklady:</span>
+  <i-pre>[1,2,3].length</i-pre>, <i-pre>"test".reverse</i-pre>.</p>
+<p>Jestliže je mezi filtry použita <em>dvojtečka</em>, levá strana musí dávát proud. Filtr za dvojtečkou se pak aplikuje po řadě na všechny jeho prvky. <span class="example">Příklad:</span>
+<i-pre>["abc","a","abcde"]:length = ["abc".length,"a".length","abcde".length] = [3,1,5]</i-pre>.</p>
+<p>Poslední možností je <em>zavináč</em>. Je následován předpisem proudu nebo několika proudů v závorkách a filtr před zavináčem se pak používá na hodnoty získané z proudů napravo, které do něj vstupují jako argumenty. <span class="example">Příklady:</span>
+<i-pre>range@[1,2,3] = [range(1),range(2),range(3)] = [[1],[1,2],[1,2,3]]</i-pre>, <i-pre>equal@([1,5,3],[1,2,3]) = [equal(1,1),equal(5,2),equal(3,3)] = [true,false,true]</i-pre>.</p>
+<h2>Základní syntaxe</h2>
+<p><em>Stream</em> ignoruje libovolné mezery mezi filtry a speciálními znaky. Názvy filtrů také mohou být psané libovolnými velkými či malými písmeny (s jednou výjimkou, <i-pre>abc</i-pre>). V řetězcích jsou ovšem prázdné znaky a velikost písmen respektovány.</p>
+<p>Základní konstrukce jazyka <em>Stream</em> jsou:</p>
+<ul>
+  <li><i-pre>[x,y,z]</i-pre> – předepisuje konečný proud tvořený danými prvky. Když je však <i-pre>[</i-pre> použito za názvem filtru, stává se zkratkou pro <i-pre>part</i-pre>.</li>
+  <li><i-pre>x ~ y</i-pre> – napojí dva nebo více proudů. Hodnoty, které nejsou proudy, jsou automaticky brány jako proudy délky 1.<br/>
+    <span class="example">Příklad:</span> <i-pre>[1,2]~3~["a"] = [1,2,3,"a"]</i-pre>.<br/>
+    <p class="warn">Jestliže potřebujete připojit proud jakožto samostatný prvek, je potřeba dvojice závorek navíc.<br/>
+    <span class="example">Příklad:</span> <i-pre>1~[2] = [1,2]</i-pre>, místo toho použijte <i-pre>1~[[2]] = [1,[2]]</i-pre>.
+    </p></li>
+  <li><i-pre>x % y</i-pre> – propojuje prvky dvou nebo více proudů jako zip. Proud, který skončí první, ukončí i čtení ostatních.<br/>
+    <span class="example">Příklad:</span> <i-pre>[1,2]%[3,4,5] = [[1,3],[2,4]]</i-pre>.</li>
+  <li><i-pre>{...}</i-pre> – definuje <a href="#block">blok</a>.</li>
+</ul>
+<h2>Speciální znaky</h2>
+<p>Následující znaky mají ještě ve <em>Stream</em> zvláštní význam:</p>
+<ul>
+  <li><i-pre>+</i-pre>, <i-pre>-</i-pre>, <i-pre>*</i-pre>, <i-pre>/</i-pre>, <i-pre>^</i-pre> – mathematické operace (<i-pre>plus</i-pre>, <i-pre>minus</i-pre>, <i-pre>times</i-pre>, <i-pre>divide</i-pre>, <i-pre>power</i-pre>)
+    <p class="info">Veškeré výpočty jsou zásadně v celých číslech: při dělení je zlomková část zahozena. <i-pre>0^0</i-pre> je definováno jako 1.</p></li>
+  <li><i-pre>&amp;</i-pre>, <i-pre>|</i-pre> – logické operace (<i-pre>and</i-pre>, <i-pre>or</i-pre>).</li>
+  <li><i-pre>=</i-pre>, <i-pre>&lt;</i-pre>, <i-pre>&gt;</i-pre>, <i-pre>&lt;=</i-pre>, <i-pre>&gt;=</i-pre>, <i-pre>&lt;&gt;</i-pre> – porovnání.
+    <p class="warn">Znaménko <i-pre>=</i-pre> má také význam přiřazení <a href="#vars">proměnné</a>. Význam porovnání lze vynutit zápisem <i-pre>==</i-pre>.</p></li>
+  <li><i-pre>#</i-pre> – reprezentuje zdroj. Při řetězení je prázdnou operací, tj. <i-pre>[1,1].#.length = [1,1].length = 2</i-pre>. Je užitečné v argumentech nebo složených operacích.<br/>
+    <span class="example">Příklady:</span> <i-pre>iota:(#^2) = [1,4,9,16,...]</i-pre>; <i-pre>[3,0,2].range(#.min,#.max) = range([3,0,2].min,[3,0,2].max) = range(0,3) = [0,1,2,3]</i-pre>.</li>
+  <li><i-pre>##</i-pre>, <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ... – reprezentují zdroj a argumenty aktuálního <a href="#block">bloku</a>.</li>
+  <li><i-pre>$</i-pre>, <i-pre>$1</i-pre>, <i-pre>$2</i-pre>, ...</i-pre> – zastupují výsledky dříve provedených příkazů. <i-pre>$</i-pre> je předchozí výsledek.</li>
+  <li><i-pre>;</i-pre> – uvozuje komentář, zbytek řádky se ignoruje (pouze řádkové rozhraní).</li>
+</ul>
+<h2>Priorita operátorů</h2>
+<p>Vstup je vždy zpracováván zleva doprava. Členy jsou k operátorům přimknuty v následujícím pořadí:</p>
+<ol>
+  <li><i-pre>.</i-pre>, <i-pre>:</i-pre>, <i-pre>@</i-pre> – řetězení,</li>
+  <li><i-pre>^</i-pre> – mocnění,</li>
+  <li><i-pre>*</i-pre>, <i-pre>/</i-pre> – násobení a dělení,</li>
+  <li><i-pre>+</i-pre>, <i-pre>-</i-pre> – sčítání a odčítání,</li>
+  <li><i-pre>~</i-pre> – napojení proudů,</li>
+  <li><i-pre>%</i-pre> – zipové propojení,</li>
+  <li><i-pre>&lt;</i-pre>, <i-pre>&gt;</i-pre>, <i-pre>&lt;=</i-pre>, <i-pre>&gt;=</i-pre>, <i-pre>&lt;&gt;</i-pre>, <i-pre>==</i-pre> – porovnání,</li>
+  <li><i-pre>=</i-pre> – porovnání / přiřazení,</li>
+  <li><i-pre>&amp;</i-pre> – logický součin,</li>
+  <li><i-pre>|</i-pre> – logický součet.</li>
+</ol>
+<p>Jako v matematice je možno pro vyhodnocení v jiném pořadí použít závorky <i-pre>(</i-pre>, <i-pre>)</i-pre>.</p>
+<h2 id="block">Bloky</h2>
+<p><em>Blok</em> je složený filtr, který může jako celek mít vlastní vstup a/nebo argumenty. Ty v těle bloku zastupují <i-pre>##</i-pre>, resp. <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ...</p>
+<p>Blok může být zapsán přímo, uzavřením nějakých příkazů do složených závorek, <i-pre>{</i-pre>, <i-pre>}</i-pre>. Uzávěr do bloku je také automaticky použit v několika situacích: v argumentu <i-pre>_body</i-pre> filtrů <i-pre>fold</i-pre>, <i-pre>reduce</i-pre>, <i-pre>recur</i-pre>, <i-pre>map2</i-pre> a při <a href="#vars">přiřazení proměnným</a>.</p>
+<p><span class="example">Příklad:</span> <i-pre>{range(#1-#2,#1+#2)}(5,1) = [4,5,6]</i-pre>.</p>
+<h2 id="vars">Uživatelské filtry a proměnné</h2>
+<p>Vytvořené proudy nebo i vlastní filtry mohou být uloženy pro pozdější použití v proměnné.</p>
+<p>Dovolené názvy proměnných jsou tvořeny znaky a...z, A...Z, 0...9, z nichž první musí být písmeno. Stejně jako u jiných filtrů není rozlišováno mezi malými a velkými písmeny.</p>
+<p>Pravá strana přiřazení je před jeho provedením plně rozepsána. Tedy například <i-pre>a=a*2</i-pre> je smysluplný příkaz, který zdvojnásobí hodnotu, již <i-pre>a</i-pre> mělo před přiřazením a skončí chybou, nebylo-li <i-pre>a</i-pre> definováno.</p>
+<p>Proměnné mohou být uloženy buď po dobu otevřeného sezení nebo trvale. Existují také <em>lokální</em> proměnné, které platí pouze v části aktuálního příkazu, viz <i-pre>with</i-pre>. Přiřazení nebo dříve zavedenou proměnnou lze učinit trvalými pomocí příkazu <i-pre>save</i-pre>.</p>
+<p>Při použití se proměnná chová jako blok, tj. může ji být přiřazen vstup a/nebo argumenty, které jsou jejímu tělu zpřístupněny skrz <i-pre>##</i-pre>, <i-pre>#1</i-pre>, ....</p>
+<p><span class="example">Příklad:</span> <i-pre>myrange=range(#1-#2,#1+#2)</i-pre> následované <i-pre>myrange(5,2)</i-pre> dá <i-pre>[3,4,5,6,7]</i-pre>.</p>

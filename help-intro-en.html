@@ -2,7 +2,7 @@
 <p><em>Stream</em> is a domain-specific language for simple, terse, mostly single-line programs creating or manipulating simple data.</p>
 <p>Its main purpose is to serve the <a href="https://vasekp.github.io/spa3/" target="_blank">Puzzlehunt Assistant</a> in creating custom decoders for input information.</p>
 <h2>Basic objects</h2>
-<p>The following object types are recognized by Stream:</p>
+<p>The following object types are recognized by <em>Stream</em>:</p>
 <ul>
   <li><em>Numbers</em> – integer numbers. The language imposes to intrinsic limit on magnitude. Numbers are input in base ten.<br/>
     <span class="example">Examples:</span> <i-pre>3</i-pre>, <i-pre>-1</i-pre>, <i-pre>100000000000000000</i-pre>.</li>
@@ -66,12 +66,12 @@
 <p>As usual, parentheses <i-pre>(</i-pre>, <i-pre>)</i-pre> can be used to achieve a different order of evaluation.</p>
 <h2 id="block">Blocks</h2>
 <p>A <em>block</em> is a compound filter that can take its own source and/or arguments. Within a block, these are referred to via <i-pre>##</i-pre> and <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ..., respectively.</p>
-<p>A block can be created manually by enclosing some code in a pair of curly brackets, <i-pre>{</i-pre>, <i-pre>}</i-pre>. It is also created automatically in several situations: in the body argument of <i-pre>fold</i-pre>, <i-pre>reduce</i-pre>, <i-pre>recur</i-pre>, <i-pre>map2</i-pre> and in <a href="#vars">variable assignment</a>.</p>
+<p>A block can be created manually by enclosing some code in a pair of curly brackets, <i-pre>{</i-pre>, <i-pre>}</i-pre>. It is also created automatically in several situations: in the <i-pre>_body</i-pre> argument of <i-pre>fold</i-pre>, <i-pre>reduce</i-pre>, <i-pre>recur</i-pre>, <i-pre>map2</i-pre> and in <a href="#vars">variable assignment</a>.</p>
 <p><span class="example">Example:</span> <i-pre>{range(#1-#2,#1+#2)}(5,1) = [4,5,6]</i-pre>.</p>
 <h2 id="vars">User variables</h2>
 <p>Created streams or even custom filters may be saved for later reuse as a variable.</p>
 <p>Valid variable names are sequences of characters a...z, A...Z, 0...9 starting with a letter. Like built-in filters, the name is case-insensitive.</p>
 <p>The right-hand side of an assignment is fully expanded prior to assigning. Thus e.g. <i-pre>a=a*2</i-pre> is legal, it doubles the value <i-pre>a</i-pre> had before the assignment and results in an error if <i-pre>a</i-pre> was not defined.</p>
-<p>Variables can have <em>session-wide</em> or <em>persistent</em> lifetime. There are also <em>local</em> variables which only hold their value within a part of a command, see <i-pre>with</i-pre>. A variable is made persistent by surrounding the assignment by <i-pre>save</i-pre>.</p>
+<p>Variables can have <em>session-wide</em> or <em>persistent</em> lifetime. There are also <em>local</em> variables which only hold their value within a part of a command, see <i-pre>with</i-pre>. A variable or an assignment is made persistent by surrounding the assignment by <i-pre>save</i-pre>.</p>
 <p>A chain of filters assigned to a variable behaves as a block, i.e., the variable can then take a source or arguments, which are accessed using <i-pre>##</i-pre>, <i-pre>#1</i-pre>, ....</p>
 <p><span class="example">Example:</span> <i-pre>myrange=range(#1-#2,#1+#2)</i-pre> followed by <i-pre>myrange(5,2)</i-pre> gives <i-pre>[3,4,5,6,7]</i-pre>.</p>
