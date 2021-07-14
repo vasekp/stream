@@ -22,9 +22,9 @@ const priority = Enum.fromObj({
   '<=': 4,
   '<>': 4,
   '==': 4,
-  '=': 3,
-  '&': 2,
-  '|': 1
+  '&': 3,
+  '|': 2,
+  '=': 1
 });
 
 const operMap = Enum.fromObj({

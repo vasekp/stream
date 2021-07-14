@@ -42,14 +42,14 @@
     <p class="info">Veškeré výpočty jsou zásadně v celých číslech: při dělení je zlomková část zahozena. <i-pre>0^0</i-pre> je definováno jako 1.</p></li>
   <li><i-pre>&amp;</i-pre>, <i-pre>|</i-pre> – logické operace (<i-pre>and</i-pre>, <i-pre>or</i-pre>).</li>
   <li><i-pre>=</i-pre>, <i-pre>&lt;</i-pre>, <i-pre>&gt;</i-pre>, <i-pre>&lt;=</i-pre>, <i-pre>&gt;=</i-pre>, <i-pre>&lt;&gt;</i-pre> – porovnání.
-    <p class="warn">Znaménko <i-pre>=</i-pre> má také význam přiřazení <a href="#vars">proměnné</a>. Význam porovnání lze vynutit zápisem <i-pre>==</i-pre>.</p></li>
+    <p class="warn">Znaménko <i-pre>=</i-pre> má také význam přiřazení <a href="#vars">proměnné</a>. Má také nižší <a href="prio">prioritu</a> než ostatní operátory. Potenciálním problémům lze předejít použitím <i-pre>==</i-pre> pro porovnání.</p></li>
   <li><i-pre>#</i-pre> – reprezentuje zdroj. Při řetězení je prázdnou operací, tj. <i-pre>[1,1].#.length = [1,1].length = 2</i-pre>. Je užitečné v argumentech nebo složených operacích.<br/>
     <span class="example">Příklady:</span> <i-pre>iota:(#^2) = [1,4,9,16,...]</i-pre>; <i-pre>[3,0,2].range(#.min,#.max) = range([3,0,2].min,[3,0,2].max) = range(0,3) = [0,1,2,3]</i-pre>.</li>
   <li><i-pre>##</i-pre>, <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ... – reprezentují zdroj a argumenty aktuálního <a href="#block">bloku</a>.</li>
   <li><i-pre>$</i-pre>, <i-pre>$1</i-pre>, <i-pre>$2</i-pre>, ...</i-pre> – zastupují výsledky dříve provedených příkazů. <i-pre>$</i-pre> je předchozí výsledek.</li>
   <li><i-pre>;</i-pre> – uvozuje komentář, zbytek řádky se ignoruje (pouze řádkové rozhraní).</li>
 </ul>
-<h2>Priorita operátorů</h2>
+<h2 id="prio">Priorita operátorů</h2>
 <p>Vstup je vždy zpracováván zleva doprava. Členy jsou k operátorům přimknuty v následujícím pořadí:</p>
 <ol>
   <li><i-pre>.</i-pre>, <i-pre>:</i-pre>, <i-pre>@</i-pre> – řetězení,</li>
@@ -59,9 +59,9 @@
   <li><i-pre>~</i-pre> – napojení proudů,</li>
   <li><i-pre>%</i-pre> – zipové propojení,</li>
   <li><i-pre>&lt;</i-pre>, <i-pre>&gt;</i-pre>, <i-pre>&lt;=</i-pre>, <i-pre>&gt;=</i-pre>, <i-pre>&lt;&gt;</i-pre>, <i-pre>==</i-pre> – porovnání,</li>
-  <li><i-pre>=</i-pre> – porovnání / přiřazení,</li>
   <li><i-pre>&amp;</i-pre> – logický součin,</li>
-  <li><i-pre>|</i-pre> – logický součet.</li>
+  <li><i-pre>|</i-pre> – logický součet,</li>
+  <li><i-pre>=</i-pre> – přiřazení / porovnání.</li>
 </ol>
 <p>Jako v matematice je možno pro vyhodnocení v jiném pořadí použít závorky <i-pre>(</i-pre>, <i-pre>)</i-pre>.</p>
 <h2 id="block">Bloky</h2>

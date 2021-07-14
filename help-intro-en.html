@@ -42,14 +42,14 @@
     <p class="info">The arithmetic is always integral: in division only the quotient is kept. Also, <i-pre>0^0</i-pre> is defined as 1.</p></li>
   <li><i-pre>&amp;</i-pre>, <i-pre>|</i-pre> – logical operators (<i-pre>and</i-pre>, <i-pre>or</i-pre>).</li>
   <li><i-pre>=</i-pre>, <i-pre>&lt;</i-pre>, <i-pre>&gt;</i-pre>, <i-pre>&lt;=</i-pre>, <i-pre>&gt;=</i-pre>, <i-pre>&lt;&gt;</i-pre> – comparison operators.
-    <p class="warn">The sign <i-pre>=</i-pre> at top level also means assignment to a <a href="#vars">variable</a>. An interpretation as comparison can be enforced using <i-pre>==</i-pre>.</p></li>
+    <p class="warn">The sign <i-pre>=</i-pre> at top level also means assignment to a <a href="#vars">variable</a>. It also has a lower <a href="prio">priority</a> than other operators. To avoid potential pitfalls, comparison can be enforced using <i-pre>==</i-pre>.</p></li>
   <li><i-pre>#</i-pre> – represents the source. In chaining it is a no-operation, e.g., <i-pre>[1,1].#.length = [1,1].length = 2</i-pre>. It is useful in arguments or in compound operations.<br/>
     <span class="example">Examples:</span> <i-pre>iota:(#^2) = [1,4,9,16,...]</i-pre>; <i-pre>[3,0,2].range(#.min,#.max) = range([3,0,2].min,[3,0,2].max) = range(0,3) = [0,1,2,3]</i-pre>.</li>
   <li><i-pre>##</i-pre>, <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ... – represents the source and the arguments of the current <a href="#block">block</a>.</li>
   <li><i-pre>$</i-pre>, <i-pre>$1</i-pre>, <i-pre>$2</i-pre>, ...</i-pre> – represents the results of prior commands. <i-pre>$</i-pre> is the most recent output.</li>
   <li><i-pre>;</i-pre> – starts a comment, the rest of the input line is ignored (command-line prompt only).</li>
 </ul>
-<h2>Operator precedence</h2>
+<h2 id="prio">Operator precedence</h2>
 <p>The input is always read from left to right. The operators are bound to their arguments in the following precedence rules:</p>
 <ol>
   <li><i-pre>.</i-pre>, <i-pre>:</i-pre>, <i-pre>@</i-pre> – the chaining constructs,</li>
@@ -59,9 +59,9 @@
   <li><i-pre>~</i-pre> – stream join,</li>
   <li><i-pre>%</i-pre> – stream zip,</li>
   <li><i-pre>&lt;</i-pre>, <i-pre>&gt;</i-pre>, <i-pre>&lt;=</i-pre>, <i-pre>&gt;=</i-pre>, <i-pre>&lt;&gt;</i-pre>, <i-pre>==</i-pre> – comparisons,</li>
-  <li><i-pre>=</i-pre> – comparison or assignment,</li>
   <li><i-pre>&amp;</i-pre> – logical AND,</li>
-  <li><i-pre>|</i-pre> – logical OR.</li>
+  <li><i-pre>|</i-pre> – logical OR,</li>
+  <li><i-pre>=</i-pre> – assignment / comparison.</li>
 </ol>
 <p>As usual, parentheses <i-pre>(</i-pre>, <i-pre>)</i-pre> can be used to achieve a different order of evaluation.</p>
 <h2 id="block">Blocks</h2>
