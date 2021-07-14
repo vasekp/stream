@@ -38,6 +38,32 @@ const entities = {
 async function populate() {
   if(document.body.id !== 'help')
     return;
+  /*** Category selection ***/
+  const cats = [...catgNames.keys()];
+  const head = document.getElementById('head');
+  for(const cat of cats) {
+    const ckbox = document.createElement('input');
+    ckbox.type = 'radio';
+    ckbox.name = 'category';
+    ckbox.value = cat;
+    ckbox.id = `cat-${cat}`;
+    ckbox.hidden = true;
+    ckbox.checked = cat === 'intro';
+    head.parentElement.insertBefore(ckbox, head);
+    const label = document.createElement('label');
+    label.htmlFor = ckbox.id;
+    label.textContent = catgNames.get(cat);
+    head.append(label);
+  }
+  const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"]) > *`).join(', ');
+  const css2 = cats.map(cat => `#cat-${cat}:checked ~ header label[for="cat-${cat}"]`).join(', ');
+  const css = `${css1} { display: none; } ${css2} { background: #eee; border-color: #888; }`;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = URL.createObjectURL(new Blob([css], {type: 'text/css'}));
+  document.head.append(link);
+  /*** Load intro and filter documentation ***/
   document.getElementById('intro').innerHTML = await fetch('./help-intro-en.html').then(r => r.text());
   await Promise.all([
     import('./filters/lang.js'),
@@ -47,10 +73,8 @@ async function populate() {
     import('./filters/combi.js'),
     import('./filters/numeric.js'),
   ]);
-  const head = document.getElementById('head');
   const nav = document.getElementById('abc');
   const list = document.getElementById('filter-list');
-  const catSet = new Set();
   let lastLett = '';
   for(const name of [..._map.keys()].sort()) {
     const obj = _map.get(name);
@@ -69,13 +93,10 @@ async function populate() {
     sec.id = `id-${name}`;
     sec.dataset.cat = 'all ';
     if(obj.cat) {
-      if(obj.cat instanceof Array) {
-        obj.cat.forEach(cat => catSet.add(cat));
+      if(obj.cat instanceof Array)
         sec.dataset.cat += obj.cat.join(' ');
-      } else {
-        catSet.add(obj.cat);
+      else
         sec.dataset.cat += obj.cat;
-      }
     }
     for(const n of obj.names) {
       const h = document.createElement('h3');
@@ -173,30 +194,6 @@ async function populate() {
     }
     list.append(sec);
   }
-  /*** Category selection ***/
-  const cats = [...catgNames.keys()].filter(cat => catSet.has(cat) || cat === 'all' || cat === 'intro');
-  for(const cat of cats) {
-    const ckbox = document.createElement('input');
-    ckbox.type = 'radio';
-    ckbox.name = 'category';
-    ckbox.value = cat;
-    ckbox.id = `cat-${cat}`;
-    ckbox.hidden = true;
-    ckbox.checked = cat === 'intro';
-    head.parentElement.insertBefore(ckbox, head);
-    const label = document.createElement('label');
-    label.htmlFor = ckbox.id;
-    label.textContent = catgNames.get(cat);
-    head.append(label);
-  }
-  const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"]) > *`).join(', ');
-  const css2 = cats.map(cat => `#cat-${cat}:checked ~ header label[for="cat-${cat}"]`).join(', ');
-  const css = `${css1} { display: none; } ${css2} { background: #eee; border-color: #888; }`;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.type = 'text/css';
-  link.href = URL.createObjectURL(new Blob([css], {type: 'text/css'}));
-  document.head.append(link);
   /*** Create links in Introduction ***/
   document.getElementById('intro').querySelectorAll('i-pre').forEach(pre => {
     const html = pre.textContent
