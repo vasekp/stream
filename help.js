@@ -195,7 +195,7 @@ async function populate() {
     list.append(sec);
   }
   /*** Create links in Introduction ***/
-  document.getElementById('intro').querySelectorAll('i-pre').forEach(pre => {
+  document.getElementById('intro').querySelectorAll('i-pre:not(.skiplink)').forEach(pre => {
     const html = pre.textContent
       .replace(/(?<!&)\w+/g, m => {
         if(_map.has(m) && m !== name)

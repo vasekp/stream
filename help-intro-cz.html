@@ -7,7 +7,7 @@
   <li><em>Čísla</em> – celá čísla libovolné velikosti. Čísla se zapisují v desítkové soustavě.</p>
     <span class="example">Příklady:</span> <i-pre>3</i-pre>, <i-pre>-1</i-pre>, <i-pre>100000000000000000</i-pre>.</li>
   <li><em>Řetězce</em> – textové řetězce, včetně jednotlivých znaků. Řetězce se zapisují mezi dvojitými uvozovkami. Výskyty znaku <i-pre>"</i-pre> uvnitř řetězce musejí být uvozeny zpětným lomítkem (<i-pre>\</i-pre>). Zpětné lomítko samo, pokud je potřeba, musí být zapsáno jako <i-pre>\\</i-pre>.<br/>
-    <span class="example">Příklady:</span> <i-pre>"řetězec"</i-pre>, <i-pre>"x"</i-pre>, <i-pre>"takto _se zapisuje \" _a \\."</i-pre>.</li>
+    <span class="example">Příklady:</span> <i-pre>"řetězec"</i-pre>, <i-pre>"x"</i-pre>, <i-pre class="skiplink">"takto se zapisuje \" a \\."</i-pre>.</li>
   <li><em>Pravdivostní hodnoty</em> – <i-pre>true</i-pre> a <i-pre>false</i-pre>.</li>
   <li><em>Proudy</em> – konečné i nekonečné posloupnosti libovolných objektů, ne nutně stejného druhu.<br>
     <span class="example">Příklady:</span> <i-pre>[1,2,3]</i-pre>, <i-pre>[]</i-pre>, <i-pre>["a",[1,2]]</i-pre>.</li>
@@ -66,7 +66,7 @@
 <p>Jako v matematice je možno pro vyhodnocení v jiném pořadí použít závorky <i-pre>(</i-pre>, <i-pre>)</i-pre>.</p>
 <h2 id="block">Bloky</h2>
 <p><em>Blok</em> je složený filtr, který může jako celek mít vlastní vstup a/nebo argumenty. Ty v těle bloku zastupují <i-pre>##</i-pre>, resp. <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ...</p>
-<p>Blok může být zapsán přímo, uzavřením nějakých příkazů do složených závorek, <i-pre>{</i-pre>, <i-pre>}</i-pre>. Uzávěr do bloku je také automaticky použit v několika situacích: v argumentu <i-pre>_body</i-pre> filtrů <i-pre>fold</i-pre>, <i-pre>reduce</i-pre>, <i-pre>recur</i-pre>, <i-pre>map2</i-pre> a při <a href="#vars">přiřazení proměnným</a>.</p>
+<p>Blok může být zapsán přímo, uzavřením nějakých příkazů do složených závorek, <i-pre>{</i-pre>, <i-pre>}</i-pre>. Uzávěr do bloku je také automaticky použit v několika situacích: v argumentu <i-pre class="skiplink">body</i-pre> filtrů <i-pre>fold</i-pre>, <i-pre>reduce</i-pre>, <i-pre>recur</i-pre>, <i-pre>map2</i-pre> a při <a href="#vars">přiřazení proměnným</a>.</p>
 <p><span class="example">Příklad:</span> <i-pre>{range(#1-#2,#1+#2)}(5,1) = [4,5,6]</i-pre>.</p>
 <h2 id="vars">Uživatelské filtry a proměnné</h2>
 <p>Vytvořené proudy nebo i vlastní filtry mohou být uloženy pro pozdější použití v proměnné.</p>
