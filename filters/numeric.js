@@ -164,6 +164,126 @@ regReducer('or', '|', (a, b) => a || b, types.B, {
   see: ['and', 'not', 'some']
 });
 
+R.register('min', {
+  sourceOrArgs: 2,
+  prepare(scope) {
+    return this.args.length === 1
+      ? this.prepareForeach(scope)
+      : this.prepareDefault(scope);
+  },
+  preeval() {
+    if(this.args.length >= 2) {
+      const ins = this.args.map(arg => arg.evalNum());
+      const res = ins.reduce((a, b) => b < a ? b : a);
+      return new Atom(res);
+    } else
+      return this;
+  },
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    if(this.args[0]) {
+      let res = null;
+      let best = null;
+      const body = this.args[0].checkType([types.symbol, types.expr]);
+      for(const r of sIn) {
+        const curr = body.prepare({src: r}).evalNum();
+        if(best === null || curr < best) {
+          best = curr;
+          res = r;
+        }
+      }
+      if(res === null)
+        throw new StreamError('empty stream');
+      else
+        return res.eval();
+    } else {
+      let res = null;
+      for(const s of sIn) {
+        const curr = s.evalNum();
+        if(res === null || curr < res)
+          res = curr;
+      }
+      if(res === null)
+        throw new StreamError('empty stream');
+      return new Atom(res);
+    }
+  },
+  help: {
+    en: ['Form with several arguments: returns the least of them.',
+      'Form without arguments: finds the least in the input stream of numbers.',
+      'Form with one argument: applies the argument on elements of the input stream and returns that which gives the least result.'],
+    cs: ['Forma s několika argumenty: vrátí nejmenší z nich.',
+      'Forma bez argumentů: najde nejmenší ze vstupního proudu čísel.',
+      'Forma s jedním argumentem: aplikuje argument na každý prvek vstupního proudu a vrátí ten, který dává nejmenší výsledek.'],
+    cat: catg.numbers,
+    src: 'stream?',
+    ex: [['range(3,5).min', '3', {en: 'input stream', cs: 'vstupní proud'}],
+      ['min(6,2,7)', '2', {en: 'arguments', cs: 'argumenty'}],
+      ['["xyz",".","abcde"].min(#.length)', '"."', {en: '1 argument', cs: '1 argument'}]],
+    see: 'max'
+  }
+});
+
+R.register('max', {
+  sourceOrArgs: 2,
+  prepare(scope) {
+    return this.args.length === 1
+      ? this.prepareForeach(scope)
+      : this.prepareDefault(scope);
+  },
+  preeval() {
+    if(this.args.length >= 2) {
+      const ins = this.args.map(arg => arg.evalNum());
+      const res = ins.reduce((a, b) => b > a ? b : a);
+      return new Atom(res);
+    } else
+      return this;
+  },
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    if(this.args[0]) {
+      let res = null;
+      let best = null;
+      const body = this.args[0].checkType([types.symbol, types.expr]);
+      for(const r of sIn) {
+        const curr = body.prepare({src: r}).evalNum();
+        if(best === null || curr > best) {
+          best = curr;
+          res = r;
+        }
+      }
+      if(res === null)
+        throw new StreamError('empty stream');
+      else
+        return res.eval();
+    } else {
+      let res = null;
+      for(const s of sIn) {
+        const curr = s.evalNum();
+        if(res === null || curr > res)
+          res = curr;
+      }
+      if(res === null)
+        throw new StreamError('empty stream');
+      return new Atom(res);
+    }
+  },
+  help: {
+    en: ['Form with several arguments: returns the greatest of them.',
+      'Form without arguments: finds the greatest in the input stream of numbers.',
+      'Form with one argument: applies the argument on elements of the input stream and returns that which gives the greatest result.'],
+    cs: ['Forma s několika argumenty: vrátí největší z nich.',
+      'Forma bez argumentů: najde největší ze vstupního proudu čísel.',
+      'Forma s jedním argumentem: aplikuje argument na každý prvek vstupního proudu a vrátí ten, který dává největší výsledek.'],
+    cat: catg.numbers,
+    src: 'stream?',
+    ex: [['range(3,5).max', '5', {en: 'input stream', cs: 'vstupní proud'}],
+      ['max(6,2,7)', '7', {en: 'arguments', cs: 'argumenty'}],
+      ['["xyz",".","abcde"].max(#.length)', '"abcde"', {en: '1 argument', cs: '1 argument'}]],
+    see: 'max'
+  }
+});
+
 function regReducerS(name, fun, numOpts, help) {
   R.register(name, {
     sourceOrArgs: 2,
@@ -204,9 +324,6 @@ function gcd(a, b) {
       return a;
   }
 }
-
-regReducerS('min', (a, b) => b < a ? b : a); // TODO
-regReducerS('max', (a, b) => b > a ? b : a); // TODO
 
 regReducerS('gcd', gcd, {min: 1n}, {
   en: ['Form with several arguments: calculates the greatest common divisor of them.',
