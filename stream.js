@@ -23,8 +23,6 @@ await fs.readFile('.stream_vars')
 
 const prompt = repl.start({eval: str => {
   try {
-    if(str.includes(';'))
-      str = str.substring(0, str.indexOf(';'));
     str = str.replace(/[\n\r]+$/, '');
     if(!str.replace(/[ \t\n\r]/g, ''))
       return;

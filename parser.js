@@ -134,6 +134,9 @@ function* tokenize(str) {
       state = ss.base;
       continue;
     }
+    /*** check for start of comment here, otherwise the following would happen twice ***/
+    if(c === ';')
+      break;
     /*** accumulation did not happen: dispatch the result ***/
     if(state === ss.ident)
       yield {value: accum, cls: tc.ident, pos: accumStart};
