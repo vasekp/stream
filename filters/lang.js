@@ -179,8 +179,44 @@ function part(src, iter) {
     const stMem = src.evalStream();
     let stSkip = null;
     let read = 0n;
+    let len = stMem.len;
     for(const ix of iter) {
-      if(ix < MAXMEM) {
+      if(ix === 0n)
+        throw new StreamError(`requested part 0`);
+      else if(ix < 0n) {
+        const nix = -ix;
+        if(len === null)
+          throw new StreamError('infinite stream');
+        else if(len === undefined) {
+          stSkip = src.evalStream();
+          read = 0n;
+          const temp = [];
+          for(const v of stSkip) {
+            temp.push(v);
+            if(temp.length > len)
+              temp.shift();
+            read++;
+          }
+          if(read < nix)
+            throw new StreamError(`requested part ${ix} beyond end`);
+          len = read;
+          yield temp[read - nix];
+        } else if(len < MAXMEM) {
+          if(nix > len)
+            throw new StreamError(`requested part ${ix} beyond end`);
+          for(let i = mem.length; i <= len - nix; i++)
+            mem.push(stMem.next().value);
+          yield mem[len - nix];
+        } else {
+          if(!stSkip || len - nix <= read) {
+            stSkip = src.evalStream();
+            read = 0n;
+          }
+          stSkip.skip(len - nix - read - 1n);
+          yield stSkip.next().value;
+          read = len - nix;
+        }
+      } else if(ix < MAXMEM) {
         if(ix > mem.length)
           for(let i = mem.length; i < ix; i++) {
             const next = stMem.next().value;
@@ -212,16 +248,41 @@ R.register('part', {
     const ins = this.args.slice(1).map(arg => arg.eval());
     if(ins.every(i => i.isAtom)) {
       if(ins.length === 1) {
-        const sIn = this.args[0].evalStream();
-        const ix = ins[0].numValue({min: 1n});
-        sIn.skip(ix - 1n);
-        const r = sIn.next().value;
-        if(!r)
-          throw new StreamError(`requested part ${ix} beyond end`);
-        return r.eval();
+        const ix = ins[0].numValue();
+        if(ix > 0n) {
+          const sIn = this.args[0].evalStream();
+          sIn.skip(ix - 1n);
+          const r = sIn.next().value;
+          if(!r)
+            throw new StreamError(`requested part ${ix} beyond end`);
+          return r.eval();
+        } else if(ix < 0n) {
+          const nix = -ix;
+          const sIn = this.args[0].evalStream({finite: true});
+          if(sIn.len === undefined) {
+            const mem = [];
+            for(const v of sIn) {
+              mem.push(v);
+              if(mem.length > nix)
+                mem.shift();
+            }
+            if(mem.length === nix)
+              return mem[mem.length + ix];
+            else
+              throw new StreamError(`requested part ${ix} beyond end`);
+          } else if(sIn.len !== null) {
+            if(sIn.len >= nix) {
+              sIn.skip(sIn.len - nix);
+              return sIn.next().value;
+            } else
+              throw new StreamError(`requested part ${ix} beyond end`);
+          } else
+            throw new Error('assertion failed');
+        } else
+            throw new StreamError(`requested part 0`);
       } else
         return new Stream(this,
-          part(this.args[0], ins.map(i => i.numValue({min: 1n}))),
+          part(this.args[0], ins.map(i => i.numValue())),
             {len: BigInt(ins.length)});
     } else if(ins.length > 1)
       throw new StreamError('required list of values or a single stream');
@@ -229,7 +290,7 @@ R.register('part', {
     return new Stream(this,
       part(this.args[0], (function*() {
         for(const s of sPart)
-          yield s.evalNum({min: 1n});
+          yield s.evalNum();
       })()),
       {
         len: sPart.len,
@@ -248,14 +309,17 @@ R.register('part', {
   help: {
     en: [
       'Returns one or more parts of `_source`. Long form of `_source[...]`.',
-      'One or more parts may be given, or a stream.'],
+      'One or more parts may be given, or a stream.',
+      '-Part specifications may be negative, in that case they are counted from the end.'],
     cs: [
       'Vrátí jeden nebo více prvků `_source`. Alternativní zápis `_source[...]`.',
-      'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.'],
+      'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.',
+      '-Požadované indexy mohou být i záporné, v takovém případě se počítají od konce proudu.'],
     cat: catg.base,
     ex: [['abc[3]', '"c"', {en: 'returns a single value', cs: 'vrací jednu hodnotu'}],
       ['abc[3,1]', '["c","a"]', {en: 'returns a stream', cs: 'vrací proud'}],
-      ['abc[range(1,5,2)]', '["a","c","e"]']],
+      ['abc[range(1,5,2)]', '["a","c","e"]'],
+      ['abc[-3]', '"x"']],
     args: 'source,...'
   }
 });

@@ -175,7 +175,7 @@ R.register('last', {
     const sIn = this.src.evalStream({finite: true});
     if(this.args[0]) {
       const len = this.args[0].evalNum({min: 1n});
-      let l = [];
+      const l = [];
       if(sIn.len === undefined) {
         for(const v of sIn) {
           l.push(v);
