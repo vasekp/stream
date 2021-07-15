@@ -166,23 +166,29 @@ regReducer('or', '|', (a, b) => a || b, types.B, {
 
 function regReducerS(name, fun, numOpts, help) {
   R.register(name, {
-    sourceOrArgs: 1,
+    sourceOrArgs: 2,
     preeval() {
-      if(this.args.length > 0) {
+      if(this.args.length >= 2) {
         const ins = this.args.map(arg => arg.evalNum());
         const res = ins.reduce(fun);
         return new Atom(res);
-      } else {
-        const sIn = this.src.evalStream({finite: true});
-        let res = null;
-        for(const s of sIn) {
-          const curr = s.evalNum(numOpts);
-          res = res === null ? curr : fun(res, curr);
-        }
-        if(res === null)
-          throw new StreamError('empty stream');
-        return new Atom(res);
+      } else if(this.args.length === 1) {
+        const inp = this.src.evalNum(numOpts);
+        const arg = this.args[0].evalNum(numOpts);
+        return new Atom(fun(inp, arg));
+      } else
+        return this;
+    },
+    eval() {
+      const sIn = this.src.evalStream({finite: true});
+      let res = null;
+      for(const s of sIn) {
+        const curr = s.evalNum(numOpts);
+        res = res === null ? curr : fun(res, curr);
       }
+      if(res === null)
+        throw new StreamError('empty stream');
+      return new Atom(res);
     },
     help
   });
@@ -203,24 +209,34 @@ regReducerS('min', (a, b) => b < a ? b : a); // TODO
 regReducerS('max', (a, b) => b > a ? b : a); // TODO
 
 regReducerS('gcd', gcd, {min: 1n}, {
-  en: ['Calculates the greatest common divisor of its arguments (if given) or the input stream.'],
-  cs: ['Najde největšího společného dělitele svých argumentů (jestliže nějaké má) nebo vstupního proudu.'],
+  en: ['Form with several arguments: calculates the greatest common divisor of them.',
+    'Form without arguments: calculates the GCD of the input stream.',
+    'Form with one argument: calculates the GCD of the source (number) and the argument.'],
+  cs: ['Forma s několika argumenty: počítá jejich největší společný dělitel (GCD).',
+    'Forma bez argumentů: počítá GCD vstupního proudu.',
+    'Forma s jedním argumentem: počítá GCD vstupu (čísla) a argumentu.'],
   cat: catg.numbers,
   src: 'stream?',
   args: 'list?',
   ex: [['range(4,8,2).gcd', '2', {en: 'input stream', cs: 'vstupní proud'}],
-    ['gcd(100,125,145)', '5', {en: 'arguments', cs: 'argumenty'}]],
+    ['gcd(100,125,145)', '5', {en: 'arguments', cs: 'argumenty'}],
+    ['iota:gcd(4)', '[1,2,1,4,1,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
   see: 'lcm'
 });
 
 regReducerS('lcm', (a, b) => a * (b / gcd(a, b)), {min: 1n}, {
-  en: ['Calculates the least common multiplier of its arguments (if given) or the input stream.'],
-  cs: ['Najde nejmenší společný násobek svých argumentů (jestliže nějaké má) nebo vstupního proudu.'],
+  en: ['Form with several arguments: calculates the least common multiple of them.',
+    'Form without arguments: calculates the LCM of the input stream.',
+    'Form with one argument: calculates the LCM of the source (number) and the argument.'],
+  cs: ['Forma s několika argumenty: počítá jejich nejmenší společný násobek (LCM).',
+    'Forma bez argumentů: počítá LCM vstupního proudu.',
+    'Forma s jedním argumentem: počítá LCM vstupu (čísla) a argumentu.'],
   cat: catg.numbers,
   src: 'stream?',
   args: 'list?',
   ex: [['range(4,8,2).lcm', '24', {en: 'input stream', cs: 'vstupní proud'}],
-    ['lcm(10,12,15)', '60', {en: 'arguments', cs: 'argumenty'}]],
+    ['lcm(10,12,15)', '60', {en: 'arguments', cs: 'argumenty'}],
+    ['iota:lcm(4)', '[4,4,12,4,20,12,28,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
   see: 'gcd'
 });
 
