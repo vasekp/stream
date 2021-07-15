@@ -107,10 +107,16 @@ R.register('save', {
         const rec = innerReg.find(arg.ident);
         if(rec?.body) {
           outerReg.register(arg.ident, rec);
+          innerReg.clear(arg.ident);
           ret.push(new Atom(arg.ident));
         }
-      } else
+      } else {
         ret.push(...arg.prepare({register: outerReg, referrer: arg}).eval());
+        arg.args.forEach((anode, ix, arr) => {
+          if(ix < arr.length - 1)
+            innerReg.clear(anode.ident);
+        });
+      }
     });
     return new Node('array', this.token, null, ret);
   },
