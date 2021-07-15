@@ -122,10 +122,11 @@ async function populate() {
           line = line.substring(1);
         }
         const html = line
-          .replace(/[<>&]/g, c => entities[c])
           .replace(/`([^``]*)`/g, (_, m) => {
-            return '<i-pre>' + m.replace(/(?<!&)\w+/g, mm => {
-              if(_map.has(mm) && mm !== name)
+            return '<i-pre>' + m.replace(/\w+|[<>&]/g, mm => {
+              if(entities[mm])
+                return entities[mm];
+              else if(_map.has(mm) && mm !== name)
                 return `<a href="#id-${mm}">${mm}</a>`;
               else if(mm[0] === '_')
                 return mm.substring(1);
@@ -159,9 +160,10 @@ async function populate() {
       let hi = 1;
       for(let [inp, out, cEn, cCz] of obj.ex) {
         let html = inp
-          .replace(/[<>&]/g, c => entities[c])
-          .replace(/(?<!&)\w+/g, m => {
-            if(_map.has(m) && m !== name)
+          .replace(/\w+|[<>&]/g, m => {
+            if(entities[m])
+              return entities[m];
+            else if(_map.has(m) && m !== name)
               return `<a href="#id-${m}">${m}</a>`;
             else
               return m;
@@ -197,8 +199,10 @@ async function populate() {
   /*** Create links in Introduction ***/
   document.getElementById('intro').querySelectorAll('i-pre:not(.skiplink)').forEach(pre => {
     const html = pre.textContent
-      .replace(/(?<!&)\w+/g, m => {
-        if(_map.has(m) && m !== name)
+      .replace(/\w+|[<>&]/g, m => {
+        if(entities[m])
+          return entities[m];
+        else if(_map.has(m) && m !== name)
           return `<a href="#id-${m}">${m}</a>`;
         else if(m[0] === '_')
           return m.substring(1);
