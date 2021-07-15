@@ -22,7 +22,7 @@ R.register(['factorial', 'fact', 'fac'], {
   },
   help: {
     en: ['Factorial of `_n`.'],
-    cz: ['Faktoriál čísla `_n`.'],
+    cs: ['Faktoriál čísla `_n`.'],
     cat: catg.numbers,
     src: 'n',
     ex: [['iota:factorial', '[1,2,6,24,120,720,...]'],
@@ -46,7 +46,7 @@ R.register(['dfactorial', 'dfact', 'dfac'], {
   },
   help: {
     en: ['Double factorial of `_n`, i.e., `n*(n-2)*...`.'],
-    cz: ['Dvojitý faktoriál čísla `_n`, tj. `n*(n-2)*...`.'],
+    cs: ['Dvojitý faktoriál čísla `_n`, tj. `n*(n-2)*...`.'],
     cat: catg.numbers,
     src: 'n',
     ex: [['iota:dfactorial', '[1,2,3,8,15,48,105,...]'],
@@ -98,7 +98,7 @@ R.register('binom', {
   help: {
     en: ['Binomial coefficient `_n` choose `_k`.',
       'If `_k` is not given, lists the entire `_n`-th row.'],
-    cz: ['Binomický koeficient `_n` nad `_k`.',
+    cs: ['Binomický koeficient `_n` nad `_k`.',
       'Jestliže `_k` není dáno, vypíše celý `_n`-tý řádek.'],
     cat: catg.numbers,
     args: 'n,k?',
@@ -142,7 +142,7 @@ R.register('comb', {
   },
   help: {
     en: ['Multinomial coefficient `_k1+_k2+...` choose `_k1`, `_k2`, ...'],
-    cz: ['Multinomický koeficient `_k1+_k2+...` nad `_k1`, `_k2`, ...'],
+    cs: ['Multinomický koeficient `_k1+_k2+...` nad `_k1`, `_k2`, ...'],
     cat: catg.numbers,
     args: 'k1,k2,...',
     ex: [['comb(2,2,1)', '30'],
@@ -160,7 +160,7 @@ R.register('rcomb', {
   help: {
     en: ['Similar as `comb(k1,k2,...)` but further divided by factorials of numbers of repetitions between the `_k` values.',
       '(The number of ways `k1+k2+...` elements can be split into indistinguishable subsets of sizes `_k1`, `_k2`, ...)'],
-    cz: ['Podobné `comb(k1,k2,...)`, ale dále vydělené faktoriály počtů opakování mezi hodnotami `_k`.',
+    cs: ['Podobné `comb(k1,k2,...)`, ale dále vydělené faktoriály počtů opakování mezi hodnotami `_k`.',
       '(Počet způsobů, jak rozdělit `k1+k2+...` prvků do nerozlišitelných skupin o velikostech `_k1`, `_k2`, ...)'],
     cat: catg.numbers,
     args: 'k1,k2,...',
@@ -277,7 +277,7 @@ R.register('tuples', {
   help: {
     en: ['1-argument form: `_n`-tuples of values taken from `_source`.',
       'Multi-argument form: tuples where `_i`-th value is taken from the `_i`-th argument.'],
-    cz: ['Forma s jedním argumentem: `_n`-tice prvků z proudu `_source`.',
+    cs: ['Forma s jedním argumentem: `_n`-tice prvků z proudu `_source`.',
       'Forma s několika argumenty: `_n`-tice, kde `_i`-tý prvek je braný z `_i`-tého argumentu.'],
     cat: catg.streams,
     src: 'source?',
@@ -501,7 +501,7 @@ R.register(['perm', 'perms', 'permute'], {
     en: ['Without `_order`: lists all distinct permutations of `_source`.',
       'If `_order` is given, it must be a valid permutation of `range(_order.length)`. Returns a permutation of `_source` where the first `_order.length` elements are taken in the given order and the rest is left unchanged.',
       '-Both forms also work with infinite streams.'],
-    cz: ['Bez argumentu `_order`: všechny různé permutace proudu `_source.',
+    cs: ['Bez argumentu `_order`: všechny různé permutace proudu `_source.',
       'Jestliže je `_order_ dáno, musí se jednat o validní permutaci `range(_order.length)`. `perm` potom vrátí permutaci `_source`, kde prvních `_order.length` prvků je bráno v daném pořadí a zbytek ponechán nezměněn.',
       '-Obě formy fungují i pro nekonečné proudy.'],
     cat: catg.streams,
@@ -636,7 +636,7 @@ R.register(['subsets', 'ss', 'choose'], {
     en: ['0-argument form: all possible subsets of `_source`.',
       'One- or multi-argument form: subsets of fixed size(s).',
       '!For performance reasons, all elements of `_source` are treated as distinct. If this is not the case, the listed sets will repeat. `uniq` can be used to remove the duplicates.'],
-    cz: ['Forma bez argumentů: všechny možné podmnožiny `_source`.',
+    cs: ['Forma bez argumentů: všechny možné podmnožiny `_source`.',
       'Forma s jedním nebo více argumenty: podmnožiny pevné velikosti (či pevných velikostí).',
       '!Z důvodů výpočetní náročnosti jsou všechny prvky `_source` brány jako rozdílné. Pokud tomu tak není, vypsané množiny se mohou opakovat. Duplikáty mohou být odfiltrovány použitím `uniq`.'],
     cat: catg.streams,

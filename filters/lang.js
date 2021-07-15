@@ -22,7 +22,7 @@ R.register('array', {
   },
   help: {
     en: ['A finite stream made of the arguments. Long form of `[...]`.'],
-    cz: ['Konečný proud sestavený z argumentů. Alternativní zápis `[...]`.'],
+    cs: ['Konečný proud sestavený z argumentů. Alternativní zápis `[...]`.'],
     cat: [catg.base, catg.sources],
     ex: [['array(1,3,5)', '[1,3,5]']]
   }
@@ -57,10 +57,10 @@ R.register('foreach', {
   },
   help: {
     en: ['Applies `body` on each element of `source`. Long form of `source:body`.'],
-    cz: ['Použije `body` na každý prvek `source`. Alternativní zápis `source:body`.'],
+    cs: ['Použije `body` na každý prvek `source`. Alternativní zápis `source:body`.'],
     cat: catg.base,
     ex: [['iota.foreach(#^2)', '[1,4,9,16,...]'],
-      ['iota:power(2)', '[1,4,9,16,...]', {en: 'short form', cz: 'zkrácená forma'}]],
+      ['iota:power(2)', '[1,4,9,16,...]', {en: 'short form', cs: 'zkrácená forma'}]],
     src: 'source',
     args: 'body'
   }
@@ -115,7 +115,7 @@ R.register('join', {
   },
   help: {
     en: ['Concatenates all arguments into a stream. Long form of `x~y~...`'],
-    cz: ['Naváže všechny argumenty do jednoho proudu. Alternativní zápis `x~y~...`'],
+    cs: ['Naváže všechny argumenty do jednoho proudu. Alternativní zápis `x~y~...`'],
     cat: catg.base,
     ex: [
       ['join([1,2],3,"a",[[]])', '[1,2,3,"a",[]]'],
@@ -163,12 +163,12 @@ R.register('zip', {
     en: [
       'Reads all arguments concurrently and returns tuples of their elements. Long form of `x%y%...`.',
       'The resulting stream stops when the shortest argument does.'],
-    cz: [
+    cs: [
       'Čte všechny argumenty souběžně a vrací jejich prvky v n-ticích. Alternativní zápis `x%y%...`.',
       'Délka výstupu odpovídá nejkratšímu z argumentů.'],
     cat: catg.base,
     ex: [['abc%iota', '[["a",1],["b",2],["c",3],...]'],
-      ['zip(iota,primes)', '[[1,2],[2,3],[3,5],[4,7],...]', {en: 'long form', cz: 'textová forma'}]],
+      ['zip(iota,primes)', '[[1,2],[2,3],[3,5],[4,7],...]', {en: 'long form', cs: 'textová forma'}]],
     args: 'x,y,...'
   }
 });
@@ -249,12 +249,12 @@ R.register('part', {
     en: [
       'Returns one or more parts of `_source`. Long form of `_source[...]`.',
       'One or more parts may be given, or a stream.'],
-    cz: [
+    cs: [
       'Vrátí jeden nebo více prvků `_source`. Alternativní zápis `_source[...]`.',
       'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.'],
     cat: catg.base,
-    ex: [['abc[3]', '"c"', {en: 'returns a single value', cz: 'vrací jednu hodnotu'}],
-      ['abc[3,1]', '["c","a"]', {en: 'returns a stream', cz: 'vrací proud'}],
+    ex: [['abc[3]', '"c"', {en: 'returns a single value', cs: 'vrací jednu hodnotu'}],
+      ['abc[3,1]', '["c","a"]', {en: 'returns a stream', cs: 'vrací proud'}],
       ['abc[range(1,5,2)]', '["a","c","e"]']],
     args: 'source,...'
   }
@@ -336,7 +336,7 @@ R.register('over', {
   },
   help: {
     en: ['Reads all arguments concurrently and uses their elements as arguments for `body`. Long form of `body@args`.'],
-    cz: ['Čte všechny argumenty souběžně a n-tice jejich prvků používá jako argumenty pro `body`. Alternativní zápis `body@args`.'],
+    cs: ['Čte všechny argumenty souběžně a n-tice jejich prvků používá jako argumenty pro `body`. Alternativní zápis `body@args`.'],
     cat: catg.base,
     ex: [['{#1^#2} @ ([3,4,5], [1,2,3])', '[3,16,125]'],
       ['range@range(3)', '[[1],[1,2],[1,2,3]]']],
@@ -375,13 +375,13 @@ R.register('equal', {
     en: [
       'Compares two or more values for equality. The result is `true` or `false`. Long form of `x=y`.',
       '-Streams can be compared as long as they are finite.'],
-    cz: [
+    cs: [
       'Testuje rovnost dvou nebo více hodnot. Výsledkem je `true` nebo `false`. Alternativní zápis `x=y`.',
       '-I proudy mohou být porovnávány, pokud jsou konečné.'],
     cat: catg.base,
     ex: [['1=2', 'false'], ['[1,2,3]+1 = [2,3,4]', 'true'],
       ['range(3,1) = [] = []~[] = []%[]', 'true'],
-      ['equal([],[])', 'true', {en: 'long form', cz: 'textová forma'}]],
+      ['equal([],[])', 'true', {en: 'long form', cs: 'textová forma'}]],
     see: 'ineq'
   }
 });
@@ -412,7 +412,7 @@ R.register('ineq', {
   },
   help: {
     en: ['Compares two values for inequality. The result is `true` or `false`. Long form of `x<>y`.'],
-    cz: ['Testuje nerovnost dvou hodnot. Výsledkem je `true` nebo `false`. Alternativní zápis `x<>y`.'],
+    cs: ['Testuje nerovnost dvou hodnot. Výsledkem je `true` nebo `false`. Alternativní zápis `x<>y`.'],
     cat: catg.base,
     ex: [['1<>2', 'true'], ['[]<>[[]]', 'true']],
     see: 'equal'
@@ -470,7 +470,7 @@ R.register('assign', {
       '-The assignments are done in a session-wide register but can be made persistent using `save`.',
       '-Persistent variables are shadowed by temporary variables of the same name.',
       '-Filters can also be assigned to variables. When used, they behave as in a block.'],
-    cz: [
+    cs: [
       'Vyhodnocení výrazu `assign` přiřadí hodnotu jedné nebo více proměnným. Nové identifikátory jsou navráceny jako seznam řetězců.',
       '-Jakékoli uživatelské proměnné použité na pravé straně přiřazení jsou nejprve dosazeny, takže proměnná může být definována pomocí předchozí hodnoty stejného symbolu, také vymazání jednoho symbolu neovlivní jiné.',
       '-Proměnné jsou uloženy v dočasném registru. Uložit je napříč sezeními je možno pomocí `save`.',

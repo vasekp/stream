@@ -27,7 +27,7 @@ R.register('clear', {
     en: ['Clears one or more variables. The affected identifiers are returned as a list of strings.',
       '-Clearing a nonexistent variable is not an error.',
       '!This command clears session-wide as well as persistent assignments.'],
-    cz: ['Smaže jedno nebo více přiřazení. Změněné identifikátory jsou navráceny jako seznam řetězců.',
+    cs: ['Smaže jedno nebo více přiřazení. Změněné identifikátory jsou navráceny jako seznam řetězců.',
       '-Pokus o smazání neexistující proměnné není chyba.',
       '!Tento příkaz maže dočasné i trvalé proměnné.'],
     cat: catg.base,
@@ -53,7 +53,7 @@ R.register('vars', {
   },
   help: {
     en: ['Lists all user-defined variables and their assignments.'],
-    cz: ['Seznam všech uživatelských proměnných a jejich hodnot.'],
+    cs: ['Seznam všech uživatelských proměnných a jejich hodnot.'],
     cat: catg.base,
     ex: [['a=b=10', '["a","b"]'], ['vars', '[["a","10"], ["b","10"]]']]
   }
@@ -70,7 +70,7 @@ R.register('desc', {
   },
   help: {
     en: ['Provides a valid input-form description of the input stream.'],
-    cz: ['Popíše proud na vstupu formou validního vstupního příkazu.'],
+    cs: ['Popíše proud na vstupu formou validního vstupního příkazu.'],
     cat: catg.base,
     ex: [['iota:range(#):desc', '["r(1)","r(2)","r(3)",...]']]
   }
@@ -117,7 +117,7 @@ R.register('save', {
   help: {
     en: ['Saves a temporary variable or variables into a persistent register.',
       '-An assignment can be put directly into `save`.'],
-    cz: ['Uloží dočasnou uživatelskou proměnnou do trvalého registru.',
+    cs: ['Uloží dočasnou uživatelskou proměnnou do trvalého registru.',
       '-Přiřazení může být zapsáno přímo jako argument `save`.'],
     cat: catg.base,
     args: 'vars|assign',
@@ -150,7 +150,7 @@ R.register(['restore', 'revert'], {
   help: {
     en: ['Clears one or more temporary variables, effectively restoring its assignment in the persistent register.',
       '-If a variable has no persistent assignment, it is undefined.'],
-    cz: ['Smaže záznam jedné nebo více proměnných v dočasném registru. Pokud má proměnná záznam v trvalém registru, zastíněná hodnota se tak zpřístupní.',
+    cs: ['Smaže záznam jedné nebo více proměnných v dočasném registru. Pokud má proměnná záznam v trvalém registru, zastíněná hodnota se tak zpřístupní.',
       '-Jestliže trvalý záznam stejného jména neexistuje, proměnná bude nedefinovaná.'],
     cat: catg.base,
     args: 'vars...',

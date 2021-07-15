@@ -97,7 +97,7 @@ R.register(['split', 'chars'], {
       'If `_rule` is a string, splits by this separator.',
       'If `_rule` is an alphabet, splits by its characters.',
       'If no `_rule` is given, separates single characters.'],
-    cz: ['Rozdělí řetězec na podřetězce.',
+    cs: ['Rozdělí řetězec na podřetězce.',
       'Jestliže `_rule` je číslo, tvoří podřetězce této délky.',
       'Jestliže `_rule` je řetězec, dělí podle tohoto oddělovače.',
       'Jestliže `_rule` je abeceda, dělí na její znaky.',
@@ -108,7 +108,7 @@ R.register(['split', 'chars'], {
     ex: [['"Test string".split()', '["T","e","s","t"," ",...]'],
       ['"Test string".split(3)', '["Tes","t s","tri","ng"]'],
       ['"Test string".split(" ")', '["Test","string"]'],
-      ['"Test string".split(abc~"st")', '["T","e","st"," ","st",...]', {en: 'custom alphabet', cz: 'upravená abeceda'}]]
+      ['"Test string".split(abc~"st")', '["T","e","st"," ","st",...]', {en: 'custom alphabet', cs: 'upravená abeceda'}]]
   }
 });
 
@@ -123,7 +123,7 @@ R.register('cat', {
   help: {
     en: ['Concatenates a stream of strings into one string.',
       '-If `_glue` is given, it is used between consecutive strings.'],
-    cz: ['Sloučí proud řetězců do jednoho řetězce.'],
+    cs: ['Sloučí proud řetězců do jednoho řetězce.'],
     cat: catg.strings,
     ex: [['"one two three".split(" ").cat(",")', '"one,two,three"'],
       ['abc[pi.while(#>0)].cat', '"cadaeibfecehigicbchdfbfdcchcbgie"'],
@@ -151,7 +151,7 @@ R.register('ord', {
   help: {
     en: ['Returns the ordinal number of a character.',
       'If `_alphabet` is given, returns index into it. Otherwise, returns a Unicode code point.'],
-    cz: ['Vrátí pořadové číslo znaku.',
+    cs: ['Vrátí pořadové číslo znaku.',
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní. Jinak vrací Unicode kód.'],
     cat: catg.strings,
     src: 'char',
@@ -181,7 +181,7 @@ R.register('chr', {
   help: {
     en: ['Returns the character with a given ordinal number.',
       'If `_alphabet` is given, works within it. Otherwise, returns a character at the given Unicode code point.'],
-    cz: ['Vrátí znak dle pořadového čísla.',
+    cs: ['Vrátí znak dle pořadového čísla.',
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní. Jinak vrátí znak daného Unicode kódu.'],
     cat: catg.strings,
     src: 'index',
@@ -205,7 +205,7 @@ R.register('chrm', {
   help: {
     en: ['Returns the character with a given ordinal number in an alphabet, wrapping over its length.',
       '-This avoids the need to use `mod` for overflows.'],
-    cz: ['Vrátí znak dle pořadového čísla v abecedě. Čísla menší než 1 nebo větší než délka abecedy jsou interpretována cyklicky.',
+    cs: ['Vrátí znak dle pořadového čísla v abecedě. Čísla menší než 1 nebo větší než délka abecedy jsou interpretována cyklicky.',
       '-Toto efektivně odstraňuje potřebu používat `mod` proti přetečení.'],
     cat: catg.strings,
     src: 'index',
@@ -232,12 +232,12 @@ R.register('ords', {
   help: {
     en: ['Returns ordinal numbers of characters of `_string` in the alphabet `_alphabet`.',
       '-This avoids the need for using `_alphabet` twice: `_string.split(_alphabet):ord(_alphabet)`.'],
-    cz: ['Vrátí pořadová čísla znaků řetězce `_string` v abecedě `_alphabet`.',
+    cs: ['Vrátí pořadová čísla znaků řetězce `_string` v abecedě `_alphabet`.',
       '-Toto odstraňuje potřebu použít `_alphabet` dvakrát: `_string.split(_alphabet):ord(_alphabet)`.'],
     cat: catg.strings,
     src: 'string',
     args: 'alphabet',
-    ex: [['abch=abc.take(8)~"ch"~abc.drop(8)', '["abch"]', {en: 'Czech alphabet without diacritics', cz: 'abeceda s ch'}],
+    ex: [['abch=abc.take(8)~"ch"~abc.drop(8)', '["abch"]', {en: 'Czech alphabet without diacritics', cs: 'abeceda s ch'}],
       ['"Czech".ords(abch)', '[3,27,5,9]']]
   }
 });
@@ -251,10 +251,10 @@ R.register(['lcase', 'lc'], {
   },
   help: {
     en: ['Converts `_string` to lowercase.'],
-    cz: ['Vrátí řetězec `_string` převedený na malá písmena.'],
+    cs: ['Vrátí řetězec `_string` převedený na malá písmena.'],
     cat: catg.strings,
     src: 'string',
-    ex: [['"Слово".lcase', '"слово"', {en: 'also works for non-Latin characters', cz: 'funguje také mimo latinku'}]],
+    ex: [['"Слово".lcase', '"слово"', {en: 'also works for non-Latin characters', cs: 'funguje také mimo latinku'}]],
     see: 'ucase'
   }
 });
@@ -268,10 +268,10 @@ R.register(['ucase', 'uc'], {
   },
   help: {
     en: ['Converts `_string` to uppercase.'],
-    cz: ['Vrátí řetězec `_string` převedený na velká písmena.'],
+    cs: ['Vrátí řetězec `_string` převedený na velká písmena.'],
     cat: catg.strings,
     src: 'string',
-    ex: [['"Слово".ucase', '"СЛОВО"', {en: 'also works for non-Latin characters', cz: 'funguje také mimo latinku'}]],
+    ex: [['"Слово".ucase', '"СЛОВО"', {en: 'also works for non-Latin characters', cs: 'funguje také mimo latinku'}]],
     see: 'lcase'
   }
 });
@@ -292,10 +292,10 @@ R.register('abc', {
   help: {
     en: ['The 26-letter English alphabet in lower case.',
       '-Filters like `split` do not require character case match.'],
-    cz: ['Anglická 26-písmenná abeceda malými písmeny.',
+    cs: ['Anglická 26-písmenná abeceda malými písmeny.',
       '-Filtry jako `split` mezi velikostí písmen nerozlišují.'],
     cat: [catg.sources, catg.strings],
-    ex: [['abc.take(8)~"ch"~abc.drop(8)', '["a","b","c","d",...]', {en: 'Czech alphabet with "ch" after h', cz: 'česká abeceda s "ch"'}],
+    ex: [['abc.take(8)~"ch"~abc.drop(8)', '["a","b","c","d",...]', {en: 'Czech alphabet with "ch" after h', cs: 'česká abeceda s "ch"'}],
       ['$.length', '27']],
     see: 'upabc'
   }
@@ -317,7 +317,7 @@ R.register(['upabc', 'uabc'], {
   help: {
     en: ['The 26-letter English alphabet in upper case.',
       '-Filters like `split` do not require character case match.'],
-    cz: ['Anglická 26-písmenná abeceda velkými písmeny.',
+    cs: ['Anglická 26-písmenná abeceda velkými písmeny.',
       '-Filtry jako `split` mezi velikostí písmen nerozlišují.'],
     cat: [catg.sources, catg.strings],
     ex: [['upabc', '["A","B","C","D",...]']],
@@ -334,7 +334,7 @@ R.register(['isstring', 'isstr'], {
   },
   help: {
     en: ['Tests if `_input` is a string. Returns `true` or `false`.'],
-    cz: ['Testuje, zda `_input` je řetězcem. Vrací `true` nebo `false`.'],
+    cs: ['Testuje, zda `_input` je řetězcem. Vrací `true` nebo `false`.'],
     cat: catg.strings,
     src: 'input',
     ex: [['[1,[2,3,4],"abc"]:isstring', '[false,false,true]']]
@@ -353,7 +353,7 @@ R.register('isdigit', {
   },
   help: {
     en: ['Tests if `_input` is a digit (`"0"` through `"9"`). Returns `true` or `false`.'],
-    cz: ['Testuje, zda `_input` je číslice (`"0"` až `"9"`). Vrací `true` nebo `false`.'],
+    cs: ['Testuje, zda `_input` je číslice (`"0"` až `"9"`). Vrací `true` nebo `false`.'],
     cat: catg.strings,
     src: 'input',
     ex: [['[1,"1","a","A"]:isdigit', '[false,true,false,false]']]
@@ -377,7 +377,7 @@ R.register('isletter', {
   help: {
     en: ['Tests if `_input` is a letter. Returns `true` or `false`.',
       'If `_alphabet` is given, uses that, otherwise uses English alphabet (`"a"` through `"z"` and uppercase variants).'],
-    cz: ['Testuje, zda `_input` je písmeno. Vrací `true` nebo `false`.',
+    cs: ['Testuje, zda `_input` je písmeno. Vrací `true` nebo `false`.',
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní, jinak používá anglickou abecedu (`"a"` až `"z"` a velká písmena).'],
     cat: catg.strings,
     src: 'input',
@@ -403,7 +403,7 @@ R.register(['isupper', 'isucase', 'isuc'], {
   help: {
     en: ['Tests if `_input` is an uppercase letter. Returns `true` or `false`.',
       'If `_alphabet` is given, uses that, otherwise uses English alphabet (`"A"` through `"Z"`).'],
-    cz: ['Testuje, zda `_input` je velké písmeno. Vrací `true` nebo `false`.',
+    cs: ['Testuje, zda `_input` je velké písmeno. Vrací `true` nebo `false`.',
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní, jinak používá anglickou abecedu (`"A"` až `"Z"`).'],
     cat: catg.strings,
     src: 'input',
@@ -429,7 +429,7 @@ R.register(['islower', 'islcase', 'islc'], {
   help: {
     en: ['Tests if `_input` is an lowercase letter. Returns `true` or `false`.',
       'If `_alphabet` is given, uses that, otherwise uses English alphabet (`"a"` through `"z"`).'],
-    cz: ['Testuje, zda `_input` je malé písmeno. Vrací `true` nebo `false`.',
+    cs: ['Testuje, zda `_input` je malé písmeno. Vrací `true` nebo `false`.',
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní, jinak používá anglickou abecedu (`"a"` až `"z"`).'],
     cat: catg.strings,
     src: 'input',
@@ -449,7 +449,7 @@ R.register('prefix', {
   help: {
     en: ['Returns `_count` first characters of `_string`. If `_string` is shorter than `_count`, returns all of it.',
       '-A negative `_count` removes `-_count` characters from the end.'],
-    cz: ['Vrátí `_count` prvních znaků řetězce `_string`. Jestliže `_string` je kratší než `_count`, vrátí jej celý.',
+    cs: ['Vrátí `_count` prvních znaků řetězce `_string`. Jestliže `_string` je kratší než `_count`, vrátí jej celý.',
       '-Záporný `_count` odstraní `-_count` znaků z konce.'],
     cat: catg.strings,
     src: 'string',
@@ -471,7 +471,7 @@ R.register('postfix', {
   help: {
     en: ['Returns `_count` last characters of `_string`. If `_string` is shorter than `_count`, returns all of it.',
       '-A negative `_count` removes `-_count` characters from the beginning.'],
-    cz: ['Vrátí `_count` posledních znaků řetězce `_string`. Jestliže `_string` je kratší než `_count`, vrátí jej celý.',
+    cs: ['Vrátí `_count` posledních znaků řetězce `_string`. Jestliže `_string` je kratší než `_count`, vrátí jej celý.',
       '-Záporný `_count` odstraní `-_count` znaků ze začátku.'],
     cat: catg.strings,
     src: 'string',
@@ -493,7 +493,7 @@ R.register('ends', {
   help: {
     en: ['Tests if `_string` ends with `_postfix`. Returns `true` or `false`.',
       '-Does not distinguish between upper and lower case.'],
-    cz: ['Testuje, zda řetězec `_string` končí podřetězcem `_postfix`. Vrací `true` nebo `false`.',
+    cs: ['Testuje, zda řetězec `_string` končí podřetězcem `_postfix`. Vrací `true` nebo `false`.',
       '-Nerozlišuje mezi malými a velkými písmeny.'],
     cat: catg.strings,
     src: 'string',
@@ -514,7 +514,7 @@ R.register('starts', {
   help: {
     en: ['Tests if `_string` begins with `_prefix`. Returns `true` or `false`.',
       '-Does not distinguish between upper and lower case.'],
-    cz: ['Testuje, zda řetězec `_string` začíná podřetězcem `_prefix`. Vrací `true` nebo `false`.',
+    cs: ['Testuje, zda řetězec `_string` začíná podřetězcem `_prefix`. Vrací `true` nebo `false`.',
       '-Nerozlišuje mezi malými a velkými písmeny.'],
     cat: catg.strings,
     src: 'string',
@@ -546,7 +546,7 @@ R.register('shift', {
   help: {
     en: ['Shifts `_string` by `_count` characters forward in the given `_alphabet`.',
       '-Upper/lower case is not maintained during shift.'],
-    cz: ['Posune `_string` o `_count` znaků dopředu v abecedě `_alphabet`.',
+    cs: ['Posune `_string` o `_count` znaků dopředu v abecedě `_alphabet`.',
       '-Během posunu se ztratí původní velikost písmen.'],
     cat: catg.strings,
     src: 'string',
@@ -590,7 +590,7 @@ R.register('tr', {
   help: {
     en: ['Substitutes characters from `_pattern` by those in the same positions in `_replacements`.',
       '-Does not distinguish between upper and lower case in input. The character case of output follows `_replacements`.'],
-    cz: ['Nahrazuje znaky z `_pattern` znaky na stejných pozicích v `_replacements`.',
+    cs: ['Nahrazuje znaky z `_pattern` znaky na stejných pozicích v `_replacements`.',
       '-Nerozlišuje mezi velkými a malými písmeny vstupu. Velikost písmen ve výstupu je dle `_replacements`.'],
     cat: catg.strings,
     src: 'string',

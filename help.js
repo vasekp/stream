@@ -36,7 +36,7 @@ const entities = {
   '&': '&amp;'};
 
 async function populate() {
-  const lang = new URLSearchParams(window.location.search).get('lang') === 'cz' ? 'cz' : 'en';
+  const lang = new URLSearchParams(window.location.search).get('lang') === 'cs' ? 'cs' : 'en';
   if(document.body.id !== 'help')
     return;
   /*** Category selection ***/
