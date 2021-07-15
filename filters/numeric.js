@@ -367,6 +367,28 @@ R.register(['power', 'pow'], {
   }
 });
 
+R.register('clamp', {
+  reqSource: true,
+  numArg: 2,
+  eval() {
+    const inp = this.src.evalNum();
+    const min = this.args[0].evalNum();
+    const max = this.args[1].evalNum();
+    if(max < min)
+      throw new StreamError(`maximum ${max} smaller than minimum ${min}`);
+    const res = inp < min ? min : inp > max ? max : inp;
+    return new Atom(res);
+  },
+  help: {
+    en: ['Clamps `_n` to bounds given by `_min` and `_max`.'],
+    cs: ['Omezí vstup `_n` mezi dané meze `_min` a `_max`.'],
+    cat: catg.numbers,
+    src: 'n',
+    args: 'min,max',
+    ex: [['iota.clamp(3,7)', '[3,3,3,4,5,6,7,7,7,...]']]
+  }
+});
+
 R.register('mod', {
   reqSource: true,
   minArg: 1,
@@ -375,9 +397,9 @@ R.register('mod', {
     const inp = this.src.evalNum();
     const mod = this.args[0].evalNum({min: 1n});
     const base = this.args[1] ? this.args[1].evalNum() : 0n;
-    const res0 = (inp - base) % mod;
-    const res = (res0 >= 0n ? res0 : res0 + mod) + base;
-    return new Atom(res);
+    let rem = (inp - base) % mod;
+    rem = (rem >= 0n ? rem : rem + mod) + base;
+    return new Atom(rem);
   },
   help: {
     en: ['Calculates `_n` modulo `_modulus`.',
@@ -385,7 +407,7 @@ R.register('mod', {
     cs: ['Počítá `_n` modulo `_modulus`.',
       'Jestliže je zadáno `_base`, dává výsledek mezi `_base` a `_base+_modulus-1` namísto mezi 0 a `_modulus-1`.'],
     cat: catg.numbers,
-    source: 'n',
+    src: 'n',
     args: 'modulus,base?',
     ex: [['range(-5,5):mod(3)', '[1,2,0,1,2,0,1,2,0,1,2]', {en: 'remainder is calculated ≥ 0 even for negative numbers', cs: 'zbytek je vrácen ≥ 0 i pro záporné argumenty'}],
       ['10.mod(5,1)', '5', {en: 'with base=1 returns 5 instead of 0', cs: 's base=1 vrátí 5 namísto 0'}]],
@@ -1176,23 +1198,27 @@ R.register(['rndstream', 'rnds'], {
 
 R.register(['divmod', 'quotrem'], {
   reqSource: true,
-  numArg: 1,
+  minArg: 1,
+  maxArg: 2,
   preeval() {
     const inp = this.src.evalNum();
     const mod = this.args[0].evalNum({min: 1n});
-    let rem = inp % mod;
-    if(rem < 0n)
-      rem += mod;
+    const base = this.args[1] ? this.args[1].evalNum() : 0n;
+    let rem = (inp - base) % mod;
+    rem = (rem >= 0n ? rem : rem + mod) + base;
     const div = (inp - rem) / mod;
     return new Node('array', this.token, null, [new Atom(div), new Atom(rem)]);
   },
   help: {
-    en: ['Returns a pair comprising the quotient and remainder of dividing `_n` by `_k`.'],
-    cs: ['Vrátí dvojici obsahující celočíselný podíl a zbytek po dělení `_n` číslem `_k`.'],
+    en: ['Returns a pair comprising the quotient and remainder of dividing `_n` by `_k`.',
+      'If `_base` is given, the remainder is given between `_base` and `_base+_modulus-1`, rather than between 0 and `_modulus-1`, shifting the quotient as needed.'],
+    cs: ['Vrátí dvojici obsahující celočíselný podíl a zbytek po dělení `_n` číslem `_k`.',
+      'Jestliže je zadáno `_base`, zbytek je dán mezi `_base` a `_base+_modulus-1` namísto mezi 0 a `_modulus-1` a podíl adekvátně upraven.'],
     cat: catg.numbers,
     src: 'n',
     args: 'k',
-    ex: [['153.divmod(10)', '[15,3]']],
+    ex: [['153.divmod(10)', '[15,3]'],
+      ['[4,5,6,7]:divmod(5,1)', '[[0,4],[0,5],[1,1],[1,2]]']],
     see: ['mantexp', 'sqrem']
   }
 });
@@ -1217,6 +1243,27 @@ R.register(['mantexp', 'manexp'], {
     src: 'n',
     args: 'base',
     ex: [['123000.mantexp(10)', '[123,3]']]
+  }
+});
+
+R.register('dlog', {
+  reqSource: true,
+  maxArg: 1,
+  preeval() {
+    const inp = this.src.evalNum({min: 0n});
+    const base = this.args[0]?.evalNum({min: 2n}) || 10n;
+    for(let x = inp, exp = 0; ; x /= base, exp++)
+      if(x === 0n)
+        return new Atom(exp);
+  },
+  help: {
+    en: ['Discrete logarithm: digit length of `_n` in base `_base` (default 10).'],
+    cs: ['Diskrétní logaritmus: počet číslic čísla `_n` v soustavě o základu `_base` (výchozí `_base = 10`).'],
+    cat: catg.numbers,
+    src: 'n',
+    args: 'base?',
+    ex: [['123456.dlog', '6'],
+      ['iota:dlog(2).index(10)', '512', {en: 'first 10-digit number in base 2', cs: 'první číslo desetimístné ve dvojkové soustavě'}]]
   }
 });
 
