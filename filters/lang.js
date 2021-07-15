@@ -60,7 +60,7 @@ R.register('foreach', {
     cz: ['Použije `body` na každý prvek `source`. Alternativní zápis `source:body`.'],
     cat: catg.base,
     ex: [['iota.foreach(#^2)', '[1,4,9,16,...]'],
-      ['iota:power(2)', '[1,4,9,16,...]', 'short form', 'zkrácená forma']],
+      ['iota:power(2)', '[1,4,9,16,...]', {en: 'short form', cz: 'zkrácená forma'}]],
     src: 'source',
     args: 'body'
   }
@@ -168,7 +168,7 @@ R.register('zip', {
       'Délka výstupu odpovídá nejkratšímu z argumentů.'],
     cat: catg.base,
     ex: [['abc%iota', '[["a",1],["b",2],["c",3],...]'],
-      ['zip(iota,primes)', '[[1,2],[2,3],[3,5],[4,7],...]', 'long form', 'textová forma']],
+      ['zip(iota,primes)', '[[1,2],[2,3],[3,5],[4,7],...]', {en: 'long form', cz: 'textová forma'}]],
     args: 'x,y,...'
   }
 });
@@ -253,8 +253,8 @@ R.register('part', {
       'Vrátí jeden nebo více prvků `_source`. Alternativní zápis `_source[...]`.',
       'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.'],
     cat: catg.base,
-    ex: [['abc[3]', '"c"', 'returns a single value', 'vrací jednu hodnotu'],
-      ['abc[3,1]', '["c","a"]', 'returns a stream', 'vrací proud'],
+    ex: [['abc[3]', '"c"', {en: 'returns a single value', cz: 'vrací jednu hodnotu'}],
+      ['abc[3,1]', '["c","a"]', {en: 'returns a stream', cz: 'vrací proud'}],
       ['abc[range(1,5,2)]', '["a","c","e"]']],
     args: 'source,...'
   }
@@ -381,7 +381,7 @@ R.register('equal', {
     cat: catg.base,
     ex: [['1=2', 'false'], ['[1,2,3]+1 = [2,3,4]', 'true'],
       ['range(3,1) = [] = []~[] = []%[]', 'true'],
-      ['equal([],[])', 'true', 'long form', 'textová forma']],
+      ['equal([],[])', 'true', {en: 'long form', cz: 'textová forma'}]],
     see: 'ineq'
   }
 });

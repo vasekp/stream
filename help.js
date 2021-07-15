@@ -158,7 +158,7 @@ async function populate() {
       const exDiv = document.createElement('div');
       exDiv.classList.add('stream-example');
       let hi = 1;
-      for(let [inp, out, cEn, cCz] of obj.ex) {
+      for(let [inp, out, comm] of obj.ex) {
         let html = inp
           .replace(/\w+|[<>&]/g, m => {
             if(entities[m])
@@ -168,8 +168,8 @@ async function populate() {
             else
               return m;
           });
-        if(cEn) {
-          html += ' <span class="comment">; ' + cEn
+        if(comm) {
+          html += ' <span class="comment">; ' + comm.en
             .replace(/[<>&]/g, c => entities[c])
             .replace(/`([^``]*)`/g, (_, m) => {
               if(_map.has(m) && m !== name)

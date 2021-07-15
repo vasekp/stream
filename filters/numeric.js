@@ -85,9 +85,9 @@ regReducer('plus', '+',
     ex: [['1+2+3', '6'],
       ['"a"+"b"+"c"', '"abc"'],
       ['[1,2,3]+4', '[5,6,7]'],
-      ['[10,20,30]+[1,2,3,4,5]', '[11,22,33]', 'shortest argument defines the length of output', 'délku výstupu definuje nejkratší argument'],
-      ['[1,2,[3,4]]+5', '!expected number or string, got stream [3,4]', 'unpacking works only to first level', 'vstup do proudu funguje jen do první úrovně'],
-      ['iota.fold(plus)', '[1,3,6,10,15,...]', 'long form used as an operand (also see `accum`)', 'textová forma použitá jako operand (viz též `accum`)']],
+      ['[10,20,30]+[1,2,3,4,5]', '[11,22,33]', {en: 'shortest argument defines the length of output', cz: 'délku výstupu definuje nejkratší argument'}],
+      ['[1,2,[3,4]]+5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cz: 'vstup do proudu funguje jen do první úrovně'}],
+      ['iota.fold(plus)', '[1,3,6,10,15,...]', {en: 'long form used as an operand (also see `accum`)', cz: 'textová forma použitá jako operand (viz též `accum`)'}]],
     see: ['add', 'minus', 'accum', 'total']
   }
 );
@@ -100,9 +100,9 @@ regReducer('minus', '-', (a, b) => a - b, types.N, {
   cat: catg.numbers,
   ex: [['1-2-3', '-4'],
     ['[1,2,3]-4', '[-3,-2,-1]'],
-    ['[10,20,30]-[1,2,3,4,5]', '[9,18,27]', 'shortest argument defines the length of output', 'délku výstupu definuje nejkratší argument'],
-    ['[1,2,[3,4]]-5', '!expected number or string, got stream [3,4]', 'unpacking works only to first level', 'vstup do proudu funguje jen do první úrovně'],
-    ['1.repeat.fold(minus)', '[[1,0,-1,-2,-3,...]', 'long form used as an operand', 'textová forma použitá jako operand']],
+    ['[10,20,30]-[1,2,3,4,5]', '[9,18,27]', {en: 'shortest argument defines the length of output', cz: 'délku výstupu definuje nejkratší argument'}],
+    ['[1,2,[3,4]]-5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cz: 'vstup do proudu funguje jen do první úrovně'}],
+    ['1.repeat.fold(minus)', '[[1,0,-1,-2,-3,...]', {en: 'long form used as an operand', cz: 'textová forma použitá jako operand'}]],
   see: ['plus', 'diff']
 });
 
@@ -114,9 +114,9 @@ regReducer('times', '*', (a, b) => a * b, types.N, {
   cat: catg.numbers,
   ex: [['1*2*3', '6'],
     ['[1,2,3]*4', '[4,8,12]'],
-    ['[10,20,30]*[1,2,3,4,5]', '[10,40,90]', 'shortest argument defines the length of output', 'délku výstupu definuje nejkratší argument'],
-    ['[1,2,[3,4]]*5', '!expected number or string, got stream [3,4]', 'unpacking works only to first level', 'vstup do proudu funguje jen do první úrovně'],
-    ['range(7).reduce(times)', '5040', 'long form used as an operand (also see `product`, `factorial`)', 'textová forma použitá jako operand (viz též `product`, `factorial`)']],
+    ['[10,20,30]*[1,2,3,4,5]', '[10,40,90]', {en: 'shortest argument defines the length of output', cz: 'délku výstupu definuje nejkratší argument'}],
+    ['[1,2,[3,4]]*5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cz: 'vstup do proudu funguje jen do první úrovně'}],
+    ['range(7).reduce(times)', '5040', {en: 'long form used as an operand (also see `product`, `factorial`)', cz: 'textová forma použitá jako operand (viz též `product`, `factorial`)'}]],
   see: ['divide', 'product']
 });
 
@@ -138,8 +138,8 @@ regReducer(['divide', 'div'], '/',
     cat: catg.numbers,
     ex: [['12/2/3', '2'],
       ['[4,5,6]/2', '[2,2,3]'],
-      ['[10,20,30]/[1,2,3,4,5]', '[10,10,10]', 'shortest argument defines the length of output', 'délku výstupu definuje nejkratší argument'],
-      ['[1,2,[3,4]]/5', '!expected number or string, got stream [3,4]', 'unpacking works only to first level', 'vstup do proudu funguje jen do první úrovně'],
+      ['[10,20,30]/[1,2,3,4,5]', '[10,10,10]', {en: 'shortest argument defines the length of output', cz: 'délku výstupu definuje nejkratší argument'}],
+      ['[1,2,[3,4]]/5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cz: 'vstup do proudu funguje jen do první úrovně'}],
       ['1/0', '!division by zero']],
     see: ['times', 'mod', 'divmod']
   });
@@ -208,8 +208,8 @@ regReducerS('gcd', gcd, {min: 1n}, {
   cat: catg.numbers,
   src: 'stream?',
   args: 'list?',
-  ex: [['range(4,8,2).gcd', '2', 'input stream', 'vstupní proud'],
-    ['gcd(100,125,145)', '5', 'arguments', 'argumenty']],
+  ex: [['range(4,8,2).gcd', '2', {en: 'input stream', cz: 'vstupní proud'}],
+    ['gcd(100,125,145)', '5', {en: 'arguments', cz: 'argumenty'}]],
   see: 'lcm'
 });
 
@@ -219,8 +219,8 @@ regReducerS('lcm', (a, b) => a * (b / gcd(a, b)), {min: 1n}, {
   cat: catg.numbers,
   src: 'stream?',
   args: 'list?',
-  ex: [['range(4,8,2).lcm', '24', 'input stream', 'vstupní proud'],
-    ['lcm(10,12,15)', '60', 'arguments', 'argumenty']],
+  ex: [['range(4,8,2).lcm', '24', {en: 'input stream', cz: 'vstupní proud'}],
+    ['lcm(10,12,15)', '60', {en: 'arguments', cz: 'argumenty'}]],
   see: 'gcd'
 });
 
@@ -387,8 +387,8 @@ R.register('mod', {
     cat: catg.numbers,
     source: 'n',
     args: 'modulus,base?',
-    ex: [['range(-5,5):mod(3)', '[1,2,0,1,2,0,1,2,0,1,2]', 'remainder is calculated ≥ 0 even for negative numbers', 'zbytek je vrácen ≥ 0 i pro záporné argumenty'],
-      ['10.mod(5,1)', '5', 'with base=1 returns 5 instead of 0', 's base=1 vrátí 5 namísto 0']],
+    ex: [['range(-5,5):mod(3)', '[1,2,0,1,2,0,1,2,0,1,2]', {en: 'remainder is calculated ≥ 0 even for negative numbers', cz: 'zbytek je vrácen ≥ 0 i pro záporné argumenty'}],
+      ['10.mod(5,1)', '5', {en: 'with base=1 returns 5 instead of 0', cz: 's base=1 vrátí 5 namísto 0'}]],
     see: ['divide', 'divmod', 'add']
   }
 });
@@ -501,7 +501,7 @@ R.register(['odd', 'isodd'], {
     cat: catg.numbers,
     src: 'n',
     ex: [['range(10).select(odd)', '[1,3,5,7,9]'],
-      ['10.nest(if(odd,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]', 'Collatz sequence', 'Collatzova posloupnost']],
+      ['10.nest(if(odd,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]', {en: 'Collatz sequence', cz: 'Collatzova posloupnost'}]],
     see: 'even'
   }
 });
@@ -570,7 +570,7 @@ R.register(['every', 'each', 'all'], {
     src: 'source',
     args: 'condition?',
     ex: [['[5,7,1,9].all(odd)', 'true'],
-      ['ineq@([2,3,4,1],range(4)).all', 'true', 'no number in its right place?', 'žádné číslo na svém místě?']],
+      ['ineq@([2,3,4,1],range(4)).all', 'true', {en: 'no number in its right place?', cz: 'žádné číslo na svém místě?'}]],
     see: 'some'
   }
 });
@@ -596,7 +596,7 @@ R.register(['some', 'any'], {
     src: 'source',
     args: 'condition?',
     ex: [['[4,6,1,8].some(odd)', 'true'],
-      ['equal@([2,3,1,4],range(4)).some', 'true', 'does some number appear in its place?', 'je některé číslo na svém místě?']],
+      ['equal@([2,3,1,4],range(4)).some', 'true', {en: 'does some number appear in its place?', cz: 'je některé číslo na svém místě?'}]],
     see: 'every'
   }
 });
@@ -699,8 +699,8 @@ R.register(['tobase', 'tbase', 'tb', 'str'], {
     cat: [catg.numbers, catg.strings],
     src: 'n',
     args: 'base?,len?',
-    ex: [['15.str', '"15"', 'number to string conversion', 'převod čísla na řetězec'],
-      ['(-100).tobase(15)', '"-6a"', 'negative inputs are permitted', 'záporná čísla jsou dovolena'],
+    ex: [['15.str', '"15"', {en: 'number to string conversion', cz: 'převod čísla na řetězec'}],
+      ['(-100).tobase(15)', '"-6a"', {en: 'negative inputs are permitted', cz: 'záporná čísla jsou dovolena'}],
       ['"n".ord(abc).tobase(2,5)', '"01110"'],
       ['"ASCII".split:ord:tobase(16,2)', '["41","53","43","49","49"]']],
     see: ['frombase', 'todigits']
@@ -737,8 +737,8 @@ R.register(['frombase', 'fbase', 'fb', 'num'], {
     cat: [catg.numbers, catg.strings],
     src: 'string',
     args: 'base?',
-    ex: [['"123".num', '123', 'string to number conversion', 'převod řetězce na číslo'],
-      ['"FFFFFF".frombase(16)', '16777215', 'parse a hexadecimal value', 'způsob zadání šestnáctkové hodnoty'],
+    ex: [['"123".num', '123', {en: 'string to number conversion', cz: 'převod řetězce na číslo'}],
+      ['"FFFFFF".frombase(16)', '16777215', {en: 'parse a hexadecimal value', cz: 'způsob zadání šestnáctkové hodnoty'}],
       ['"74657374".split(2):frombase(16):chr.cat', '"test"']],
     see: ['tobase', 'fromdigits']
   }
@@ -774,7 +774,7 @@ R.register(['todigits', 'tdig'], {
     src: 'n',
     args: 'base?,len?',
     ex: [['(2^100).todigits', '[1,2,6,7,6,5,0,6,0,...]'],
-      ['65536.todigits(100)', '[6,55,36]', 'allows bases larger than 36', 'umožňuje soustavy vyšší než 36']],
+      ['65536.todigits(100)', '[6,55,36]', {en: 'allows bases larger than 36', cz: 'umožňuje soustavy vyšší než 36'}]],
     see: ['fromdigits', 'tobase']
   }
 });
@@ -900,7 +900,7 @@ R.register('factor', {
     cat: catg.numbers,
     src: 'n',
     ex: [['1552668.factor', '[2,2,3,13,37,269]'],
-      ['iota.select(#.factor.rle.every(#[2]=1))', '[2,3,5,6,7,10,11,13,...]', 'squarefree numbers', 'bezčtvercová čísla']],
+      ['iota.select(#.factor.rle.every(#[2]=1))', '[2,3,5,6,7,10,11,13,...]', {en: 'squarefree numbers', cz: 'bezčtvercová čísla'}]],
     see: 'rle'
   }
 });
@@ -1085,11 +1085,11 @@ R.register(['random', 'rnd', 'sample'], {
       'Forma se 3 argumenty: `_count` náhodných čísel mezi `_min` a `_max`.',
       '!V zájmu vnitřní konzistence všechny instance `random` a `rndstream` v rámci jednoho příkazu používají stejný pseudonáhodný generátor se stejným počátečním stavem. To může způsobit překvapivé chování.'],
     cat: [catg.numbers, catg.streams, catg.sources],
-    ex: [['abc.subsets.random.cat', '"cefgnptuvw"', 'random subset of alphabet', 'náhodná podmnožina abecedy'],
+    ex: [['abc.subsets.random.cat', '"cefgnptuvw"', {en: 'random subset of alphabet', cz: 'náhodná podmnožina abecedy'}],
       ['"ABC".split.perm.random(3):cat', '["BCA","BAC","BCA"]'],
       ['random(1,6)', '4'],
-      ['[rnd(1,6),rnd(1,6),rnd(1,6)]', '[3,3,3]', 'watch out for this!', 'pozor na toto!'],
-      ['random(1,6,3)', '[2,1,6]', 'use this instead!', 'použijte toto!']
+      ['[rnd(1,6),rnd(1,6),rnd(1,6)]', '[3,3,3]', {en: 'watch out for this!', cz: 'pozor na toto!'}],
+      ['random(1,6,3)', '[2,1,6]', {en: 'use this instead!', cz: 'použijte toto!'}]
     ],
     src: 'source?',
     args: 'min??,max??,count?',
@@ -1165,8 +1165,8 @@ R.register(['rndstream', 'rnds'], {
       '!V zájmu vnitřní konzistence všechny instance `random` a `rndstream` v rámci jednoho příkazu používají stejný pseudonáhodný generátor se stejným počátečním stavem. To může způsobit překvapivé chování.'],
     cat: [catg.numbers, catg.streams, catg.sources],
     ex: [['rndstream(1,9)', '[6,7,3,2,9,5,2,3,6,4,...]'],
-      ['rndstream(1,9)', '[3,2,7,5,1,4,1,8,6,7,...]', 'new run gives new results', 'nový běh dá nové výsledky'],
-      ['$1', '[6,7,3,2,9,5,2,3,6,4,...]', 'but recalling history reuses the earlier state', 'ale odkaz na historii replikuje též stav generátoru']
+      ['rndstream(1,9)', '[3,2,7,5,1,4,1,8,6,7,...]', {en: 'new run gives new results', cz: 'nový běh dá nové výsledky'}],
+      ['$1', '[6,7,3,2,9,5,2,3,6,4,...]', {en: 'but recalling history reuses the earlier state', cz: 'ale odkaz na historii replikuje též stav generátoru'}]
     ],
     src: 'source?',
     args: 'min??,max??,count?',
@@ -1283,6 +1283,6 @@ R.register('trirem', {
     cat: catg.numbers,
     src: 'n',
     ex: [['iota.trirem', '[[1,0],[1,1],[2,0],[2,1],[2,2],...]'],
-      ['$.iwhere(#[2]=0)', '[1,3,6,10,15,21,28,...]', 'triangular numbers', 'trojúhelníková čísla']]
+      ['$.iwhere(#[2]=0)', '[1,3,6,10,15,21,28,...]', {en: 'triangular numbers', cz: 'trojúhelníková čísla'}]]
   }
 });

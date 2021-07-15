@@ -108,7 +108,7 @@ R.register(['split', 'chars'], {
     ex: [['"Test string".split()', '["T","e","s","t"," ",...]'],
       ['"Test string".split(3)', '["Tes","t s","tri","ng"]'],
       ['"Test string".split(" ")', '["Test","string"]'],
-      ['"Test string".split(abc~"st")', '["T","e","st"," ","st",...]', 'custom alphabet', 'upravená abeceda']]
+      ['"Test string".split(abc~"st")', '["T","e","st"," ","st",...]', {en: 'custom alphabet', cz: 'upravená abeceda'}]]
   }
 });
 
@@ -237,7 +237,7 @@ R.register('ords', {
     cat: catg.strings,
     src: 'string',
     args: 'alphabet',
-    ex: [['abch=abc.take(8)~"ch"~abc.drop(8)', '["abch"]', 'Czech alphabet without diacritics', 'abeceda s ch'],
+    ex: [['abch=abc.take(8)~"ch"~abc.drop(8)', '["abch"]', {en: 'Czech alphabet without diacritics', cz: 'abeceda s ch'}],
       ['"Czech".ords(abch)', '[3,27,5,9]']]
   }
 });
@@ -254,7 +254,7 @@ R.register(['lcase', 'lc'], {
     cz: ['Vrátí řetězec `_string` převedený na malá písmena.'],
     cat: catg.strings,
     src: 'string',
-    ex: [['"Слово".lcase', '"слово"', 'also works for non-Latin characters', 'funguje také mimo latinku']],
+    ex: [['"Слово".lcase', '"слово"', {en: 'also works for non-Latin characters', cz: 'funguje také mimo latinku'}]],
     see: 'ucase'
   }
 });
@@ -271,7 +271,7 @@ R.register(['ucase', 'uc'], {
     cz: ['Vrátí řetězec `_string` převedený na velká písmena.'],
     cat: catg.strings,
     src: 'string',
-    ex: [['"Слово".ucase', '"СЛОВО"', 'also works for non-Latin characters', 'funguje také mimo latinku']],
+    ex: [['"Слово".ucase', '"СЛОВО"', {en: 'also works for non-Latin characters', cz: 'funguje také mimo latinku'}]],
     see: 'lcase'
   }
 });
@@ -295,7 +295,7 @@ R.register('abc', {
     cz: ['Anglická 26-písmenná abeceda malými písmeny.',
       '-Filtry jako `split` mezi velikostí písmen nerozlišují.'],
     cat: [catg.sources, catg.strings],
-    ex: [['abc.take(8)~"ch"~abc.drop(8)', '["a","b","c","d",...]', 'Czech alphabet with "ch" after h', 'česká abeceda s "ch"'],
+    ex: [['abc.take(8)~"ch"~abc.drop(8)', '["a","b","c","d",...]', {en: 'Czech alphabet with "ch" after h', cz: 'česká abeceda s "ch"'}],
       ['$.length', '27']],
     see: 'upabc'
   }
