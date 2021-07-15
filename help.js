@@ -2,15 +2,25 @@ import Enum from './enum.js';
 
 export const catg = Enum.fromArray(['base', 'sources', 'streams', 'strings', 'numbers']);
 
-const catgNames = new Map();
-
-catgNames.set('intro', 'Introduction');
-catgNames.set('all', 'All filters');
-catgNames.set(catg.base, 'Base functions');
-catgNames.set(catg.sources, 'Sources');
-catgNames.set(catg.streams, 'Stream ops');
-catgNames.set(catg.strings, 'Strings');
-catgNames.set(catg.numbers, 'Mathematical');
+const catNames = {
+  en: {
+    intro: 'Introduction',
+    all: 'All filters',
+    [catg.base]: 'Base functions',
+    [catg.sources]: 'Sources',
+    [catg.streams]: 'Stream ops',
+    [catg.strings]: 'Strings',
+    [catg.numbers]: 'Mathematical',
+  }, cs: {
+    intro: 'Úvod',
+    all: 'Všechny filtry',
+    [catg.base]: 'Základ',
+    [catg.sources]: 'Zdroje',
+    [catg.streams]: 'Proudy',
+    [catg.strings]: 'Řetězce',
+    [catg.numbers]: 'Matematika',
+  }
+};
 
 const _map = new Map();
 
@@ -40,7 +50,7 @@ async function populate() {
   if(document.body.id !== 'help')
     return;
   /*** Category selection ***/
-  const cats = [...catgNames.keys()];
+  const cats = Object.keys(catNames[lang]);
   const head = document.getElementById('head');
   for(const cat of cats) {
     const ckbox = document.createElement('input');
@@ -53,7 +63,7 @@ async function populate() {
     head.parentElement.insertBefore(ckbox, head);
     const label = document.createElement('label');
     label.htmlFor = ckbox.id;
-    label.textContent = catgNames.get(cat);
+    label.textContent = catNames[lang][cat];
     head.append(label);
   }
   const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"]) > *`).join(', ');
