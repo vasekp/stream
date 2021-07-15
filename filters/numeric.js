@@ -354,9 +354,11 @@ R.register(['power', 'pow'], {
   },
   help: {
     en: ['Calculates `_base` to the power of `_power`.',
-      'These can be given as two arguments, or in the form `_base.power(_power)`. Also allows short form `_base^_power`.'],
+      'These can be given as two arguments, or in the form `_base.power(_power)`. Also allows short form `_base^_power`.',
+      '-`0^0` is defined as 1.'],
     cz: ['Počítá `_power`-tou mocninu `_base`.',
-      'Hodnoty mohou být zadány jako dva argumenty nebo ve formě `_base.power(_power)`. Existuje také stručný zápis `_base^_power`.'],
+      'Hodnoty mohou být zadány jako dva argumenty nebo ve formě `_base.power(_power)`. Existuje také stručný zápis `_base^_power`.',
+      '-`0^0` je definováno jako 1.'],
     cat: [catg.numbers, catg.streams],
     args: 'base?,power',
     ex: [['2^64', '18446744073709551616'],

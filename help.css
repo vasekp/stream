@@ -87,6 +87,10 @@ i-pre {
   word-wrap: anywhere;
 }
 
+i-pre > i-pre {
+  padding: 0;
+}
+
 a {
   color: #00C;
   text-decoration: none;
