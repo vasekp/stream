@@ -14,8 +14,10 @@ export function isSingleChar(c) {
   return c === String.fromCodePoint(c.codePointAt(0));
 }
 
+// Expects abc in lowercase!
 function* splitABC(str, abc, err = false) {
   let ix = 0;
+  const strl = str.toLowerCase();
   while(ix < str.length) {
     let bestLen = 0;
     let bestIx;
@@ -23,13 +25,13 @@ function* splitABC(str, abc, err = false) {
       const ch = abc[i];
       if(ch.length <= bestLen)
         continue;
-      if(str.startsWith(ch, ix)) {
+      if(strl.startsWith(ch, ix)) {
         bestLen = ch.length;
         bestIx = i;
       }
     }
     if(bestLen) {
-      yield [abc[bestIx], bestIx];
+      yield [str.substring(ix, ix + bestLen), bestIx];
       ix += bestLen;
     } else {
       if(err)
@@ -70,7 +72,7 @@ R.register(['split', 'chars'], {
           {len: BigInt(split.length)}
         );
       } else if(ev.type === types.stream) {
-        const abc = this.args[0].evalAlphabet();
+        const abc = this.args[0].evalAlphabet(true);
         return new Stream(this,
           (function*() {
             for(const [ch, _] of splitABC(str, abc))
@@ -103,10 +105,10 @@ R.register(['split', 'chars'], {
     cat: catg.strings,
     src: 'string',
     args: 'rule?',
-    ex: [['"test string".split()', '["t","e","s","t"," ",...]'],
-      ['"test string".split(3)', '["tes","t s","tri","ng"]'],
-      ['"test string".split(" ")', '["test","string"]'],
-      ['"test string".split(abc~"st")', '["t","e","st"," ","st",...]']]
+    ex: [['"Test string".split()', '["T","e","s","t"," ",...]'],
+      ['"Test string".split(3)', '["Tes","t s","tri","ng"]'],
+      ['"Test string".split(" ")', '["Test","string"]'],
+      ['"Test string".split(abc~"st")', '["T","e","st"," ","st",...]', 'custom alphabet', 'upravená abeceda']]
   }
 });
 
@@ -137,8 +139,8 @@ R.register('ord', {
   preeval() {
     const c = this.src.evalAtom(types.S);
     if(this.args[0]) {
-      const abc = this.args[0].evalAlphabet();
-      const ix = abc.indexOf(c);
+      const abc = this.args[0].evalAlphabet(true);
+      const ix = abc.indexOf(c.toLowerCase());
       if(ix < 0)
         throw new StreamError(`character "${c}" not in alphabet`);
       else
@@ -155,7 +157,7 @@ R.register('ord', {
     src: 'char',
     args: 'alphabet?',
     ex: [['"😀".ord.tobase(16)', '"1f600"'],
-      ['"test".split:ord(abc)', '[20,5,19,20]']],
+      ['"Test".split:ord(abc)', '[20,5,19,20]']],
     see: ['ords', 'chr']
   }
 });
@@ -219,7 +221,7 @@ R.register('ords', {
   numArg: 1,
   eval() {
     const str = this.src.evalAtom(types.S);
-    const abc = this.args[0].evalAlphabet();
+    const abc = this.args[0].evalAlphabet(true);
     return new Stream(this,
       (function*() {
         for(const [_, ix] of splitABC(str, abc, true))
@@ -236,7 +238,7 @@ R.register('ords', {
     src: 'string',
     args: 'alphabet',
     ex: [['abch=abc.take(8)~"ch"~abc.drop(8)', '["abch"]', 'Czech alphabet without diacritics', 'abeceda s ch'],
-      ['"czech".ords(abch)', '[3,27,5,9]']]
+      ['"Czech".ords(abch)', '[3,27,5,9]']]
   }
 });
 
@@ -269,7 +271,7 @@ R.register(['ucase', 'uc'], {
     cz: ['Vrátí řetězec `_string` převedený na velká písmena.'],
     cat: catg.strings,
     src: 'string',
-    ex: [['"Слово".lcase', '"СЛОВО"', 'also works for non-Latin characters', 'funguje také mimo latinku']],
+    ex: [['"Слово".ucase', '"СЛОВО"', 'also works for non-Latin characters', 'funguje také mimo latinku']],
     see: 'lcase'
   }
 });
@@ -278,11 +280,9 @@ R.register('abc', {
   reqSource: false,
   numArg: 0,
   eval() {
-    const ucase = this.ident === 'ABC';
-    const base = ucase ? 65 : 97;
-    let i = base;
+    let i = 97;
     return new Stream(this,
-      (function*() { while(i < base + 26) yield new Atom(String.fromCharCode(i++)); })(),
+      (function*() { while(i < 97 + 26) yield new Atom(String.fromCharCode(i++)); })(),
       {
         skip: c => i += Number(c),
         len: 26n
@@ -290,13 +290,38 @@ R.register('abc', {
     );
   },
   help: {
-    en: ['The 26-letter English alphabet.',
-      '!If spelled as `ABC`, gives the alphabet in capitals. No other intrinsic or user-defined filter can mimic this distinction.'],
-    cz: ['Anglická 26-písmenná abeceda.',
-      '!Jestliže je zapsáno jako `ABC`, dává abecedu velkými písmeny. Žádná jiná vnitřní ani uživatelská funkce nedokáže toto chování replikovat.'],
+    en: ['The 26-letter English alphabet in lower case.',
+      '-Filters like `split` do not require character case match.'],
+    cz: ['Anglická 26-písmenná abeceda malými písmeny.',
+      '-Filtry jako `split` mezi velikostí písmen nerozlišují.'],
     cat: [catg.sources, catg.strings],
-    ex: [['abc', '["a","b","c","d",...]'],
-      ['ABC', '["A","B","C","D",...]']]
+    ex: [['abc.take(8)~"ch"~abc.drop(8)', '["a","b","c","d",...]', 'Czech alphabet with "ch" after h', 'česká abeceda s "ch"'],
+      ['$.length', '27']],
+    see: 'upabc'
+  }
+});
+
+R.register(['upabc', 'uabc'], {
+  reqSource: false,
+  numArg: 0,
+  eval() {
+    let i = 65;
+    return new Stream(this,
+      (function*() { while(i < 65 + 26) yield new Atom(String.fromCharCode(i++)); })(),
+      {
+        skip: c => i += Number(c),
+        len: 26n
+      }
+    );
+  },
+  help: {
+    en: ['The 26-letter English alphabet in upper case.',
+      '-Filters like `split` do not require character case match.'],
+    cz: ['Anglická 26-písmenná abeceda velkými písmeny.',
+      '-Filtry jako `split` mezi velikostí písmen nerozlišují.'],
+    cat: [catg.sources, catg.strings],
+    ex: [['upabc', '["A","B","C","D",...]']],
+    see: 'abc'
   }
 });
 
@@ -344,8 +369,7 @@ R.register('isletter', {
       return new Atom(false);
     const c = r.value;
     if(this.args[0]) {
-      const abc = this.args[0].evalAlphabet()
-        .map(a => a.evalAtom(types.S).toLowerCase());
+      const abc = this.args[0].evalAlphabet(true);
       return new Atom(abc.includes(c.toLowerCase()));
     } else
       return new Atom(isSingleChar(c) && (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'));
@@ -357,6 +381,7 @@ R.register('isletter', {
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní, jinak používá anglickou abecedu (`"a"` až `"z"` a velká písmena).'],
     cat: catg.strings,
     src: 'input',
+    args: 'alphabet?',
     ex: [['[1,"1","a","A"]:isletter', '[false,false,true,true]']]
   }
 });
@@ -370,8 +395,7 @@ R.register(['isupper', 'isucase', 'isuc'], {
       return new Atom(false);
     const c = r.value;
     if(this.args[0]) {
-      const abc = this.args[0].evalAlphabet()
-        .map(a => a.evalAtom(types.S).toUpperCase());
+      const abc = this.args[0].evalAlphabet().map(a => a.toUpperCase());
       return new Atom(abc.includes(c));
     } else
       return new Atom(isSingleChar(c) && c >= 'A' && c <= 'Z');
@@ -383,6 +407,7 @@ R.register(['isupper', 'isucase', 'isuc'], {
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní, jinak používá anglickou abecedu (`"A"` až `"Z"`).'],
     cat: catg.strings,
     src: 'input',
+    args: 'alphabet?',
     ex: [['[1,"1","a","A"]:isupper', '[false,false,false,true]']]
   }
 });
@@ -396,8 +421,7 @@ R.register(['islower', 'islcase', 'islc'], {
       return new Atom(false);
     const c = r.value;
     if(this.args[0]) {
-      const abc = this.args[0].evalAlphabet()
-        .map(a => a.evalAtom(types.S).toLowerCase());
+      const abc = this.args[0].evalAlphabet(true);
       return new Atom(abc.includes(c));
     } else
       return new Atom(isSingleChar(c) && c >= 'a' && c <= 'z');
@@ -409,6 +433,7 @@ R.register(['islower', 'islcase', 'islc'], {
       'Jestliže je dána abeceda `_alphabet`, pracuje v ní, jinak používá anglickou abecedu (`"a"` až `"z"`).'],
     cat: catg.strings,
     src: 'input',
+    args: 'alphabet?',
     ex: [['[1,"1","a","A"]:islower', '[false,false,true,false]']]
   }
 });
@@ -461,17 +486,19 @@ R.register('ends', {
   reqSource: true,
   numArg: 1,
   preeval() {
-    const str = this.src.evalAtom(types.S);
-    const pfx = this.args[0].evalAtom(types.S);
+    const str = this.src.evalAtom(types.S).toLowerCase();
+    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
     return new Atom(str.endsWith(pfx));
   },
   help: {
-    en: ['Tests if `_string` ends with `_postfix`. Returns `true` or `false`.'],
-    cz: ['Testuje, zda řetězec `_string` končí podřetězcem `_postfix`. Vrací `true` nebo `false`.'],
+    en: ['Tests if `_string` ends with `_postfix`. Returns `true` or `false`.',
+      '-Does not distinguish between upper and lower case.'],
+    cz: ['Testuje, zda řetězec `_string` končí podřetězcem `_postfix`. Vrací `true` nebo `false`.',
+      '-Nerozlišuje mezi malými a velkými písmeny.'],
     cat: catg.strings,
     src: 'string',
     args: 'postfix',
-    ex: [['"this is a test".split(" ").select(ends("s"))', '["this","is"]']],
+    ex: [['"This is a test".split(" ").select(ends("s"))', '["this","is"]']],
     see: 'starts'
   }
 });
@@ -480,17 +507,19 @@ R.register('starts', {
   reqSource: true,
   numArg: 1,
   preeval() {
-    const str = this.src.evalAtom(types.S);
-    const pfx = this.args[0].evalAtom(types.S);
+    const str = this.src.evalAtom(types.S).toLowerCase();
+    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
     return new Atom(str.startsWith(pfx));
   },
   help: {
-    en: ['Tests if `_string` begins with `_prefix`. Returns `true` or `false`.'],
-    cz: ['Testuje, zda řetězec `_string` začíná podřetězcem `_prefix`. Vrací `true` nebo `false`.'],
+    en: ['Tests if `_string` begins with `_prefix`. Returns `true` or `false`.',
+      '-Does not distinguish between upper and lower case.'],
+    cz: ['Testuje, zda řetězec `_string` začíná podřetězcem `_prefix`. Vrací `true` nebo `false`.',
+      '-Nerozlišuje mezi malými a velkými písmeny.'],
     cat: catg.strings,
     src: 'string',
     args: 'prefix',
-    ex: [['"this is a test".split(" ").select(starts("t"))', '["this","test"]']],
+    ex: [['"This is a test".split(" ").select(starts("t"))', '["This","test"]']],
     see: 'ends'
   }
 });
@@ -501,7 +530,7 @@ R.register('shift', {
   preeval() {
     const str = this.src.evalAtom(types.S);
     let shift = this.args[0].evalNum();
-    const abc = this.args[1].evalAlphabet();
+    const abc = this.args[1].evalAlphabet(true);
     shift = Number(shift % BigInt(abc.length));
     if(shift < 0)
       shift += abc.length;
@@ -515,13 +544,15 @@ R.register('shift', {
     return new Atom(ret);
   },
   help: {
-    en: ['Shifts `_string` by `_count` characters forward in the given `_alphabet`.'],
-    cz: ['Posune `_string` o `_count` znaků dopředu v abecedě `_alphabet`.'],
+    en: ['Shifts `_string` by `_count` characters forward in the given `_alphabet`.',
+      '-Upper/lower case is not maintained during shift.'],
+    cz: ['Posune `_string` o `_count` znaků dopředu v abecedě `_alphabet`.',
+      '-Během posunu se ztratí původní velikost písmen.'],
     cat: catg.strings,
     src: 'string',
     args: 'count,alphabet',
-    ex: [['"caesar".nest(shift(1,abc))', '["caesar","dbftbs","ecguct",...]'],
-      ['"grfg".shift(13,abc)', '"test"']]
+    ex: [['"grfg".shift(13,abc)', '"test"'],
+      ['"Caesar".nest(shift(1,abc))', '["Caesar","dbftbs","ecguct",...]']]
   }
 });
 
@@ -530,11 +561,11 @@ R.register('tr', {
   minArg: 2,
   maxArg: 3,
   preeval() {
-    const str = this.src.evalAtom(types.S);
-    const from = this.args[0].evalAtom(types.S);
+    const str = this.src.evalAtom(types.S).toLowerCase();
+    const from = this.args[0].evalAtom(types.S).toLowerCase();
     const to = this.args[1].evalAtom(types.S);
     if(this.args[2]) {
-      const abc = this.args[2].evalAlphabet();
+      const abc = this.args[2].evalAlphabet(true);
       const fArr = [...splitABC(from, abc)].map(([ch, _]) => ch);
       const tArr = [...splitABC(to, abc)].map(([ch, _]) => ch);
       if(fArr.length !== tArr.length)
@@ -557,12 +588,15 @@ R.register('tr', {
     }
   },
   help: {
-    en: ['Substitutes characters from `_pattern` by those in the same positions in `_replacements`.'],
-    cz: ['Nahrazuje znaky z `_pattern` znaky na stejných pozicích v `_replacements`.'],
+    en: ['Substitutes characters from `_pattern` by those in the same positions in `_replacements`.',
+      '-Does not distinguish between upper and lower case in input. The character case of output follows `_replacements`.'],
+    cz: ['Nahrazuje znaky z `_pattern` znaky na stejných pozicích v `_replacements`.',
+      '-Nerozlišuje mezi velkými a malými písmeny vstupu. Velikost písmen ve výstupu je dle `_replacements`.'],
     cat: catg.strings,
     src: 'string',
     args: 'pattern,replacements',
-    ex: [['"test".tr("ts","st")', '"sets"']],
+    ex: [['"substitution".tr("aeiou","iouae")', '"sebstutetuan"'],
+      ['"Test".tr("ts","st")', '"sets"']],
     see: 'subs'
   }
 });

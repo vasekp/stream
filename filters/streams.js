@@ -117,10 +117,10 @@ R.register(['length', 'len'], {
   help: {
     en: ['Returns the number of elements in the source stream.',
       'Also works for strings, where it gives the number of characters.',
-      '-For counting characters with a custom alphabet, use `"...".split(abc).length`.'],
+      '-For counting characters with a custom alphabet, use `"...".split(_alphabet).length`.'],
     cz: ['Počet prvků vstupního proudu.',
       'Funguje také pro řetězce, kde vrátí počet znaků.',
-      '-Pro počet znaků dle upravené abecedy použijte `"...".split(abc).length`.'],
+      '-Pro počet znaků dle upravené abecedy použijte `"...".split(_alphabet).length`.'],
     cat: [catg.streams, catg.strings],
     ex: [['range(1,10,3).length', '4'], ['"string".length', '6']]
   }
@@ -1089,16 +1089,16 @@ R.register('index', {
       // not found
       return new Atom(0);
     } else {
-      const haystack = sIn.value;
-      const needle = this.args[0].evalAtom(types.S);
+      const haystack = sIn.value.toLowerCase();
+      const needle = this.args[0].evalAtom(types.S).toLowerCase();
       return new Atom(haystack.indexOf(needle) + 1);
     }
   },
   help: {
     en: ['Returns the position of the first entry of `_source` equal to `_value`, or 0 if not found.',
-      '-If `_source` is a string, returns the position of the first substring `_value`.'],
+      '-If `_source` is a string, returns the position of the first substring `_value`, case insensitive.'],
     cz: ['Vrátí pozici prvního prvku `_source` rovného `_value`, nebo 0, pokud takový není nalezen.',
-      '-`_source` také může být řetězec, pak vyhledá pozici výskytu podřetězce `_value`.'],
+      '-`_source` také může být řetězec, pak vyhledá pozici výskytu podřetězce `_value`, bez ohledu na velká a malá písmena.'],
     cat: [catg.streams, catg.strings],
     src: 'source',
     args: 'value',
@@ -1126,8 +1126,8 @@ R.register(['indexes', 'indices'], {
         })()
       );
     } else {
-      const haystack = sIn.value;
-      const needle = this.args[0].evalAtom(types.S);
+      const haystack = sIn.value.toLowerCase();
+      const needle = this.args[0].evalAtom(types.S).toLowerCase();
       return new Stream(this,
         (function*() {
           let start = 0;
@@ -1145,9 +1145,9 @@ R.register(['indexes', 'indices'], {
   },
   help: {
     en: ['Returns a sequence of positions of entries of `_source` equal to `_value`.',
-      '-If `_source` is a string, returns positions of substrings `_value`.'],
+      '-If `_source` is a string, returns positions of substrings `_value`, case insensitive.'],
     cz: ['Vrátí posloupnost pozic prvků `_source` rovných `_value`.',
-      '-`_source` také může být řetězec, pak vyhledá pozice výskytů podřetězce `_value`.'],
+      '-`_source` také může být řetězec, pak vyhledá pozice výskytů podřetězce `_value`, bez ohledu na malá a velká písmena.'],
     cat: [catg.streams, catg.strings],
     src: 'source',
     args: 'value',

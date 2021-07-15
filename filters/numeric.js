@@ -702,7 +702,7 @@ R.register(['tobase', 'tbase', 'tb', 'str'], {
     ex: [['15.str', '"15"', 'number to string conversion', 'převod čísla na řetězec'],
       ['(-100).tobase(15)', '"-6a"', 'negative inputs are permitted', 'záporná čísla jsou dovolena'],
       ['"n".ord(abc).tobase(2,5)', '"01110"'],
-      ['""ASCII".split:ord:tobase(16,2)', '["41","53","43","49","49"]']],
+      ['"ASCII".split:ord:tobase(16,2)', '["41","53","43","49","49"]']],
     see: ['frombase', 'todigits']
   }
 });

@@ -254,12 +254,14 @@ export class Node extends Base {
     throw new Error(`Node.prototype.eval() (${this.toString()})`);
   }
 
-  evalAlphabet() {
-    if(!this._cache)
+  evalAlphabet(lcase = false) {
+    if(!this._cache) {
       this._cache = [...this.evalStream({finite: true})].map(s => s.evalAtom(types.S));
+      this._cacheL = this._cache.map(c => c.toLowerCase());
+    }
     if(!this._cache.length)
       throw new StreamError('empty alphabet');
-    return this._cache;
+    return lcase ? this._cache : this._cacheL;
   }
 
   evalStream(opts = {}) {
