@@ -36,6 +36,7 @@ const entities = {
   '&': '&amp;'};
 
 async function populate() {
+  const lang = new URLSearchParams(window.location.search).get('lang') === 'cz' ? 'cz' : 'en';
   if(document.body.id !== 'help')
     return;
   /*** Category selection ***/
@@ -64,7 +65,7 @@ async function populate() {
   link.href = URL.createObjectURL(new Blob([css], {type: 'text/css'}));
   document.head.append(link);
   /*** Load intro and filter documentation ***/
-  document.getElementById('intro').innerHTML = await fetch('./help-intro-en.html').then(r => r.text());
+  document.getElementById('intro').innerHTML = await fetch(`./help-intro-${lang}.html`).then(r => r.text());
   await Promise.all([
     import('./filters/lang.js'),
     import('./filters/iface.js'),
@@ -111,8 +112,9 @@ async function populate() {
       h.textContent = n;
       sec.append(h);
     }
-    if(obj.en)
-      for(let line of obj.en) {
+    const desc = obj[lang] || obj.en;
+    if(desc)
+      for(let line of desc) {
         const p = document.createElement('p');
         if(line[0] === '-') {
           p.classList.add('info');
@@ -139,7 +141,7 @@ async function populate() {
       }
     if(obj.see) {
       const p = document.createElement('p');
-      let html = obj.en ? 'See also ' : 'See ';
+      let html = desc ? 'See also ' : 'See ';
       if(obj.see instanceof Array)
         html += obj.see.map(ident => {
           if(!_map.has(ident))
@@ -169,7 +171,7 @@ async function populate() {
               return m;
           });
         if(comm) {
-          html += ' <span class="comment">; ' + comm.en
+          html += ' <span class="comment">; ' + (comm[lang] || comm.en)
             .replace(/[<>&]/g, c => entities[c])
             .replace(/`([^``]*)`/g, (_, m) => {
               if(_map.has(m) && m !== name)
