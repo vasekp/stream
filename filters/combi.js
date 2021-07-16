@@ -501,8 +501,8 @@ R.register(['perm', 'perms', 'permute'], {
     en: ['Without `_order`: lists all distinct permutations of `_source`.',
       'If `_order` is given, it must be a valid permutation of `range(_order.length)`. Returns a permutation of `_source` where the first `_order.length` elements are taken in the given order and the rest is left unchanged.',
       '-Both forms also work with infinite streams.'],
-    cs: ['Bez argumentu `_order`: všechny různé permutace proudu `_source.',
-      'Jestliže je `_order_ dáno, musí se jednat o validní permutaci `range(_order.length)`. `perm` potom vrátí permutaci `_source`, kde prvních `_order.length` prvků je bráno v daném pořadí a zbytek ponechán nezměněn.',
+    cs: ['Bez argumentu `_order`: všechny různé permutace proudu `_source`.',
+      'Jestliže je `_order` dáno, musí se jednat o validní permutaci `range(_order.length)`. `perm` potom vrátí permutaci `_source`, kde prvních `_order.length` prvků je bráno v daném pořadí a zbytek ponechán nezměněn.',
       '-Obě formy fungují i pro nekonečné proudy.'],
     cat: catg.streams,
     src: 'source',
@@ -510,7 +510,51 @@ R.register(['perm', 'perms', 'permute'], {
     ex: [['"abba".split.perm:cat', '["abba","baba","bbaa","aabb","abab","baab"]'],
       ['iota.perm[10^10]', '[14,7,10,9,12,5,1,3,11,4,...]'],
       ['range(10).perm.random', '[3,2,9,6,5,8,1,4,10,7]'],
-      ['abc.perm([6,1,2,5,4,3]).cat', '"fabedcghijklmnopqrstuvwxyz"']]
+      ['abc.perm([6,1,2,5,4,3]).cat', '"fabedcghijklmnopqrstuvwxyz"']],
+    see: 'iperm'
+  }
+});
+
+R.register('iperm', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    const vals = [];
+    const helperSrc = function*() {
+      const sIn = this.src.evalStream();
+      for(const r of sIn) {
+        vals.push(r);
+        yield vals.length - 1;
+      }
+    }.bind(this);
+    const helper = permHelper(helperSrc());
+    const thisSrc = this.src;
+    const thisToken = this.token;
+    const inLen = this.src.evalStream().len;
+    return new Stream(this,
+      (function*() {
+        for(const arr of helper)
+          yield new Node('#permute', thisToken, thisSrc, [],
+            {_vals: vals, _arr: arr.slice(), _helper: helperSrc});
+      })(),
+      {
+        len: inLen === null ? null
+          : inLen === undefined ? undefined
+          : fact(inLen),
+        skip: helper.skip
+      }
+    );
+  },
+  help: {
+    en: ['Lists `_source` reordered in all permutations. The indices are permuted, rather than the values, so no checks on distinctness are made.',
+      '-Also works with infinite streams.'],
+    cs: ['Vypíše proud `_source` přeuspořádaný ve všech permutacích. Permutovány jsou indexy, ne hodnoty: není prováděna žádná kontrola opakování.',
+      '-Funguje i pro nekonečné proudy.'],
+    cat: catg.streams,
+    src: 'source',
+    ex: [['"ABC".split.iperm:cat', '["ABC","BAC","ACB","CAB","BCA","CBA"]'],
+      ['"ABA".split.iperm:cat', '["ABA","BAA","AAB","AAB","BAA","ABA"]', {en: 'same length as above, C replaced by A', cs: 'stejný počet jako výše, C pouze nahrazeno A'}]],
+    see: 'perm'
   }
 });
 

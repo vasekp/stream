@@ -771,7 +771,7 @@ R.register(['every', 'each', 'all'], {
   help: {
     en: ['Returns `true` only if evaluating `_condition` on every element of `_source` gives `true`, `false` otherwise.',
       'If `_condition` is omitted, the elements of `_source` must be boolean values themselves.'],
-    cs: ['Vrátí `true` pokud podmínka `_condition` vyhodnocená v každém prvku proudu `_source` dává `true`, jinak `false`.',
+    cs: ['Vrátí `true`, pokud podmínka `_condition` vyhodnocená v každém prvku proudu `_source` dává `true`, jinak `false`.',
       'Jestliže `_condition` není poskytnuta, prvky `_source` musí samy být pravdivostními hodnotami.'],
     cat: catg.numbers,
     src: 'source',
@@ -797,7 +797,7 @@ R.register(['some', 'any'], {
   help: {
     en: ['Returns `true` if evaluating `_condition` on some element of `_source` gives `true`, `false` otherwise.',
       'If `_condition` is omitted, the elements of `_source` must be boolean values themselves.'],
-    cs: ['Vrátí `true` pokud podmínka `_condition` vyhodnocená na některém prvku proudu `_source` dává `true`, jinak `false`.',
+    cs: ['Vrátí `true`, pokud podmínka `_condition` vyhodnocená na některém prvku proudu `_source` dává `true`, jinak `false`.',
       'Jestliže `_condition` není poskytnuta, prvky `_source` musí samy být pravdivostními hodnotami.'],
     cat: catg.numbers,
     src: 'source',
@@ -1109,6 +1109,60 @@ R.register('factor', {
     ex: [['1552668.factor', '[2,2,3,13,37,269]'],
       ['iota.select(#.factor.rle.every(#[2]=1))', '[2,3,5,6,7,10,11,13,...]', {en: 'squarefree numbers', cs: 'bezčtvercová čísla'}]],
     see: 'rle'
+  }
+});
+
+R.register('divisors', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    let val = this.src.evalNum({min: 1n});
+    const fact = new Map();
+    for(const p of primes()) {
+      let pow = 0;
+      while((val % p) === 0n) {
+        pow++;
+        val /= p;
+      }
+      if(pow !== 0)
+        fact.set(p, BigInt(pow));
+      if(val === 1n)
+        break;
+    }
+    const len = [...fact.values()].reduce((a, b) => a * (b + 1n), 1n);
+    let i = 0n;
+    return new Stream(this,
+      (function*() {
+        for(;;) {
+          if(i >= len)
+            return;
+          let x = i;
+          let res = 1n;
+          for(const [prime, pow] of fact) {
+            if(x === 0n)
+              break;
+            const p = x % (pow + 1n);
+            res *= prime ** p;
+            x /= (pow + 1n);
+          }
+          yield new Atom(res);
+          i++;
+        }
+      })(),
+      {
+        len,
+        skip: c => i += c
+      }
+    );
+  },
+  help: {
+    en: ['All integer divisors of `_n`.'],
+    cs: ['Všechny celočíselné dělitele čísla `_n`.'],
+    cat: catg.numbers,
+    src: 'n',
+    ex: [['12.divisors', '[1,2,4,3,6,12]'],
+      ['range(10000).iwhere(#.divisors.sum-#==#)', '[6,28,496,8128]', {en: 'perfect numbers', cs: 'dokonalá čísla'}]],
+    see: 'factor'
   }
 });
 

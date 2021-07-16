@@ -1570,3 +1570,109 @@ R.register(['subs', 'subst', 'replace', 'repl'], {
     see: 'tr'
   }
 });
+
+R.register(['allequal', 'alleq', 'same', 'allsame'], {
+  reqSource: true,
+  maxArg: 1,
+  prepare: Node.prototype.prepareForeach,
+  eval() {
+    const sIn = this.src.evalStream();
+    if(this.args[0]) {
+      const body = this.args[0].checkType([types.symbol, types.expr]);
+      let prev = null;
+      for(const r of sIn) {
+        const curr = body.prepare({src: r});
+        if(prev === null)
+          prev = curr;
+        else if(!compareStreams(prev, curr))
+          return new Atom(false);
+      }
+      if(prev !== null)
+        return new Atom(true);
+      else
+        throw new StreamError('empty stream');
+    } else {
+      let prev = null;
+      for(const r of sIn) {
+        if(prev === null)
+          prev = r;
+        else if(!compareStreams(prev, r))
+          return new Atom(false);
+      }
+      if(prev !== null)
+        return new Atom(true);
+      else
+        throw new StreamError('empty stream');
+    }
+  },
+  help: {
+    en: ['Checks if all elements of `_source` are equal. Returns `true` or `false`.',
+      'If `_body` is given, checks if `_element._body` evaluates to the same value for all elements of `_source.'],
+    cs: ['Vrací `true` nebo `false` podle toho, zda všechny prvky proudu `_source` jsou stejné.',
+      'Jestliže je dáno `_body`, zkouší, zda `_element._body` dává pro všechny prvky `_source` stejný výsledek.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'body?',
+    ex: [['"one two six ten".split(" ").allequal(length)', 'true']],
+    see: 'every'
+  }
+});
+
+R.register('trans', {
+  reqSource: true,
+  numArg: 0,
+  eval() {
+    let i = 0n;
+    const sOut = this.src.evalStream();
+    const sFirst = sOut.next().value.evalStream();
+    if(!sFirst)
+      throw new StreamError('empty stream');
+    return new Stream(this,
+      (function*(self) {
+        for(const r of sFirst)
+          yield new Node('transpart', self.token, self.src, [new Atom(++i)]);
+      })(this),
+      {
+        len: sFirst.len,
+        skip: c => {
+          i += c;
+          sFirst.skip(c);
+        }
+      }
+    );
+  },
+  help: {
+    en: ['Expects a stream of streams as input. Outputs all first parts, then all second parts, etc.',
+      'After any of the streams finishes, the further elements of output will be cut before that point. The length is thus determined by the first stream.'],
+    cs: ['Očekává na vstupu proud tvořený proudy. Vrátí proud tvořený všemi prvními částmi, pak všemi druhými atd.',
+      'Když některý proud skončí dříve než ostatní, následující prvky výstupu budou uťaty před touto pozicí. Délka je tedy určena prvním z proudů.'],
+    cat: catg.streams,
+    ex: [['[[1,4,7],[2,5],[6,5,3,9]].trans', '[[1,2,6],[4,5,5],[7]]', {en: '3,9 are never seen because second stream ended before third', cs: '3,9 nejsou vypsány, protože druhý proud skončil dříve'}],
+      ['$.trans', '[[1,4,7],[2,5],[6,5]]'],
+      ['[iota,[1,2]].trans', '[[1,1],[2,2],[3],[4],...]'],
+      ['[[1,2],iota].trans', '[[1,1],[2,2]]']],
+    see: 'zip'
+  }
+});
+
+R.register('transpart', {
+  reqSource: true,
+  numArg: 1,
+  eval() {
+    const sOut = this.src.evalStream();
+    const part = this.args[0].evalNum({min: 1n});
+    return new Stream(this,
+      (function*() {
+        for(const r of sOut) {
+          const sIn = r.evalStream();
+          sIn.skip(part - 1n);
+          const rr = sIn.next().value;
+          if(!rr)
+            return;
+          //else
+          yield rr;
+        }
+      })()
+    );
+  }
+});
