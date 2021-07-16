@@ -158,7 +158,15 @@ li {
 }
 
 #filters section {
-  margin: .5rem 0 .5rem 1rem;
+  margin-left: 1rem;
+  padding-top: .5rem;
+}
+
+#filters section::after {
+  content: '';
+  border-bottom: 1pt dashed #AAE;
+  display: block;
+  margin: .5rem -1rem 0 -2rem;
 }
 
 section:target > * {
@@ -170,12 +178,6 @@ h3 {
   margin-left: -1rem;
   font-size: 100%;
   font-weight: 800;
-}
-
-h3:first-child {
-  margin-top: .5rem;
-  padding-top: .5rem;
-  border-top: 1pt dashed #AAE;
 }
 
 h3::before, h3::after {
