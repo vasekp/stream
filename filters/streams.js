@@ -1002,10 +1002,57 @@ R.register(['groupby', 'gby'], {
     en: ['Returns groups of successive elements which evaluate to the same result when `_body` is applied.'],
     cs: ['Čte proud `_source` a vrací skupiny po sobě jdoucích jeho prvků, které dávají stejný výsledek při aplikaci `_body`.'],
     cat: catg.streams,
+    src: 'source',
+    args: 'body',
     ex: [['range(1,101,10).groupby(dlog)', '[[1],[11,21,31,41,51,61,71,81,91],[101]]', {en: 'group by digit count', cs: 'sdružovat podle počtu číslic'}],
       ['"abc12def".split.groupby(isletter):cat', '["abc","12","def"]', {en: 'group by a property', cs: 'třídit podle vlastnosti'}],
       ['"this is a test".split(" ").groupby(length)', '[["this"],["is"],["a"],["test"]]', {en: 'only groups successive elements!', cs: 'slučuje jen po sobě jdoucí prvky!'}],
-      ['"this is a test".split(" ").sort(length).groupby(length)', '[["a"],["is"],["this","test"]]', {en: 'use `sort` to identify all matches', cs: 'použijte `sort`, pokud chcete najít všechny shody'}]]
+      ['"this is a test".split(" ").sort(length).groupby(length)', '[["a"],["is"],["this","test"]]', {en: 'use `sort` to identify all matches', cs: 'použijte `sort`, pokud chcete najít všechny shody'}],
+      ['iota.groupby(#<5)', '!Timeout', {en: 'groupby must be able to determine where the individual parts end', cs: 'groupby musí umět rozhodnout, kde jednotlivé části končí'}]],
+  }
+});
+
+R.register('splitat', {
+  reqSource: true,
+  minArg: 1,
+  maxArg: 2,
+  eval() {
+    const sIn = this.src.evalStream();
+    const div = this.args[0];
+    const count = this.args[1]?.evalNum({min: 1n});
+    return new Stream(this,
+      (function*(self) {
+        let lastDiv = -1n;
+        let ix = 0n;
+        let ctr = 0n;
+        for(const r of sIn) {
+          if(compareStreams(r, div)) {
+            yield new Node('droptake', self.token, self.src, [new Atom(lastDiv + 1n), new Atom(ix - lastDiv - 1n)]);
+            lastDiv = ix;
+            if(++ctr === count)
+              break;
+          }
+          ix++;
+        }
+        yield new Node('droptake', self.token, self.src, [new Atom(lastDiv + 1n)]);
+      })(this));
+  },
+  help: {
+    en: ['Splits the input stream to substreams on occurrences of `_divider`. These do not appear in any substream.',
+      'If `_count` is given, stops looking for `_divider` after `_count` substreams have been output and returns the rest.',
+      '-If two occurrences appear next to each other, an empty array is output between them.',
+      '-If `_divider` appears as the first or last element of input, the output will start or end with `[]`, respectively.'],
+    cs: ['Rozdělí vstupní proud na části podle výskytů `_divider`. Ty nejsou zařazeny do žádné z částí.',
+      'Jestliže je dáno `_count`, přestane po vypsání `_count` částí hledat další výskyty `_divider` a vydá zbytek vstupu nezměněn.',
+      '-Jestliže se ve vstupu `_divider` vyskytuje dvakrát za sebou, ve výstupu na odpovídajícím místě bude `[]`.',
+      '-Jestliže `_divider` je prvním nebo posledním prvkem vstupu, výstup bude začínat, resp. končit `[]`.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'divider,count?',
+    ex: [['range(8).splitat(3)', '[[1,2],[4,5,6,7,8]]'],
+      ['iota.splitat(3)', '!Timeout', {en: 'splitat must be able to determine where the individual parts end', cs: 'splitat musí umět rozhodnout, kde jednotlivé části končí'}],
+      ['iota.splitat(3,1)', '[[1,2],[4,5,6,7,...]]', {en: 'this can be fixed by giving count', cs: 'může být napraveno poskytnutím count'}]],
+    see: 'split'
   }
 });
 
