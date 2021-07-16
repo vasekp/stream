@@ -482,27 +482,6 @@ R.register('postfix', {
   }
 });
 
-R.register('ends', {
-  reqSource: true,
-  numArg: 1,
-  preeval() {
-    const str = this.src.evalAtom(types.S).toLowerCase();
-    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
-    return new Atom(str.endsWith(pfx));
-  },
-  help: {
-    en: ['Tests if `_string` ends with `_postfix`. Returns `true` or `false`.',
-      '-Does not distinguish between upper and lower case.'],
-    cs: ['Testuje, zda řetězec `_string` končí podřetězcem `_postfix`. Vrací `true` nebo `false`.',
-      '-Nerozlišuje mezi malými a velkými písmeny.'],
-    cat: catg.strings,
-    src: 'string',
-    args: 'postfix',
-    ex: [['"This is a test".split(" ").select(ends("s"))', '["this","is"]']],
-    see: 'starts'
-  }
-});
-
 R.register('starts', {
   reqSource: true,
   numArg: 1,
@@ -520,7 +499,49 @@ R.register('starts', {
     src: 'string',
     args: 'prefix',
     ex: [['"This is a test".split(" ").select(starts("t"))', '["This","test"]']],
-    see: 'ends'
+    see: ['ends', 'contains']
+  }
+});
+
+R.register('ends', {
+  reqSource: true,
+  numArg: 1,
+  preeval() {
+    const str = this.src.evalAtom(types.S).toLowerCase();
+    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
+    return new Atom(str.endsWith(pfx));
+  },
+  help: {
+    en: ['Tests if `_string` ends with `_postfix`. Returns `true` or `false`.',
+      '-Does not distinguish between upper and lower case.'],
+    cs: ['Testuje, zda řetězec `_string` končí podřetězcem `_postfix`. Vrací `true` nebo `false`.',
+      '-Nerozlišuje mezi malými a velkými písmeny.'],
+    cat: catg.strings,
+    src: 'string',
+    args: 'postfix',
+    ex: [['"This is a test".split(" ").select(ends("s"))', '["this","is"]']],
+    see: ['starts', 'contains']
+  }
+});
+
+R.register('contains', {
+  reqSource: true,
+  numArg: 1,
+  preeval() {
+    const str = this.src.evalAtom(types.S).toLowerCase();
+    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
+    return new Atom(str.includes(pfx));
+  },
+  help: {
+    en: ['Tests if `_string` contains `_substr`. Returns `true` or `false`.',
+      '-Does not distinguish between upper and lower case.'],
+    cs: ['Testuje, zda řetězec `_string` obsahuje podřetězec `_substr`. Vrací `true` nebo `false`.',
+      '-Nerozlišuje mezi malými a velkými písmeny.'],
+    cat: catg.strings,
+    src: 'string',
+    args: 'substr',
+    ex: [['"This is a test".split(" ").select(contains("is"))', '["This","is"]']],
+    see: ['starts', 'ends']
   }
 });
 
