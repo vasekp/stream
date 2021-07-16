@@ -1,3 +1,4 @@
+import {StreamError} from './errors.js';
 import Enum from './enum.js';
 
 export const catg = Enum.fromArray(['base', 'sources', 'streams', 'strings', 'numbers']);
@@ -27,7 +28,7 @@ const seeAlso = {
   cs: ['Viz', 'Viz též']
 };
 
-const _map = new Map();
+const map = new Map();
 
 export const help = {
   register(names, obj) {
@@ -35,13 +36,61 @@ export const help = {
       console.warn(`${names}: no category`);
     if(names instanceof Array) {
       const fname = names[0];
-      for(const name of names) {
-        if(name[0] !== fname[0])
-          _map.set(name, {names: [name], see: fname});
-      }
-      _map.set(fname, {names: names, ...obj});
+      for(const name of names)
+        map.set(name, {names: [name], see: fname, merge: name[0] === fname[0]});
+      map.set(fname, {names: names, ...obj});
     } else
-      _map.set(names, {names: [names], ...obj});
+      map.set(names, {names: [names], ...obj});
+  },
+
+  dumpTopic(topic) {
+    const obj = map.get(topic);
+    if(!obj)
+      throw new StreamError(`help on '${topic}' not found`);
+    if(!obj.en && obj.see)
+      return this.dumpTopic(obj.see);
+
+    for(const n of obj.names) {
+      let ln = '';
+      if(obj.src)
+        ln += `${obj.src}.`;
+      else if(obj.reqSource)
+        ln += '(...).';
+      ln += n;
+      if(obj.args)
+        ln += `(${obj.args})`;
+      else if(obj.minArg || obj.maxArg || obj.numArg)
+        ln += `(...)`;
+      console.log(ln);
+    }
+    console.log('');
+    for(const line of obj.en) {
+      if(line[0] === '-')
+        console.log(`[→] ${line.substring(1).replaceAll('_', '')}`);
+      else if(line[0] === '!')
+        console.log(`[!] ${line.substring(1).replaceAll('_', '')}`);
+      else
+        console.log(line.replaceAll('_', ''));
+    }
+    if(obj.see) {
+      if(obj.see instanceof Array)
+        console.log(`See also: ${obj.see.join(', ')}`);
+      else
+        console.log(`See also: ${obj.see}`);
+    }
+    console.log('\nExamples:');
+    let ln = 1;
+    for(const e of obj.ex) {
+      if(e[2])
+        console.log(`> ${e[0]} ; ${e[2].en}`);
+      else
+        console.log(`> ${e[0]}`);
+      if(e[1][0] === '!')
+        console.log(`Error: ${e[1].substring(1)}`);
+      else
+        console.log(`$${ln++}: ${e[1]}`);
+    }
+    console.log('');
   }
 };
 
@@ -92,8 +141,10 @@ async function populate() {
   const nav = document.getElementById('abc');
   const list = document.getElementById('filter-list');
   let lastLett = '';
-  for(const name of [..._map.keys()].sort()) {
-    const obj = _map.get(name);
+  for(const name of [...map.keys()].sort()) {
+    const obj = map.get(name);
+    if(obj.merge)
+      continue;
     if(name[0].toUpperCase() !== lastLett) {
       lastLett = name[0].toUpperCase();
       const anchor = document.createElement('div');
@@ -143,7 +194,7 @@ async function populate() {
             return '<i-pre>' + m.replace(/\w+|[<>&]/g, mm => {
               if(entities[mm])
                 return entities[mm];
-              else if(_map.has(mm) && mm !== name)
+              else if(map.has(mm) && mm !== name)
                 return `<a href="#id-${mm}">${mm}</a>`;
               else if(mm[0] === '_')
                 return mm.substring(1);
@@ -159,12 +210,12 @@ async function populate() {
       let html = `${seeAlso[lang][desc ? 1 : 0]} `;
       if(obj.see instanceof Array)
         html += obj.see.map(ident => {
-          if(!_map.has(ident))
+          if(!map.has(ident))
             console.warn(`Broken help link ${obj.names[0]} => ${ident}`);
           return `<i-pre><a href="#id-${ident}">${ident}</a></i-pre>`
         }).join(', ');
       else {
-        if(!_map.has(obj.see))
+        if(!map.has(obj.see))
           console.warn(`Broken help link ${obj.names[0]} => ${obj.see}`);
         html += `<i-pre><a href="#id-${obj.see}">${obj.see}</a></i-pre>`;
       }
@@ -180,7 +231,7 @@ async function populate() {
           .replace(/\w+|[<>&]/g, m => {
             if(entities[m])
               return entities[m];
-            else if(_map.has(m) && m !== name)
+            else if(map.has(m) && m !== name)
               return `<a href="#id-${m}">${m}</a>`;
             else
               return m;
@@ -189,7 +240,7 @@ async function populate() {
           html += ' <span class="comment">; ' + (comm[lang] || comm.en)
             .replace(/[<>&]/g, c => entities[c])
             .replace(/`([^``]*)`/g, (_, m) => {
-              if(_map.has(m) && m !== name)
+              if(map.has(m) && m !== name)
                 return `<a href="#id-${m}">${m}</a>`;
               else
                 return m;
@@ -219,7 +270,7 @@ async function populate() {
       .replace(/\w+|[<>&]/g, m => {
         if(entities[m])
           return entities[m];
-        else if(_map.has(m) && m !== name)
+        else if(map.has(m) && m !== name)
           return `<a href="#id-${m}">${m}</a>`;
         else if(m[0] === '_')
           return m.substring(1);

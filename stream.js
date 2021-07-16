@@ -9,6 +9,7 @@ import parse from './parser.js';
 import RNG from './random.js';
 import mainReg from './register.js';
 import History from './history.js';
+import {help} from './help.js';
 
 import repl from 'repl';
 import * as fs from 'fs/promises';
@@ -26,6 +27,16 @@ const prompt = repl.start({eval: str => {
     str = str.replace(/[\n\r]+$/, '');
     if(!str.replace(/[ \t\n\r]/g, ''))
       return;
+    const helpMatch = /^\?\s*(\w+)\s*$/.exec(str);
+    if(helpMatch) {
+      const topic = helpMatch[1];
+      help.dumpTopic(topic);
+      return;
+    } else if(str === '?' || str === 'help') {
+      console.log('Use \'? topic\' to see help on a specific command.');
+      console.log('For general information visit: https://vasekp.github.io/spa3/js/stream/help.html');
+      return;
+    }
     let node = parse(str);
     if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
       node = node.toAssign();
