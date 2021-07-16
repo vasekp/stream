@@ -561,7 +561,7 @@ R.register('tr', {
   minArg: 2,
   maxArg: 3,
   preeval() {
-    const str = this.src.evalAtom(types.S).toLowerCase();
+    const str = this.src.evalAtom(types.S);
     const from = this.args[0].evalAtom(types.S).toLowerCase();
     const to = this.args[1].evalAtom(types.S);
     if(this.args[2]) {
@@ -579,9 +579,13 @@ R.register('tr', {
     } else {
       if(from.length !== to.length)
         throw new StreamError('pattern and replacement strings of different lengths');
+      const strl = str.toLowerCase();
+      const lowerIter = strl[Symbol.iterator]();
       let ret = '';
-      for(const ch of [...str]) {
-        const ix = from.indexOf(ch);
+      let read = 0;
+      for(const ch of str) {
+        const lch = lowerIter.next().value; // assumption: str and strl have the same length in code points
+        const ix = from.indexOf(lch);
         ret += ix >= 0 ? to[ix] : ch;
       }
       return new Atom(ret);
