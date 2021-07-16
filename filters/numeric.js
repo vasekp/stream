@@ -146,22 +146,26 @@ regReducer(['divide', 'div'], '/',
 
 regReducer('and', '&', (a, b) => a && b, types.B, {
   en: ['Takes a logical conjunction of its arguments, i.e., `true` only if all of them are `true`. Long form of `x&y&...`.',
-    'If any of the arguments are streams, they are processed element by element.'],
+    'If any of the arguments are streams, they are processed element by element.',
+    '-For bitwise operation on numbers, see `bitand`.'],
   cs: ['Počítá logický součin svých argumentů, tj. `true` právě tehdy, pokud všechny jsou `true`. Alternativní zápis `x&y&...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.'],
+    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+    '-Tento filtr je vyhrazen pro pravdivostní hodnoty. Pro bitovou operaci nad čísly viz `bitand`.'],
   cat: catg.numbers,
   ex: [['range(10).select(#.odd & #<6)', '[1,3,5]']],
-  see: ['or', 'not', 'every']
+  see: ['or', 'not', 'bitand', 'every']
 });
 
 regReducer('or', '|', (a, b) => a || b, types.B, {
   en: ['Takes a logical disjunction of its arguments, i.e., `true` only if at least one of them is `true`. Long form of `x|y|...`.',
-    'If any of the arguments are streams, they are processed element by element.'],
+    'If any of the arguments are streams, they are processed element by element.',
+    '-For bitwise operation on numbers, see `bitor`.'],
   cs: ['Počítá logický součet svých argumentů, tj. `true` právě tehdy, pokud alespoň jeden z nich je `true`. Alternativní zápis `x|y|...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.'],
+    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+    '-Tento filtr je vyhrazen pro pravdivostní hodnoty. Pro bitovou operaci nad čísly viz `bitor`.'],
   cat: catg.numbers,
   ex: [['range(10).select(#.odd | #<6)', '[1,2,3,4,5,7,9]']],
-  see: ['and', 'not', 'some']
+  see: ['and', 'not', 'bitor', 'some']
 });
 
 R.register('min', {
@@ -355,6 +359,54 @@ regReducerS('lcm', (a, b) => a * (b / gcd(a, b)), {min: 1n}, {
     ['lcm(10,12,15)', '60', {en: 'arguments', cs: 'argumenty'}],
     ['iota:lcm(4)', '[4,4,12,4,20,12,28,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
   see: 'gcd'
+});
+
+regReducerS('bitand', (a, b) => a & b, {min: 1n}, {
+  en: ['Form with several arguments: calculates the bitwise logical AND of them.',
+    'Form without arguments: calculates the same operation the input stream.',
+    'Form with one argument: calculates the same operation the source (number) and the argument.'],
+  cs: ['Forma s několika argumenty: počítá jejich bitový logický součin (AND).',
+    'Forma bez argumentů: počítá bitový součin vstupního proudu.',
+    'Forma s jedním argumentem: počítá bitový součin vstupu (čísla) a argumentu.'],
+  cat: catg.numbers,
+  src: 'stream?',
+  args: 'list?',
+  ex: [['range(7,21,4).bitand', '3', {en: 'input stream', cs: 'vstupní proud'}],
+    ['bitand("a".ord, "b".ord)', '96', {en: 'arguments', cs: 'argumenty'}],
+    ['iota:bitand(6)', '[0,2,2,4,4,6,6,0,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+  see: ['bitor', 'bitxor']
+});
+
+regReducerS('bitor', (a, b) => a | b, {min: 1n}, {
+  en: ['Form with several arguments: calculates the bitwise logical OR of them.',
+    'Form without arguments: calculates the same operation the input stream.',
+    'Form with one argument: calculates the same operation the source (number) and the argument.'],
+  cs: ['Forma s několika argumenty: počítá jejich bitový logický součet (OR).',
+    'Forma bez argumentů: počítá bitový součet vstupního proudu.',
+    'Forma s jedním argumentem: počítá bitový součet vstupu (čísla) a argumentu.'],
+  cat: catg.numbers,
+  src: 'stream?',
+  args: 'list?',
+  ex: [['range(7,21,4).bitor', '31', {en: 'input stream', cs: 'vstupní proud'}],
+    ['bitor("a".ord,"b".ord).chr', '"c"', {en: 'arguments', cs: 'argumenty'}],
+    ['iota:bitor(2)', '[3,2,3,6,7,6,7,10,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+  see: ['bitand', 'bitxor']
+});
+
+regReducerS('bitxor', (a, b) => a ^ b, {min: 1n}, {
+  en: ['Form with several arguments: calculates the bitwise logical XOR of them.',
+    'Form without arguments: calculates the same operation the input stream.',
+    'Form with one argument: calculates the same operation the source (number) and the argument.'],
+  cs: ['Forma s několika argumenty: počítá jejich bitový exkluzivní logický součin (XOR).',
+    'Forma bez argumentů: počítá stejnou operaci na vstupním proudu.',
+    'Forma s jedním argumentem: počítá stejnou operaci na vstupu (čísle) a argumentu.'],
+  cat: catg.numbers,
+  src: 'stream?',
+  args: 'list?',
+  ex: [['range(15).bitxor', '0', {en: 'input stream', cs: 'vstupní proud'}],
+    ['bitxor(3,6)', '5', {en: 'arguments', cs: 'argumenty'}],
+    ['iota:bitxor(1)', '[0,3,2,5,4,7,6,9,8,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+  see: ['bitand', 'bitor']
 });
 
 R.register(['accum', 'acc', 'ac'], {
