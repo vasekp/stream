@@ -22,6 +22,11 @@ const catNames = {
   }
 };
 
+const seeAlso = {
+  en: ['See', 'See also'],
+  cs: ['Viz', 'Viz též']
+};
+
 const _map = new Map();
 
 export const help = {
@@ -151,7 +156,7 @@ async function populate() {
       }
     if(obj.see) {
       const p = document.createElement('p');
-      let html = desc ? 'See also ' : 'See ';
+      let html = `${seeAlso[lang][desc ? 1 : 0]} `;
       if(obj.see instanceof Array)
         html += obj.see.map(ident => {
           if(!_map.has(ident))
