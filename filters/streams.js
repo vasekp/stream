@@ -122,7 +122,8 @@ R.register(['length', 'len'], {
       'Funguje také pro řetězce, kde vrátí počet znaků.',
       '-Pro počet znaků dle upravené abecedy použijte `"...".split(_alphabet).length`.'],
     cat: [catg.streams, catg.strings],
-    ex: [['range(1,10,3).length', '4'], ['"string".length', '6']]
+    ex: [['range(1,10,3).length', '4'], ['"string".length', '6'],
+      ['"abc567def".split.select(isdigit).length', '3', {en: 'count elements with a given property', cs: 'spočítat prvky s danou vlastností'}]]
   }
 });
 
@@ -163,7 +164,8 @@ R.register('first', {
       'Forma s argumentem vrátí `_count` prvních prvků.'],
     args: 'count?',
     cat: catg.streams,
-    ex: [['iota.first', '1'], ['primes.first(5)', '[2,3,5,7,11]']],
+    ex: [['iota.first', '1'], ['primes.first(5)', '[2,3,5,7,11]'],
+      ['iota(1,3).select(isprime).first', '7', {en: 'first element with a given property', cs: 'první s danou vlastností'}]],
     see: ['last', 'take', 'drop', 'prefix']
   }
 });
@@ -908,7 +910,8 @@ R.register(['select', 'sel', 'filter', 'where'], {
     src: 'source',
     args: 'condition',
     ex: [['iota.where(#.factor.length=2)', '[4,6,9,10,14,15,21,...]', {en: 'products of two primes', cs: 'součiny dvojic prvočísel'}],
-      ['"one two three".split.select(#<>" ").cat', '"onetwothree"']]
+      ['"one two three".split.select(#<>" ").cat', '"onetwothree"'],
+      ['"abc567def".split.select(isdigit).length', '3', {en: 'count elements with a given property', cs: 'spočítat prvky s danou vlastností'}]]
   }
 });
 
@@ -967,6 +970,45 @@ R.register('while', {
     ex: [['primes.while(#<30)', '[2,3,5,7,11,13,17,19,23,29]']]
   }
 });
+
+R.register(['groupby', 'gby'], {
+  reqSource: true,
+  numArg: 1,
+  prepare: Node.prototype.prepareForeach,
+  eval() {
+    const sIn = this.src.evalStream();
+    const body = this.args[0].checkType([types.symbol, types.expr]);
+    return new Stream(this,
+      (function*(self) {
+        let lastIx = 0n;
+        let prev = null;
+        let ix = 0n;
+        for(const r of sIn) {
+          const curr = body.prepare({src: r});
+          if(prev === null)
+            prev = curr;
+          else if(!compareStreams(prev, curr)) {
+            yield new Node('droptake', self.token, self.src, [new Atom(lastIx), new Atom(ix - lastIx)]);
+            lastIx = ix;
+            prev = curr;
+          }
+          ix++;
+        }
+        if(prev !== null)
+          yield new Node('droptake', self.token, self.src, [new Atom(lastIx), new Atom(ix - lastIx)]);
+      })(this));
+  },
+  help: {
+    en: ['Returns groups of successive elements which evaluate to the same result when `_body` is applied.'],
+    cs: ['Čte proud `_source` a vrací skupiny po sobě jdoucích jeho prvků, které dávají stejný výsledek při aplikaci `_body`.'],
+    cat: catg.streams,
+    ex: [['range(1,101,10).groupby(dlog)', '[[1],[11,21,31,41,51,61,71,81,91],[101]]', {en: 'group by digit count', cs: 'sdružovat podle počtu číslic'}],
+      ['"abc12def".split.groupby(isletter):cat', '["abc","12","def"]', {en: 'group by a property', cs: 'třídit podle vlastnosti'}],
+      ['"this is a test".split(" ").groupby(length)', '[["this"],["is"],["a"],["test"]]', {en: 'only groups successive elements!', cs: 'slučuje jen po sobě jdoucí prvky!'}],
+      ['"this is a test".split(" ").sort(length).groupby(length)', '[["a"],["is"],["this","test"]]', {en: 'use `sort` to identify all matches', cs: 'použijte `sort`, pokud chcete najít všechny shody'}]]
+  }
+});
+
 
 function numCompare(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -1223,8 +1265,10 @@ R.register('count', {
     return new Atom(count);
   },
   help: {
-    en: ['Returns the count of occurrences of `_value` in `_source`.'],
-    cs: ['Vrátí počet výskytů prvku `_value` v proudu `_source`.'],
+    en: ['Returns the count of occurrences of `_value` in `_source`.',
+      '-To count elements with some property, use `select(...).length`'],
+    cs: ['Vrátí počet výskytů prvku `_value` v proudu `_source`.',
+      '-Pokud chcete spočítat prvky s nějakou vlastností, použijte `select(...).length`.'],
     cat: catg.streams,
     src: 'source',
     args: 'value',
