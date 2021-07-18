@@ -224,7 +224,7 @@ R.register('min', {
     ex: [['range(3,5).min', '3', {en: 'input stream', cs: 'vstupní proud'}],
       ['min(6,2,7)', '2', {en: 'arguments', cs: 'argumenty'}],
       ['["xyz",".","abcde"].min(#.length)', '"."', {en: '1 argument', cs: '1 argument'}]],
-    see: 'max'
+    see: ['max', 'selmin']
   }
 });
 
@@ -284,7 +284,7 @@ R.register('max', {
     ex: [['range(3,5).max', '5', {en: 'input stream', cs: 'vstupní proud'}],
       ['max(6,2,7)', '7', {en: 'arguments', cs: 'argumenty'}],
       ['["xyz",".","abcde"].max(#.length)', '"abcde"', {en: '1 argument', cs: '1 argument'}]],
-    see: 'max'
+    see: ['min', 'selmax']
   }
 });
 

@@ -1016,6 +1016,42 @@ R.register(['groupby', 'gby'], {
   }
 });
 
+R.register(['selmax', 'selmin'], {
+  reqSource: true,
+  numArg: 1,
+  prepare: Node.prototype.prepareForeach,
+  eval() {
+    const sIn = this.src.evalStream({finite: true});
+    const func = this.args[0];
+    const max = this.ident === 'selmax';
+    let prev = null;
+    const ret = [];
+    for(const value of sIn) {
+      const curr = func.prepare({src: value}).evalNum();
+      if(curr === prev)
+        ret.push(value);
+      else if(prev === null || (max ? curr > prev : curr < prev)) {
+        ret.splice(0);
+        ret.push(value);
+        prev = curr;
+      }
+    }
+    return new Stream(this, ret.values(), {len: BigInt(ret.length)});
+  },
+  help: {
+    en: ['Evaluates `_function` on each element of `_source` and returns those for which it results in the maximal numeric value.',
+      '`_selmin` works the same but finding the minimal value.'],
+    cs: ['Vyhodnocuje `_function` na všech prvcích `_source` a vrátí ty, pro které dává nejvyšší číselnou hodnotu.',
+      '`_selmin` funguje stejně, ale hledá nejmenší hodnotu.'],
+    cat: catg.streams,
+    src: 'source',
+    args: 'function',
+    ex: [['"this is a test".split(" ").selmax(length)', '["this","test"]']],
+    see: ['max', 'min']
+  }
+});
+
+
 R.register('splitat', {
   reqSource: true,
   minArg: 1,
@@ -1080,7 +1116,7 @@ function usort(arr, fn = x => x) {
   }
 }
 
-R.register('sort', {
+R.register(['sort', 'rsort'], {
   reqSource: true,
   maxArg: 1,
   prepare: Node.prototype.prepareForeach,
@@ -1090,6 +1126,8 @@ R.register('sort', {
       const temp = [...sIn].map(s => [s, this.args[0].prepare({src: s}).eval()]);
       usort(temp, x => x[1]);
       const vals = temp.map(x => x[0]);
+      if(this.ident === 'rsort')
+        vals.reverse();
       return new Stream(this,
         vals.values(),
         {len: BigInt(vals.length)}
@@ -1097,6 +1135,8 @@ R.register('sort', {
     } else {
       const vals = [...sIn].map(s => s.eval());
       usort(vals);
+      if(this.ident === 'rsort')
+        vals.reverse();
       return new Stream(this,
         vals.values(),
         {len: BigInt(vals.length)}
@@ -1106,9 +1146,11 @@ R.register('sort', {
   help: {
     en: ['Loads the input stream in full and returns sorted.',
       'In the 1-argument form, the sorting key is obtained by applying `_body` on the elements of `_source`.',
+      '`_rsort` sorts the values in reverse order.',
       '!The values to be compared must be either all numeric or all strings.'],
     cs: ['Načte celý vstupní proud a vrátí seřazený.',
       'Pokud je poskytnuto `_body`, řadicí klíč se získá jeho použitím na každý prvek `_source`.',
+      '`_rsort` řadí hodnoty v obráceném pořadí.',
       '!Řazené hodnoty musejí být buď všechny čísla nebo všechny řetězce.'],
     cat: [catg.streams, catg.strings, catg.numbers],
     src: 'source',
