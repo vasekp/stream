@@ -5,52 +5,55 @@ import R from '../register.js';
 import RNG from '../random.js';
 import {catg} from '../help.js';
 
-function regReducer(name, sign, fun, type, help) {
+function regMathOp(name, sign, fun, type, streamOp, help) {
   R.register(name, {
-    reqSource: false,
-    minArg: 2,
+    minArg: streamOp ? 1 : 2,
+    sourceOrArgs: 2, // does not make difference if = minArg
     preeval() {
-      if(this.args.every(arg => arg.isAtom))
+      if(this.args.length > 1 && this.args.every(arg => arg.isAtom))
         return new Atom(this.args.map(arg => arg.checkType(type).value).reduce(fun));
       else
         return this;
     },
     eval() {
-      const is = this.args
-        .map(arg => arg.eval());
+      if(this.args.length === 1) {
+        const a = this.src.evalAtom(type);
+        const b = this.args[0].evalAtom(type);
+        return new Atom(fun(a, b));
+      }
+      const is = this.args.map(arg => arg.eval());
       if(is.every(i => i.isAtom))
         return new Atom(is.map(a => a.checkType(type).value).reduce(fun));
-      else {
-        const lens = is.filter(i => !i.isAtom).map(i => i.len);
-        const len = lens.some(len => len === undefined) ? undefined
-          : lens.every(len => len === null) ? null
-          : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
-        return new Stream(this,
-          (function*() {
-            for(;;) {
-              const vs = [];
-              for(const i of is)
-                if(i.isAtom)
-                  vs.push(i.value);
-                else {
-                  const r = i.next().value;
-                  if(!r)
-                    return;
-                  vs.push(r.evalAtom(type));
-                }
-              yield new Atom(vs.reduce(fun));
-            }
-          }()),
-          {
-            len,
-            skip: c => {
-              for(const i of is)
-                if(!i.isAtom)
-                  i.skip(c);
-            }
+      // else
+      const lens = is.filter(i => !i.isAtom).map(i => i.len);
+      const len = lens.some(len => len === undefined) ? undefined
+        : lens.every(len => len === null) ? null
+        : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
+      return new Stream(this,
+        (function*() {
+          for(;;) {
+            const vs = [];
+            for(const i of is)
+              if(i.isAtom)
+                vs.push(i.value);
+              else {
+                const r = i.next().value;
+                if(!r)
+                  return;
+                vs.push(r.evalAtom(type));
+              }
+            yield new Atom(vs.reduce(fun));
           }
-        );
-      }
+        }()),
+        {
+          len,
+          skip: c => {
+            for(const i of is)
+              if(!i.isAtom)
+                i.skip(c);
+          }
+        }
+      );
     },
     toString() {
       let ret = '';
@@ -68,83 +71,95 @@ function regReducer(name, sign, fun, type, help) {
   });
 }
 
-regReducer('plus', '+',
+regMathOp(['plus', 'add'], '+',
   (a, b) => {
     if(typeof a !== typeof b)
       throw new StreamError(`${Atom.format(a)} and ${Atom.format(b)} have different types`);
     else
       return a + b;
   },
-  [types.N, types.S],
+  [types.N, types.S], true,
   {
     en: ['Adds numbers or concatenates strings. Long form of `x+y+...`.',
-      'If any of the arguments are streams, they are processed element by element.'],
+      'If any of the arguments are streams, they are processed element by element.',
+      'Form with one argument: adds the argument to the source (number).'],
     cs: ['Sčítá čísla nebo navazuje řetězce. Alternativní zápis `x+y+...`.',
-      'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.'],
+      'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+      'Forma s jedním argumentem: součet vstupu (čísla) a argumentu.'],
     cat: [catg.numbers, catg.streams],
     ex: [['1+2+3', '6'],
       ['"a"+"b"+"c"', '"abc"'],
       ['[1,2,3]+4', '[5,6,7]'],
+      ['[1,2,3]:plus(4)', '[5,6,7]'],
       ['[10,20,30]+[1,2,3,4,5]', '[11,22,33]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
       ['[1,2,[3,4]]+5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
       ['iota.fold(plus)', '[1,3,6,10,15,...]', {en: 'long form used as an operand (also see `accum`)', cs: 'textová forma použitá jako operand (viz též `accum`)'}]],
-    see: ['add', 'minus', 'accum', 'total']
+    see: ['minus', 'accum', 'total']
   }
 );
 
-regReducer('minus', '-', (a, b) => a - b, types.N, {
+regMathOp('minus', '-', (a, b) => a - b, types.N, true, {
   en: ['Subtracts second and higher arguments from first. Long form of `x-y-...`.',
-    'If any of the arguments are streams, they are processed element by element.'],
+    'If any of the arguments are streams, they are processed element by element.',
+    'Form with one argument: subtracts the argument from the source (number).'],
   cs: ['Odečítá od prvního argumentu všechny následující. Alternativní zápis `x-y-...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.'],
+    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+    'Forma s jedním argumentem: odečítá argument od vstupu (čísla).'],
   cat: catg.numbers,
   ex: [['1-2-3', '-4'],
     ['[1,2,3]-4', '[-3,-2,-1]'],
+    ['[1,2,3]:minus(4)', '[-3,-2,-1]'],
     ['[10,20,30]-[1,2,3,4,5]', '[9,18,27]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
     ['[1,2,[3,4]]-5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
     ['1.repeat.fold(minus)', '[[1,0,-1,-2,-3,...]', {en: 'long form used as an operand', cs: 'textová forma použitá jako operand'}]],
   see: ['plus', 'diff']
 });
 
-regReducer('times', '*', (a, b) => a * b, types.N, {
+regMathOp('times', '*', (a, b) => a * b, types.N, true, {
   en: ['Multiplies its arguments. Long form of `x*y*...`.',
-    'If any of the arguments are streams, they are processed element by element.'],
+    'If any of the arguments are streams, they are processed element by element.',
+    'Form with one argument: multiplies the argument and the source (number).'],
   cs: ['Násobí své argumenty. Alternativní zápis `x*y*...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.'],
+    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+    'Forma s jedním argumentem: součin vstupu (čísla) a argumentu.'],
   cat: catg.numbers,
   ex: [['1*2*3', '6'],
     ['[1,2,3]*4', '[4,8,12]'],
+    ['[1,2,3]:times(4)', '[4,8,12]'],
     ['[10,20,30]*[1,2,3,4,5]', '[10,40,90]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
     ['[1,2,[3,4]]*5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
     ['range(7).reduce(times)', '5040', {en: 'long form used as an operand (also see `product`, `factorial`)', cs: 'textová forma použitá jako operand (viz též `product`, `factorial`)'}]],
   see: ['divide', 'product']
 });
 
-regReducer(['divide', 'div'], '/',
+regMathOp(['divide', 'div'], '/',
   (a, b) => {
     if(b === 0n)
       throw new StreamError('division by zero');
     else
-      return a / b
+      return a / b;
   },
-  types.N,
+  types.N, true,
   {
     en: ['Divides its first argument by all the others. Long form of `x/y/...`.',
       'If any of the arguments are streams, they are processed element by element.',
+      'Form with one argument: divides the source (number) with the argument.',
       '!All numbers in Stream are integers. Fractional part is lost.'],
     cs: ['Dělí první argument všemi následujícími. Alternativní zápis `x/y/...`.',
       'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+      'Forma s jedním argumentem: dělí vstup (číslo) argumentem.',
       '!Všechna čísla v jazyce Stream jsou celá. Zlomková část je zahozena.'],
     cat: catg.numbers,
     ex: [['12/2/3', '2'],
       ['[4,5,6]/2', '[2,2,3]'],
+      ['[4,5,6]:divide(2)', '[2,2,3]'],
       ['[10,20,30]/[1,2,3,4,5]', '[10,10,10]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
       ['[1,2,[3,4]]/5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
       ['1/0', '!division by zero']],
     see: ['times', 'mod', 'divmod']
   });
 
-regReducer('and', '&', (a, b) => a && b, types.B, {
+regMathOp('and', '&', (a, b) => a && b, types.B, false, {
   en: ['Takes a logical conjunction of its arguments, i.e., `true` only if all of them are `true`. Long form of `x&y&...`.',
     'If any of the arguments are streams, they are processed element by element.',
     '-For bitwise operation on numbers, see `bitand`.'],
@@ -156,7 +171,7 @@ regReducer('and', '&', (a, b) => a && b, types.B, {
   see: ['or', 'not', 'bitand', 'every']
 });
 
-regReducer('or', '|', (a, b) => a || b, types.B, {
+regMathOp('or', '|', (a, b) => a || b, types.B, false, {
   en: ['Takes a logical disjunction of its arguments, i.e., `true` only if at least one of them is `true`. Long form of `x|y|...`.',
     'If any of the arguments are streams, they are processed element by element.',
     '-For bitwise operation on numbers, see `bitor`.'],
@@ -596,7 +611,7 @@ R.register('mod', {
     args: 'modulus,base?',
     ex: [['range(-5,5):mod(3)', '[1,2,0,1,2,0,1,2,0,1,2]', {en: 'remainder is calculated ≥ 0 even for negative numbers', cs: 'zbytek je vrácen ≥ 0 i pro záporné argumenty'}],
       ['10.mod(5,1)', '5', {en: 'with base=1 returns 5 instead of 0', cs: 's base=1 vrátí 5 namísto 0'}]],
-    see: ['divide', 'divmod', 'add']
+    see: ['divide', 'divmod']
   }
 });
 
@@ -631,35 +646,6 @@ R.register('modinv', {
       ['range(1,6)*$', '[1,8,15,8,15,36]'],
       ['$:mod(7)', '[1,1,1,1,1,1]'],
       ['10.modinv(6)', '!10 and 6 are not coprime']]
-  }
-});
-
-R.register('add', {
-  reqSource: true,
-  minArg: 1,
-  maxArg: 3,
-  preeval() {
-    const inp = this.src.evalNum();
-    const add = this.args[0].evalNum();
-    if(this.args.length > 1) {
-      const mod = this.args[1].evalNum({min: 1n});
-      const base = this.args[2] ? this.args[2].evalNum() : 0n;
-      const res0 = (inp + add - base) % mod;
-      const res = (res0 >= 0n ? res0 : res0 + mod) + base;
-      return new Atom(res);
-    } else
-      return new Atom(inp + add);
-  },
-  help: {
-    en: ['1-argument form: alternative to `_n+_add` for chaining.',
-      '2- and 3-argument form: equivalent to `(_n+_add).mod(_modulus,_base?)`'],
-    cs: ['Forma s jedním argumentem: alternativa k `_n+_add` uzpůsobená k řetězení.',
-      'Forma se dvěma nebo třemi argumenty: ekvivalentní `(_n+_add).mod(_modulus,_base?)`'],
-    cat: catg.numbers,
-    src: 'n',
-    args: 'add,modulus?,base?',
-    ex: [['range(10,20):add(10,26,1)', '[20,21,22,23,24,25,26,1,2,3,4]']],
-    see: ['plus', 'mod']
   }
 });
 
