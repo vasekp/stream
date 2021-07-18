@@ -1480,8 +1480,10 @@ R.register('with', {
   prepare(scope) {
     const args = this.args.map((arg, ix, arr) => {
       if(ix < arr.length - 1) {
-        if(arg.token.value === '=')
+        if(arg.ident === 'equal')
           return arg.toAssign();
+        else if(arg.ident === 'assign')
+          return arg;
         else
           throw new StreamError(`expected assignment, found ${arg.desc()}`);
       } else
@@ -1492,7 +1494,7 @@ R.register('with', {
       .prepareBase(scope, {},
         (arg, ix, arr) => {
           if(ix === arr.length - 1) // body
-            return {register: undefined, partial: true};
+            return {register: undefined, partial: true, expand: false};
           else // assignments
             return {partial: true, expand: !scope.partial};
         },

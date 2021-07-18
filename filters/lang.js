@@ -426,7 +426,7 @@ R.register('equal', {
       ret = this.src.toString() + '.';
     if(this.args.length > 0) {
       ret += '(';
-      ret += this.args.map(n => n.toString()).join('=');
+      ret += this.args.map(n => n.toString()).join('==');
       ret += ')';
     } else
       ret += this.ident;
