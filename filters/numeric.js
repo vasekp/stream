@@ -5,10 +5,10 @@ import R from '../register.js';
 import RNG from '../random.js';
 import {catg} from '../help.js';
 
-function regMathOp(name, sign, fun, type, streamOp, help) {
+function regMathOp(name, sign, fun, type, help) {
   R.register(name, {
-    minArg: streamOp ? 1 : 2,
-    sourceOrArgs: 2, // does not make difference if = minArg
+    minArg: 1,
+    sourceOrArgs: 2,
     preeval() {
       if(this.args.length > 1 && this.args.every(arg => arg.isAtom))
         return new Atom(this.args.map(arg => arg.checkType(type).value).reduce(fun));
@@ -78,7 +78,7 @@ regMathOp(['plus', 'add'], '+',
     else
       return a + b;
   },
-  [types.N, types.S], true,
+  [types.N, types.S],
   {
     en: ['Adds numbers or concatenates strings. Long form of `x+y+...`.',
       'If any of the arguments are streams, they are processed element by element.',
@@ -98,7 +98,7 @@ regMathOp(['plus', 'add'], '+',
   }
 );
 
-regMathOp('minus', '-', (a, b) => a - b, types.N, true, {
+regMathOp('minus', '-', (a, b) => a - b, types.N, {
   en: ['Subtracts second and higher arguments from first. Long form of `x-y-...`.',
     'If any of the arguments are streams, they are processed element by element.',
     'Form with one argument: subtracts the argument from the source (number).'],
@@ -115,7 +115,7 @@ regMathOp('minus', '-', (a, b) => a - b, types.N, true, {
   see: ['plus', 'diff']
 });
 
-regMathOp('times', '*', (a, b) => a * b, types.N, true, {
+regMathOp('times', '*', (a, b) => a * b, types.N, {
   en: ['Multiplies its arguments. Long form of `x*y*...`.',
     'If any of the arguments are streams, they are processed element by element.',
     'Form with one argument: multiplies the argument and the source (number).'],
@@ -139,7 +139,7 @@ regMathOp(['divide', 'div'], '/',
     else
       return a / b;
   },
-  types.N, true,
+  types.N,
   {
     en: ['Divides its first argument by all the others. Long form of `x/y/...`.',
       'If any of the arguments are streams, they are processed element by element.',
@@ -158,30 +158,6 @@ regMathOp(['divide', 'div'], '/',
       ['1/0', '!division by zero']],
     see: ['times', 'mod', 'divmod']
   });
-
-regMathOp('and', '&', (a, b) => a && b, types.B, false, {
-  en: ['Takes a logical conjunction of its arguments, i.e., `true` only if all of them are `true`. Long form of `x&y&...`.',
-    'If any of the arguments are streams, they are processed element by element.',
-    '-For bitwise operation on numbers, see `bitand`.'],
-  cs: ['Počítá logický součin svých argumentů, tj. `true` právě tehdy, pokud všechny jsou `true`. Alternativní zápis `x&y&...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
-    '-Tento filtr je vyhrazen pro pravdivostní hodnoty. Pro bitovou operaci nad čísly viz `bitand`.'],
-  cat: catg.numbers,
-  ex: [['range(10).select(#.odd & #<6)', '[1,3,5]']],
-  see: ['or', 'not', 'bitand', 'every']
-});
-
-regMathOp('or', '|', (a, b) => a || b, types.B, false, {
-  en: ['Takes a logical disjunction of its arguments, i.e., `true` only if at least one of them is `true`. Long form of `x|y|...`.',
-    'If any of the arguments are streams, they are processed element by element.',
-    '-For bitwise operation on numbers, see `bitor`.'],
-  cs: ['Počítá logický součet svých argumentů, tj. `true` právě tehdy, pokud alespoň jeden z nich je `true`. Alternativní zápis `x|y|...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
-    '-Tento filtr je vyhrazen pro pravdivostní hodnoty. Pro bitovou operaci nad čísly viz `bitor`.'],
-  cat: catg.numbers,
-  ex: [['range(10).select(#.odd | #<6)', '[1,2,3,4,5,7,9]']],
-  see: ['and', 'not', 'bitor', 'some']
-});
 
 R.register('min', {
   sourceOrArgs: 2,
@@ -715,6 +691,64 @@ R.register(['even', 'iseven'], {
     src: 'n',
     ex: [['range(10).select(even)', '[2,4,6,8,10]']],
     see: 'odd'
+  }
+});
+
+R.register('and', {
+  reqSource: false,
+  minArg: 2,
+  preeval() {
+    return new Atom(this.args.map(arg => arg.evalAtom(types.B)).reduce((a, b) => a && b));
+  },
+  toString() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.toString() + '.';
+    if(this.args.length > 0) {
+      ret += '(';
+      ret += this.args.map(n => n.toString()).join('&');
+      ret += ')';
+    } else
+      ret += name;
+    return ret;
+  },
+  help: {
+    en: ['Takes a logical conjunction of its arguments, i.e., `true` only if all of them are `true`. Long form of `x&y&...`.',
+      '-For bitwise operation on numbers, see `bitand`.'],
+    cs: ['Počítá logický součin svých argumentů, tj. `true` právě tehdy, pokud všechny jsou `true`. Alternativní zápis `x&y&...`.',
+      '-Tento filtr je vyhrazen pro pravdivostní hodnoty. Pro bitovou operaci nad čísly viz `bitand`.'],
+    cat: catg.numbers,
+    ex: [['range(10).select(#.odd & #<6)', '[1,3,5]']],
+    see: ['or', 'not', 'bitand', 'every']
+  }
+});
+
+R.register('or', {
+  reqSource: false,
+  minArg: 2,
+  preeval() {
+    return new Atom(this.args.map(arg => arg.evalAtom(types.B)).reduce((a, b) => a || b));
+  },
+  toString() {
+    let ret = '';
+    if(this.src)
+      ret = this.src.toString() + '.';
+    if(this.args.length > 0) {
+      ret += '(';
+      ret += this.args.map(n => n.toString()).join('|');
+      ret += ')';
+    } else
+      ret += name;
+    return ret;
+  },
+  help: {
+    en: ['Takes a logical disjunction of its arguments, i.e., `true` only if at least one of them is `true`. Long form of `x|y|...`.',
+      '-For bitwise operation on numbers, see `bitor`.'],
+    cs: ['Počítá logický součet svých argumentů, tj. `true` právě tehdy, pokud alespoň jeden z nich je `true`. Alternativní zápis `x|y|...`.',
+      '-Tento filtr je vyhrazen pro pravdivostní hodnoty. Pro bitovou operaci nad čísly viz `bitor`.'],
+    cat: catg.numbers,
+    ex: [['range(10).select(#.odd | #<6)', '[1,2,3,4,5,7,9]']],
+    see: ['and', 'not', 'bitor', 'some']
   }
 });
 
