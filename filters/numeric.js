@@ -110,8 +110,8 @@ regMathOp('minus', '-', (a, b) => a - b, types.N, {
     ['[1,2,3]-4', '[-3,-2,-1]'],
     ['[1,2,3]:minus(4)', '[-3,-2,-1]'],
     ['[10,20,30]-[1,2,3,4,5]', '[9,18,27]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
-    ['[1,2,[3,4]]-5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
-    ['1.repeat.fold(minus)', '[[1,0,-1,-2,-3,...]', {en: 'long form used as an operand', cs: 'textová forma použitá jako operand'}]],
+    ['[1,2,[3,4]]-5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
+    ['1.repeat.fold(minus)', '[1,0,-1,-2,-3,...]', {en: 'long form used as an operand', cs: 'textová forma použitá jako operand'}]],
   see: ['plus', 'diff']
 });
 
@@ -127,7 +127,7 @@ regMathOp('times', '*', (a, b) => a * b, types.N, {
     ['[1,2,3]*4', '[4,8,12]'],
     ['[1,2,3]:times(4)', '[4,8,12]'],
     ['[10,20,30]*[1,2,3,4,5]', '[10,40,90]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
-    ['[1,2,[3,4]]*5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
+    ['[1,2,[3,4]]*5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
     ['range(7).reduce(times)', '5040', {en: 'long form used as an operand (also see `product`, `factorial`)', cs: 'textová forma použitá jako operand (viz též `product`, `factorial`)'}]],
   see: ['divide', 'product']
 });
@@ -154,7 +154,7 @@ regMathOp(['divide', 'div'], '/',
       ['[4,5,6]/2', '[2,2,3]'],
       ['[4,5,6]:divide(2)', '[2,2,3]'],
       ['[10,20,30]/[1,2,3,4,5]', '[10,10,10]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
-      ['[1,2,[3,4]]/5', '!expected number or string, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
+      ['[1,2,[3,4]]/5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
       ['1/0', '!division by zero']],
     see: ['times', 'mod', 'divmod']
   });
@@ -561,7 +561,7 @@ R.register('clamp', {
     cat: catg.numbers,
     src: 'n',
     args: 'min,max',
-    ex: [['iota.clamp(3,7)', '[3,3,3,4,5,6,7,7,7,...]']]
+    ex: [['iota:clamp(3,7)', '[3,3,3,4,5,6,7,7,7,...]']]
   }
 });
 
@@ -771,7 +771,7 @@ R.register('not', {
       'Může být použito ve formě `_value.not` i `not(_value)`.'],
     cat: catg.numbers,
     args: 'value?',
-    ex: [['range(10).select(not(isprime)))', '[1,4,6,8,9,10]']],
+    ex: [['range(10).select(not(isprime))', '[1,4,6,8,9,10]']],
     see: ['and', 'or']
   }
 });
@@ -1098,7 +1098,7 @@ R.register('isprime', {
       'Nečíselný vstup způsobí chybu.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['range(10).select(even)', '[2,4,5,7]']],
+    ex: [['range(10).select(isprime)', '[2,3,5,7]']],
     see: 'primes'
   }
 });
@@ -1372,6 +1372,7 @@ R.register(['random', 'rnd', 'sample'], {
       ['[rnd(1,6),rnd(1,6),rnd(1,6)]', '[3,3,3]', {en: 'watch out for this!', cs: 'pozor na toto!'}],
       ['random(1,6,3)', '[2,1,6]', {en: 'use this instead!', cs: 'použijte toto!'}]
     ],
+    skipTest: true,
     src: 'source?',
     args: 'min??,max??,count?',
     see: 'rndstream'
@@ -1449,6 +1450,7 @@ R.register(['rndstream', 'rnds'], {
       ['rndstream(1,9)', '[3,2,7,5,1,4,1,8,6,7,...]', {en: 'new run gives new results', cs: 'nový běh dá nové výsledky'}],
       ['$1', '[6,7,3,2,9,5,2,3,6,4,...]', {en: 'but recalling history reuses the earlier state', cs: 'ale odkaz na historii replikuje též stav generátoru'}]
     ],
+    skipTest: true,
     src: 'source?',
     args: 'min??,max??,count?',
     see: 'rndstream'
@@ -1588,7 +1590,7 @@ R.register('trirem', {
     cs: ['Vrátí dvojici čísel `[_k,_l]` takových, že `_n = _k*(_k-1) + _l` a `_k <= _n`.'],
     cat: catg.numbers,
     src: 'n',
-    ex: [['iota.trirem', '[[1,0],[1,1],[2,0],[2,1],[2,2],...]'],
+    ex: [['iota:trirem', '[[1,0],[1,1],[2,0],[2,1],[2,2],...]'],
       ['$.iwhere(#[2]=0)', '[1,3,6,10,15,21,28,...]', {en: 'triangular numbers', cs: 'trojúhelníková čísla'}]]
   }
 });

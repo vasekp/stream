@@ -26,7 +26,7 @@ R.register(['factorial', 'fact', 'fac'], {
     cat: catg.numbers,
     src: 'n',
     ex: [['iota:factorial', '[1,2,6,24,120,720,...]'],
-      ['100.factorial', '9332621544394415268169...']],
+      ['100.factorial', '9332621544394415268169...', {skipTest: true}]],
     see: 'dfactorial'
   }
 });
@@ -509,7 +509,7 @@ R.register(['perm', 'perms', 'permute'], {
     args: 'order?',
     ex: [['"abba".split.perm:cat', '["abba","baba","bbaa","aabb","abab","baab"]'],
       ['iota.perm[10^10]', '[14,7,10,9,12,5,1,3,11,4,...]'],
-      ['range(10).perm.random', '[3,2,9,6,5,8,1,4,10,7]'],
+      ['range(10).perm.random', '[3,2,9,6,5,8,1,4,10,7]', {skipTest: true}],
       ['abc.perm([6,1,2,5,4,3]).cat', '"fabedcghijklmnopqrstuvwxyz"']],
     see: 'iperm'
   }

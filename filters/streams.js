@@ -549,7 +549,7 @@ R.register(['flatten', 'fl'], {
       'Jestliže je dáno `_depth`, zploští vnořené proudy pouze do této hloubky.'],
     cat: catg.streams,
     ex: [['[1].nest([#]).flatten', '[1,1,1,1,1,1,...]'],
-      ['[1].nest([#]).flatten(3)', '[1,1,1,[1],[[1]],...']]
+      ['[1].nest([#]).flatten(3)', '[1,1,1,[1],[[1]],...]']]
   }
 });
 
@@ -1091,7 +1091,7 @@ R.register('splitat', {
     args: 'divider,count?',
     ex: [['range(8).splitat(3)', '[[1,2],[4,5,6,7,8]]'],
       ['iota.splitat(3)', '!Timeout', {en: 'splitat must be able to determine where the individual parts end', cs: 'splitat musí umět rozhodnout, kde jednotlivé části končí'}],
-      ['iota.splitat(3,1)', '[[1,2],[4,5,6,7,...]]', {en: 'this can be fixed by giving count', cs: 'může být napraveno poskytnutím count'}]],
+      ['iota.splitat(3,1)', '[[1,2],[4,5,6,7,...]]', {en: 'this can be fixed by giving count', cs: 'může být napraveno poskytnutím count', skipTest: true}]],
     see: 'split'
   }
 });

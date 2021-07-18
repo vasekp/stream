@@ -81,7 +81,7 @@ export const help = {
     console.log('\nExamples:');
     let ln = 1;
     for(const e of obj.ex) {
-      if(e[2])
+      if(e[2]?.en)
         console.log(`> ${e[0]} ; ${e[2].en}`);
       else
         console.log(`> ${e[0]}`);
@@ -238,7 +238,7 @@ async function populate() {
             else
               return m;
           });
-        if(comm) {
+        if(comm && (comm[lang] || comm.en)) {
           html += ' <span class="comment">; ' + (comm[lang] || comm.en)
             .replace(/[<>&]/g, c => entities[c])
             .replace(/`([^``]*)`/g, (_, m) => {

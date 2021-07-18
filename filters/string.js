@@ -127,7 +127,7 @@ R.register('cat', {
     cat: catg.strings,
     ex: [['"one two three".split(" ").cat(",")', '"one,two,three"'],
       ['abc[pi.while(#>0)].cat', '"cadaeibfecehigicbchdfbfdcchcbgie"'],
-      ['abc.perm.random.cat', '"izsqefyhmlwjkrgdcptauxbvno"']],
+      ['abc.perm.random.cat', '"izsqefyhmlwjkrgdcptauxbvno"', {skipTest: true}]],
     args: 'glue?',
     see: 'plus'
   }
@@ -454,8 +454,8 @@ R.register('prefix', {
     cat: catg.strings,
     src: 'string',
     args: 'count',
-    ex: [['"string".prefix(2)', 'st'],
-      ['"string".prefix(-2)', 'stri']],
+    ex: [['"string".prefix(2)', '"st"'],
+      ['"string".prefix(-2)', '"stri"']],
     see: 'postfix'
   }
 });
@@ -476,8 +476,8 @@ R.register('postfix', {
     cat: catg.strings,
     src: 'string',
     args: 'count',
-    ex: [['"string".postfix(2)', 'ng'],
-      ['"string".postfix(2)', 'ring']],
+    ex: [['"string".postfix(2)', '"ng"'],
+      ['"string".postfix(-2)', '"ring"']],
     see: 'prefix'
   }
 });
@@ -519,7 +519,7 @@ R.register('ends', {
     cat: catg.strings,
     src: 'string',
     args: 'postfix',
-    ex: [['"This is a test".split(" ").select(ends("s"))', '["this","is"]']],
+    ex: [['"This is a test".split(" ").select(ends("s"))', '["This","is"]']],
     see: ['starts', 'contains']
   }
 });

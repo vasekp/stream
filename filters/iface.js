@@ -55,7 +55,7 @@ R.register('vars', {
     en: ['Lists all user-defined variables and their assignments.'],
     cs: ['Seznam všech uživatelských proměnných a jejich hodnot.'],
     cat: catg.base,
-    ex: [['a=b=10', '["a","b"]'], ['vars', '[["a","10"], ["b","10"]]']]
+    ex: [['a=b=10', '["a","b"]'], ['vars', '[["a","10"],["b","10"]]']]
   }
 });
 
@@ -72,7 +72,7 @@ R.register('desc', {
     en: ['Provides a valid input-form description of the input stream.'],
     cs: ['Popíše proud na vstupu formou validního vstupního příkazu.'],
     cat: catg.base,
-    ex: [['iota:range(#):desc', '["r(1)","r(2)","r(3)",...]']]
+    ex: [['iota:range(#):desc', '["range(1)","range(2)",...]']]
   }
 });
 
