@@ -215,8 +215,10 @@ export class Node extends Base {
     return this.prepareBase(scope, {}, {src: undefined, partial: true});
   }
 
-  prepareFold(scope) {
-    return this.prepareBase(scope, {}, {src: undefined, outer: undefined, partial: true});
+  prepareFold(scope, evalLast = false) {
+    return this.prepareBase(scope, {}, (arg, ix, arr) =>
+      evalLast && ix === arr.length - 1 ? {} : {src: undefined, outer: undefined, partial: true}
+    );
   }
 
   apply(args) {

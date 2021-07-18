@@ -725,7 +725,9 @@ R.register('fold', {
   reqSource: true,
   minArg: 1,
   maxArg: 3,
-  prepare: Node.prototype.prepareFold,
+  prepare(scope) {
+    return this.prepareFold(scope, this.args.length > 1);
+  },
   eval() {
     const sIn = this.src.evalStream();
     const bodyMem = this.args[0].checkType([types.symbol, types.expr]);;
@@ -767,7 +769,9 @@ R.register('reduce', {
   reqSource: true,
   minArg: 1,
   maxArg: 2,
-  prepare: Node.prototype.prepareFold,
+  prepare(scope) {
+    return this.prepareFold(scope, this.args.length === 2);
+  },
   eval() {
     const sIn = this.src.evalStream({finite: true});
     const body = this.args[0].checkType([types.symbol, types.expr]);;
