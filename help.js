@@ -91,7 +91,9 @@ export const help = {
         console.log(`$${ln++}: ${e[1]}`);
     }
     console.log('');
-  }
+  },
+
+  [Symbol.iterator]: map[Symbol.iterator].bind(map)
 };
 
 const entities = {
