@@ -563,16 +563,16 @@ R.register('#history', {
         if(!ret)
           throw new StreamError(`history element ${ix} not found`);
         else
-          return ret;
+          return ret.prepare(scope);
       } else {
         const ret = scope.history.last();
         if(!ret)
           throw new StreamError(`history is empty`);
         else
-          return ret;
+          return ret.prepare(scope);
       }
     } else
-      throw new StreamError('out of scope');
+      throw new Error('initial prepare without scope.history');
   },
   toString() {
     let ret = '';
