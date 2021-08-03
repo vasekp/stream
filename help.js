@@ -1,4 +1,5 @@
 import Enum from './enum.js';
+import mainReg from './register.js';
 
 export const catg = Enum.fromArray(['base', 'sources', 'streams', 'strings', 'numbers']);
 
@@ -27,78 +28,52 @@ const seeAlso = {
   cs: ['Viz', 'Viz též']
 };
 
-const map = new Map();
-
-export const help = {
-  register(names, obj) {
-    if(!obj.cat)
-      console.warn(`${names}: no category`);
-    if(names instanceof Array) {
-      const fname = names[0];
-      for(const name of names)
-        map.set(name, {names: [name], see: fname, merge: name[0] === fname[0]});
-      map.set(fname, {names: names, ...obj});
-    } else
-      map.set(names, {names: [names], ...obj});
-  },
-
-  get(ident) {
-    const obj = map.get(ident);
-    if(!obj)
-      return null;
-    if(!obj.en && obj.see)
-      return this.get(obj.see);
+export function formatText(obj) {
+  if(!obj.help.en && obj.help.see)
+    return formatText(mainReg.find(obj.help.see));
+  let out = '';
+  for(const n of obj.aliases) {
+    let ln = '';
+    if(obj.help.src)
+      ln += `${obj.help.src}.`;
+    else if(obj.reqSource)
+      ln += '(...).';
+    ln += n;
+    if(obj.help.args)
+      ln += `(${obj.help.args})`;
+    else if(obj.minArg || obj.maxArg || obj.numArg)
+      ln += `(...)`;
+    out += `${ln}\n`;
+  }
+  out += '\n';
+  for(const line of obj.help.en) {
+    if(line[0] === '-')
+      out += `[→] ${line.substring(1).replaceAll('_', '')}\n`;
+    else if(line[0] === '!')
+      out += `[!] ${line.substring(1).replaceAll('_', '')}\n`;
     else
-      return obj;
-  },
-
-  formatText(obj) {
-    let out = '';
-    for(const n of obj.names) {
-      let ln = '';
-      if(obj.src)
-        ln += `${obj.src}.`;
-      else if(obj.reqSource)
-        ln += '(...).';
-      ln += n;
-      if(obj.args)
-        ln += `(${obj.args})`;
-      else if(obj.minArg || obj.maxArg || obj.numArg)
-        ln += `(...)`;
-      out += `${ln}\n`;
-    }
-    out += '\n';
-    for(const line of obj.en) {
-      if(line[0] === '-')
-        out += `[→] ${line.substring(1).replaceAll('_', '')}\n`;
-      else if(line[0] === '!')
-        out += `[!] ${line.substring(1).replaceAll('_', '')}\n`;
-      else
-        out += `${line.replaceAll('_', '')}\n`;
-    }
-    if(obj.see) {
-      if(obj.see instanceof Array)
-        out += `See also: ${obj.see.join(', ')}\n`;
-      else
-        out += `See also: ${obj.see}\n`;
-    }
-    out += '\nExamples:\n';
-    let ln = 1;
-    for(const e of obj.ex) {
-      if(e[2]?.en)
-        out += `> ${e[0]} ; ${e[2].en}\n`;
-      else
-        out += `> ${e[0]}\n`;
-      if(e[1][0] === '!')
-        out += `Error: ${e[1].substring(1)}\n`;
-      else
-        out += `$${ln++}: ${e[1]}\n`;
-    }
-    return out;
-  },
-
-  [Symbol.iterator]: map[Symbol.iterator].bind(map)
-};
+      out += `${line.replaceAll('_', '')}\n`;
+  }
+  if(obj.help.see) {
+    if(obj.help.see instanceof Array)
+      out += `See also: ${obj.help.see.join(', ')}\n`;
+    else
+      out += `See also: ${obj.help.see}\n`;
+  }
+  out += '\nExamples:\n';
+  let ln = 1;
+  for(const e of obj.help.ex) {
+    if(e[2]?.en)
+      out += `> ${e[0]} ; ${e[2].en}\n`;
+    else
+      out += `> ${e[0]}\n`;
+    if(e[1][0] === '!')
+      out += `Error: ${e[1].substring(1)}\n`;
+    else
+      out += `$${ln++}: ${e[1]}\n`;
+  }
+  return out;
+}
 
 const entities = {
   '<': '&lt;',
@@ -147,10 +122,25 @@ async function populate() {
   const nav = document.getElementById('abc');
   const list = document.getElementById('filter-list');
   let lastLett = '';
+  const map = new Map();
+  for(const [ident, obj] of mainReg) {
+    if(!obj.help)
+      continue;
+    const canon = obj.aliases[0];
+    if(ident === canon)
+      map.set(ident, obj);
+    else if(ident[0] !== canon[0])
+      map.set(ident, {...obj,
+        aliases: [ident],
+        stub: true,
+        help: {...obj.help,
+          cat: obj.help.cat,
+          see: canon
+        }
+      });
+  }
   for(const name of [...map.keys()].sort()) {
     const obj = map.get(name);
-    if(obj.merge)
-      continue;
     if(name[0].toUpperCase() !== lastLett) {
       lastLett = name[0].toUpperCase();
       const anchor = document.createElement('div');
@@ -165,27 +155,29 @@ async function populate() {
     const sec = document.createElement('section');
     sec.id = `id-${name}`;
     sec.dataset.cat = 'all ';
-    if(obj.cat) {
-      if(obj.cat instanceof Array)
-        sec.dataset.cat += obj.cat.join(' ');
+    if(obj.help.cat) {
+      if(obj.help.cat instanceof Array)
+        sec.dataset.cat += obj.help.cat.join(' ');
       else
-        sec.dataset.cat += obj.cat;
+        sec.dataset.cat += obj.help.cat;
+    } else {
+      console.warn(`${name}: no category`);
     }
-    for(const n of obj.names) {
+    for(const n of obj.aliases) {
       const h = document.createElement('h3');
-      if(obj.src)
-        h.dataset.pre = `${obj.src}.`;
+      if(obj.help.src)
+        h.dataset.pre = `${obj.help.src}.`;
       else if(obj.reqSource)
         h.dataset.pre = '(...).';
-      if(obj.args)
-        h.dataset.post = `(${obj.args})`;
+      if(obj.help.args)
+        h.dataset.post = `(${obj.help.args})`;
       else if(obj.minArg || obj.maxArg || obj.numArg)
         h.dataset.post = `(...)`;
       h.textContent = n;
       sec.append(h);
     }
-    const desc = obj[lang] || obj.en;
-    if(desc)
+    if(!obj.stub) {
+      const desc = obj.help[lang] || obj.help.en;
       for(let line of desc) {
         const p = document.createElement('p');
         if(line[0] === '-') {
@@ -211,28 +203,29 @@ async function populate() {
         p.innerHTML = html;
         sec.append(p);
       }
-    if(obj.see) {
+    }
+    if(obj.help.see) {
       const p = document.createElement('p');
-      let html = `${seeAlso[lang][desc ? 1 : 0]} `;
-      if(obj.see instanceof Array)
-        html += obj.see.map(ident => {
+      let html = `${seeAlso[lang][obj.stub ? 0 : 1]} `;
+      if(obj.help.see instanceof Array)
+        html += obj.help.see.map(ident => {
           if(!map.has(ident))
-            console.warn(`Broken help link ${obj.names[0]} => ${ident}`);
+            console.warn(`Broken help link ${obj.aliases[0]} => ${ident}`);
           return `<i-pre><a href="#id-${ident}">${ident}</a></i-pre>`
         }).join(', ');
       else {
-        if(!map.has(obj.see))
-          console.warn(`Broken help link ${obj.names[0]} => ${obj.see}`);
-        html += `<i-pre><a href="#id-${obj.see}">${obj.see}</a></i-pre>`;
+        if(!map.has(obj.help.see))
+          console.warn(`Broken help link ${obj.aliases[0]} => ${obj.help.see}`);
+        html += `<i-pre><a href="#id-${obj.help.see}">${obj.help.see}</a></i-pre>`;
       }
       p.innerHTML = html + '.';
       sec.append(p);
     }
-    if(obj.ex) {
+    if(!obj.stub && obj.help.ex) {
       const exDiv = document.createElement('div');
       exDiv.classList.add('stream-example');
       let hi = 1;
-      for(let [inp, out, comm] of obj.ex) {
+      for(let [inp, out, comm] of obj.help.ex) {
         let html = inp
           .replace(/\w+|[<>&]/g, m => {
             if(entities[m])

@@ -9,7 +9,7 @@ import mainReg from './register.js';
 import History from './history.js';
 import parse from './parser.js';
 import RNG from './random.js';
-import {help} from './help.js';
+import {formatText} from './help.js';
 import {StreamError, TimeoutError, ParseError} from './errors.js';
 
 const helpRegex = /^\?\s*(\w+)?\s*$/d;
@@ -28,14 +28,14 @@ export default class StreamSession {
         if(!helpMatch[1])
           return {result: 'help'};
         const ident = helpMatch[1];
-        const topic = help.get(ident);
-        if(topic)
+        const record = mainReg.find(ident);
+        if(record)
           return {
             result: 'help',
             ident,
-            identCanon: topic.names[0],
+            identCanon: record.aliases[0],
             get helpText() {
-              return help.formatText(topic);
+              return formatText(record);
             }
           };
         else

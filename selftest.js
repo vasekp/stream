@@ -1,17 +1,19 @@
 import StreamSession from './interface.js';
-import {help} from './help.js';
+import mainReg from './register.js';
 
 import * as fs from 'fs/promises';
 
 let passed = 0, failed = 0;
 
-for(const [key, obj] of help) {
-  if(!obj.ex)
+for(const [ident, obj] of mainReg) {
+  if(ident !== obj.aliases[0])
     continue;
-  if(obj.skipTest)
+  if(!obj.help?.ex)
+    continue;
+  if(obj.help.skipTest)
     continue;
   const sess = new StreamSession();
-  for(const [input, expOut, extra] of obj.ex) {
+  for(const [input, expOut, extra] of obj.help.ex) {
     const res = sess.eval(input);
     const realOut = res.result === 'ok' ? res.output : `!${res.error}`;
     let happy;

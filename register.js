@@ -1,5 +1,4 @@
 import parse from './parser.js';
-import {help} from './help.js';
 import {StreamError} from './errors.js';
 
 class Register extends EventTarget {
@@ -15,21 +14,16 @@ class Register extends EventTarget {
       this.register(ident, {body: parse(string)});
   }
 
-  register(ident, obj) {
-    if(obj.help) {
-      help.register(ident, {
-        reqSource: obj.reqSource,
-        minArg: obj.minArg,
-        maxArg: obj.maxArg,
-        numArg: obj.numArg,
-        ...obj.help
-      });
-    }
-    if(ident instanceof Array) {
-      ident.forEach(e => this.register(e, {...obj, help: null}));
+  register(idents, obj, aliases = [idents]) {
+    if(idents instanceof Array) {
+      idents.forEach(ident => this.register(ident, obj, idents));
       return;
     }
-    ident = ident.toLowerCase();
+    // else: idents is a single string
+    const ident = idents.toLowerCase();
+    // by now, aliases is set correctly
+    if(!obj.aliases)
+      obj.aliases = aliases;
     if(mainReg.includes(ident))
       throw new StreamError(`trying to overwrite base symbol ${ident}`);
     else
@@ -81,6 +75,10 @@ class Register extends EventTarget {
     for(const key of keys)
       ret.push([key, this.find(key).body.toString()]);
     return ret;
+  }
+
+  [Symbol.iterator]() {
+    return this.map[Symbol.iterator]();
   }
 }
 
