@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     label.textContent = catNames[lang][cat];
     head.append(label);
   }
-  const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"]) > *`).join(', ');
+  const css1 = cats.map(cat => `#cat-${cat}:checked ~ main section:not([data-cat~="${cat}"])`).join(', ');
   const css2 = cats.map(cat => `#cat-${cat}:checked ~ header label[for="cat-${cat}"]`).join(', ');
   const css = `${css1} { display: none; } ${css2} { background: #eee; border-color: #888; }`;
   const link = document.createElement('link');
@@ -153,17 +153,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     if(obj.help.see) {
       const p = document.createElement('p');
       let html = `${seeAlso[lang][obj.stub ? 0 : 1]} `;
-      if(obj.help.see instanceof Array)
-        html += obj.help.see.map(ident => {
-          if(!map.has(ident))
-            console.warn(`Broken help link ${obj.aliases[0]} => ${ident}`);
-          return `<i-pre><a href="#id-${ident}">${ident}</a></i-pre>`
-        }).join(', ');
-      else {
-        if(!map.has(obj.help.see))
-          console.warn(`Broken help link ${obj.aliases[0]} => ${obj.help.see}`);
-        html += `<i-pre><a href="#id-${obj.help.see}">${obj.help.see}</a></i-pre>`;
-      }
+      const seeList = obj.help.see instanceof Array ? obj.help.see : [obj.help.see];
+      html += seeList.map(ident => {
+        const rec = mainReg.find(ident);
+        if(!rec?.help)
+          console.warn(`Broken help link ${obj.aliases[0]} => ${ident}`);
+        return `<i-pre><a href="#id-${rec?.aliases[0]}">${ident}</a></i-pre>`
+      }).join(', ');
       p.innerHTML = html + '.';
       sec.append(p);
     }
