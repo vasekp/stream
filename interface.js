@@ -90,30 +90,37 @@ export default class StreamSession {
 
       /*** Normal command ***/
       let node = parse(input);
-      if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
+      if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol' && !opts.browse)
         node = node.toAssign();
-      const [pnode, ev, output] = node.timed(n => {
+      return node.timed(n => {
         const pnode = n.prepare({
           history: this.history,
           register: this.sessReg,
           seed: RNG.seed(),
           referrer: n});
         const ev = pnode.eval();
-        const out = ev.type === 'stream' && opts.browse
-          ? new StreamHandle(ev)
-          : ev.writeout(opts.length);
-        return [pnode, ev, out];
+        if(ev.type === 'stream' && opts.browse) {
+          return {
+            result: 'ok',
+            input,
+            handle: new StreamHandle(ev),
+            type: ev.type,
+            outRaw: ev.isAtom ? ev.value.toString() : null
+          };
+        } else {
+          const output = ev.writeout(opts.length);
+          return {
+            result: 'ok',
+            input,
+            output,
+            histName: `$${this.history.add(pnode)}`,
+            histRecord: pnode.toString(),
+            regEvents,
+            type: ev.type,
+            outRaw: ev.isAtom ? ev.value.toString() : null
+          };
+        }
       }, opts.time);
-      return {
-        result: 'ok',
-        input,
-        output,
-        histName: `$${this.history.add(pnode)}`,
-        histRecord: pnode.toString(),
-        regEvents,
-        type: ev.type,
-        outRaw: ev.isAtom ? ev.value.toString() : null
-      };
     } catch(e) {
       if(e instanceof ParseError || e instanceof StreamError || e instanceof TimeoutError)
         return {
@@ -124,12 +131,14 @@ export default class StreamSession {
           errNode: e.desc,
           error: e.msg
         };
-      else
+      else {
+        console.error(e);
         return {
           result: 'error',
           input,
           error: e.toString()
         };
+      }
     } finally {
       this.sessReg.removeEventListener('register', regEvent);
       this.saveReg.removeEventListener('register', regEvent);
