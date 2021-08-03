@@ -64,7 +64,7 @@ function regMathOp(name, sign, fun, type, help) {
         ret += this.args.map(n => n.toString()).join(sign);
         ret += ')';
       } else
-        ret += name;
+        ret += this.ident;
       return ret;
     },
     help
@@ -709,7 +709,7 @@ R.register('and', {
       ret += this.args.map(n => n.toString()).join('&');
       ret += ')';
     } else
-      ret += name;
+      ret += this.ident;
     return ret;
   },
   help: {
@@ -738,7 +738,7 @@ R.register('or', {
       ret += this.args.map(n => n.toString()).join('|');
       ret += ')';
     } else
-      ret += name;
+      ret += this.ident;
     return ret;
   },
   help: {
@@ -858,7 +858,7 @@ function regComparer(name, sign, fun, help) {
         ret += this.args.map(n => n.toString()).join(sign);
         ret += ')';
       } else
-        ret += name;
+        ret += this.ident;
       return ret;
     },
     help

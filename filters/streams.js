@@ -548,6 +548,8 @@ R.register(['flatten', 'fl'], {
     cs: ['Zploští všechny prvky `_source`, které jsou samy proudy, do jednoho dlouhého proudu.',
       'Jestliže je dáno `_depth`, zploští vnořené proudy pouze do této hloubky.'],
     cat: catg.streams,
+    src: 'source',
+    args: 'depth?',
     ex: [['[1].nest([#]).flatten', '[1,1,1,1,1,1,...]'],
       ['[1].nest([#]).flatten(3)', '[1,1,1,[1],[[1]],...]']]
   }
@@ -1012,7 +1014,7 @@ R.register(['groupby', 'gby'], {
       ['"abc12def".split.groupby(isletter):cat', '["abc","12","def"]', {en: 'group by a property', cs: 'třídit podle vlastnosti'}],
       ['"this is a test".split(" ").groupby(length)', '[["this"],["is"],["a"],["test"]]', {en: 'only groups successive elements!', cs: 'slučuje jen po sobě jdoucí prvky!'}],
       ['"this is a test".split(" ").sort(length).groupby(length)', '[["a"],["is"],["this","test"]]', {en: 'use `sort` to identify all matches', cs: 'použijte `sort`, pokud chcete najít všechny shody'}],
-      ['iota.groupby(#<5)', '!Timeout', {en: 'groupby must be able to determine where the individual parts end', cs: 'groupby musí umět rozhodnout, kde jednotlivé části končí'}]],
+      ['iota.groupby(#<5)', '!Timed out', {en: 'groupby must be able to determine where the individual parts end', cs: 'groupby musí umět rozhodnout, kde jednotlivé části končí'}]],
   }
 });
 
@@ -1090,7 +1092,7 @@ R.register('splitat', {
     src: 'source',
     args: 'divider,count?',
     ex: [['range(8).splitat(3)', '[[1,2],[4,5,6,7,8]]'],
-      ['iota.splitat(3)', '!Timeout', {en: 'splitat must be able to determine where the individual parts end', cs: 'splitat musí umět rozhodnout, kde jednotlivé části končí'}],
+      ['iota.splitat(3)', '!Timed out', {en: 'splitat must be able to determine where the individual parts end', cs: 'splitat musí umět rozhodnout, kde jednotlivé části končí'}],
       ['iota.splitat(3,1)', '[[1,2],[4,5,6,7,...]]', {en: 'this can be fixed by giving count', cs: 'může být napraveno poskytnutím count', skipTest: true}]],
     see: 'split'
   }

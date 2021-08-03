@@ -26,7 +26,7 @@ for(const [ident, obj] of mainReg) {
     else
       happy = false;
     if(!happy) {
-      console.error(`Key:\t${key}`);
+      console.error(`Key:\t${obj.aliases[0]}`);
       console.error(`Input:\t${input}`);
       console.error(`Expect:\t${expOut}`);
       console.error(`Actual:\t${realOut}`);
