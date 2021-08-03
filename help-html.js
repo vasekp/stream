@@ -27,7 +27,8 @@ const entities = {
   '&': '&amp;'};
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const lang = new URLSearchParams(window.location.search).get('lang') === 'cs' ? 'cs' : 'en';
+  const params = new URLSearchParams(window.location.search);
+  const lang = params.get('lang') === 'cs' ? 'cs' : 'en';
   if(document.body.id !== 'help')
     return;
   /*** Category selection ***/
@@ -232,4 +233,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
   }
   document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', linkClick));
+  /*** Open at an entry if specified ***/
+  const entry = mainReg.find(params.get('entry'))?.aliases[0];
+  if(entry) {
+    document.getElementById('cat-all').checked = true;
+    document.getElementById(`id-${entry}`)?.scrollIntoView();
+  }
 });
