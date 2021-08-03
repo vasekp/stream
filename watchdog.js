@@ -3,6 +3,8 @@ import {TimeoutError} from './errors.js';
 let timeEnd;
 let counter = 0;
 
+const DEFTIME = 1000;
+
 export default {
   start(limit) {
     if(!timeEnd) {
@@ -26,6 +28,15 @@ export default {
       throw new Error('Watchdog tick() called without start()');
     if(Date.now() > timeEnd) {
       throw new TimeoutError(counter);
+    }
+  },
+
+  timed(func, limit = DEFTIME) {
+    try {
+      this.start(limit);
+      return func();
+    } finally {
+      this.stop();
     }
   }
 };

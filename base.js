@@ -4,7 +4,6 @@ import Enum from './enum.js';
 import mainReg from './register.js';
 
 const DEFLEN = 100;
-const DEFTIME = 1000;
 export const MAXMEM = 1000;
 
 export const debug = globalThis.process?.argv?.includes('debug');
@@ -64,19 +63,6 @@ class Base {
         throw new StreamError(`expected ${type}, got ${this.desc()}`);
     // else
     return this;
-  }
-
-  timed(func, limit = DEFTIME) {
-    try {
-      watchdog.start(limit);
-      return func(this);
-    } finally {
-      watchdog.stop();
-    }
-  }
-
-  static timed(func, limit = DEFTIME) {
-    return Base.prototype.timed(func, limit);
   }
 
   writeout(maxLen = DEFLEN) {

@@ -9,6 +9,7 @@ import mainReg from './register.js';
 import History from './history.js';
 import parse from './parser.js';
 import RNG from './random.js';
+import watchdog from './watchdog.js';
 import {formatText} from './help.js';
 import {StreamError, TimeoutError, ParseError} from './errors.js';
 
@@ -92,12 +93,12 @@ export default class StreamSession {
       let node = parse(input);
       if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol' && !opts.browse)
         node = node.toAssign();
-      return node.timed(n => {
-        const pnode = n.prepare({
+      return watchdog.timed(_ => {
+        const pnode = node.prepare({
           history: this.history,
           register: this.sessReg,
           seed: RNG.seed(),
-          referrer: n});
+          referrer: node});
         const ev = pnode.eval();
         if(ev.type === 'stream' && opts.browse) {
           return {
@@ -157,14 +158,14 @@ class StreamHandle {
 
   next(opts = {}) {
     try {
-      const n = this.stm.timed(s => s.next().value?.eval());
+      const n = watchdog.timed(_ => this.stm.next().value?.eval(), opts.time);
       if(!n)
         return {result: 'ok'};
       else
         return {
           result: 'ok',
           input: n.toString(),
-          output: n.timed(n => n.writeout(opts.length), opts.time),
+          output: watchdog.timed(_ => n.writeout(opts.length), opts.time),
           type: n.type,
           outRaw: n.isAtom ? n.value.toString() : null
         };
