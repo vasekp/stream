@@ -1,14 +1,4 @@
-import './filters/lang.js';
-import './filters/streams.js';
-import './filters/numeric.js';
-import './filters/string.js';
-import './filters/combi.js';
-import './filters/iface.js';
-import {StreamError, TimeoutError, ParseError} from './errors.js';
-import parse from './parser.js';
-import RNG from './random.js';
-import mainReg from './register.js';
-import History from './history.js';
+import StreamSession from './interface.js';
 import {help} from './help.js';
 
 import * as fs from 'fs/promises';
@@ -20,24 +10,10 @@ for(const [key, obj] of help) {
     continue;
   if(obj.skipTest)
     continue;
-  const history = new History();
-  const saveReg = mainReg.child();
-  const sessReg = saveReg.child();
-  for(const [inp, expOut, extra] of obj.ex) {
-    let realOut;
-    try {
-      let node = parse(inp);
-      if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
-        node = node.toAssign();
-      node = node.timed(n => n.prepare({history, register: sessReg, seed: RNG.seed(), referrer: n}));
-      realOut = node.timed(n => n.eval().writeout());
-      history.add(node);
-    } catch(e) {
-      if(e instanceof TimeoutError)
-        realOut = '!Timeout';
-      else
-        realOut = `!${e.msg}`;
-    }
+  const sess = new StreamSession();
+  for(const [input, expOut, extra] of obj.ex) {
+    const res = sess.eval(input);
+    const realOut = res.result === 'ok' ? res.output : `!${res.error}`;
     let happy;
     if(realOut === expOut)
       happy = true;
@@ -49,7 +25,7 @@ for(const [key, obj] of help) {
       happy = false;
     if(!happy) {
       console.error(`Key:\t${key}`);
-      console.error(`Input:\t${inp}`);
+      console.error(`Input:\t${input}`);
       console.error(`Expect:\t${expOut}`);
       console.error(`Actual:\t${realOut}`);
       console.error();

@@ -21,6 +21,7 @@ export class TimeoutError extends Error {
   constructor(count) {
     super();
     this.count = count;
+    this.msg = 'Timed out';
   }
 }
 

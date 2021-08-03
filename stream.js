@@ -1,75 +1,46 @@
-import './filters/lang.js';
-import './filters/streams.js';
-import './filters/numeric.js';
-import './filters/string.js';
-import './filters/combi.js';
-import './filters/iface.js';
-import {StreamError, TimeoutError, ParseError} from './errors.js';
-import parse from './parser.js';
-import RNG from './random.js';
-import mainReg from './register.js';
-import History from './history.js';
+import StreamSession from './interface.js';
 import {help} from './help.js';
 
 import repl from 'repl';
 import * as fs from 'fs/promises';
 
-const history = new History();
-const saveReg = mainReg.child();
-const sessReg = saveReg.child();
+const savedVars = await fs.readFile('.stream_vars')
+  .then(cont => JSON.parse(cont))
+  .catch(_ => {{}});
 
-await fs.readFile('.stream_vars')
-  .then(cont => saveReg.init(JSON.parse(cont)))
-  .catch(() => {});
+const sess = new StreamSession(savedVars);
 
 const prompt = repl.start({eval: str => {
-  try {
-    str = str.replace(/[\n\r]+$/, '');
-    if(!str.replace(/[ \t\n\r]/g, ''))
-      return;
-    const helpMatch = /^\?\s*(\w+)\s*$/.exec(str);
-    if(helpMatch) {
-      const topic = helpMatch[1];
-      help.dumpTopic(topic);
-      return;
-    } else if(str === '?' || str === 'help') {
-      console.log('Use \'? topic\' to see help on a specific command.');
-      console.log('For general information visit: https://vasekp.github.io/spa3/js/stream/help.html');
-      return;
-    }
-    let node = parse(str);
-    if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
-      node = node.toAssign();
-    node = node.timed(n => n.prepare({history, register: sessReg, seed: RNG.seed(), referrer: n}));
-    const out = node.timed(n => n.eval().writeout());
-    console.log(`$${history.add(node)}: ${out}`);
-  } catch(e) {
-    if(e instanceof ParseError) {
-      if(e.str !== '')
-        console.error(e.str);
-      if(e.pos >= 0)
-        console.error(' '.repeat(e.pos) + '^'.repeat(e.len));
-      console.error(`${e.name}: ${e.msg}`);
-    } else if(e instanceof StreamError) {
-      if(e.len) {
-        console.error(str);
-        console.error(' '.repeat(e.pos) + '^'.repeat(e.len));
+  str = str.replace(/[\n\r]+$/, '');
+  if(!str.replace(/[ \t\n\r]/g, ''))
+    return;
+  const helpMatch = /^\?\s*(\w+)\s*$/.exec(str);
+  if(helpMatch) {
+    const topic = helpMatch[1];
+    help.dumpTopic(topic);
+    return;
+  } else if(str === '?' || str === 'help') {
+    console.log('Use \'? topic\' to see help on a specific command.');
+    console.log('For general information visit: https://vasekp.github.io/spa3/js/stream/help.html');
+    return;
+  }
+  const res = sess.eval(str);
+  switch(res.result) {
+    case 'ok':
+      console.log(`${res.histName}: ${res.output}`);
+      break;
+    case 'error':
+      if(res.errPos >= 0) {
+        console.log(res.input);
+        console.error(' '.repeat(res.errPos) + '^'.repeat(res.errLen));
       }
-      if(e.desc)
-        console.error(`${e.desc}: ${e.msg}`);
-      else
-        console.error(e.msg);
-    } else if(e instanceof TimeoutError) {
-      console.error(`Timeout`);
-    } else if(typeof e === 'string')
-      console.error(`Error: ${e}`);
-    else
-      throw e;
+      console.error(res.errNode ? `${res.errNode}: ${res.error}` : res.error);
+      break;
   }
 }});
 
 prompt.on('exit', e => {
   fs.open('.stream_vars', 'w')
-    .then(f => f.writeFile(JSON.stringify(saveReg.dump())))
+    .then(f => f.writeFile(JSON.stringify(sess.close())))
     .catch(console.error);
 });
