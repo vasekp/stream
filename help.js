@@ -1,4 +1,3 @@
-import {StreamError} from './errors.js';
 import Enum from './enum.js';
 
 export const catg = Enum.fromArray(['base', 'sources', 'streams', 'strings', 'numbers']);
@@ -43,13 +42,18 @@ export const help = {
       map.set(names, {names: [names], ...obj});
   },
 
-  dumpTopic(topic) {
-    const obj = map.get(topic);
+  get(ident) {
+    const obj = map.get(ident);
     if(!obj)
-      throw new StreamError(`help on '${topic}' not found`);
+      return null;
     if(!obj.en && obj.see)
-      return this.dumpTopic(obj.see);
+      return this.get(obj.see);
+    else
+      return obj;
+  },
 
+  formatText(obj) {
+    let out = '';
     for(const n of obj.names) {
       let ln = '';
       if(obj.src)
@@ -61,36 +65,36 @@ export const help = {
         ln += `(${obj.args})`;
       else if(obj.minArg || obj.maxArg || obj.numArg)
         ln += `(...)`;
-      console.log(ln);
+      out += `${ln}\n`;
     }
-    console.log('');
+    out += '\n';
     for(const line of obj.en) {
       if(line[0] === '-')
-        console.log(`[→] ${line.substring(1).replaceAll('_', '')}`);
+        out += `[→] ${line.substring(1).replaceAll('_', '')}\n`;
       else if(line[0] === '!')
-        console.log(`[!] ${line.substring(1).replaceAll('_', '')}`);
+        out += `[!] ${line.substring(1).replaceAll('_', '')}\n`;
       else
-        console.log(line.replaceAll('_', ''));
+        out += `${line.replaceAll('_', '')}\n`;
     }
     if(obj.see) {
       if(obj.see instanceof Array)
-        console.log(`See also: ${obj.see.join(', ')}`);
+        out += `See also: ${obj.see.join(', ')}\n`;
       else
-        console.log(`See also: ${obj.see}`);
+        out += `See also: ${obj.see}\n`;
     }
-    console.log('\nExamples:');
+    out += '\nExamples:\n';
     let ln = 1;
     for(const e of obj.ex) {
       if(e[2]?.en)
-        console.log(`> ${e[0]} ; ${e[2].en}`);
+        out += `> ${e[0]} ; ${e[2].en}\n`;
       else
-        console.log(`> ${e[0]}`);
+        out += `> ${e[0]}\n`;
       if(e[1][0] === '!')
-        console.log(`Error: ${e[1].substring(1)}`);
+        out += `Error: ${e[1].substring(1)}\n`;
       else
-        console.log(`$${ln++}: ${e[1]}`);
+        out += `$${ln++}: ${e[1]}\n`;
     }
-    console.log('');
+    return out;
   },
 
   [Symbol.iterator]: map[Symbol.iterator].bind(map)

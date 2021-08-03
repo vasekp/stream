@@ -9,7 +9,10 @@ import mainReg from './register.js';
 import History from './history.js';
 import parse from './parser.js';
 import RNG from './random.js';
+import {help} from './help.js';
 import {StreamError, TimeoutError, ParseError} from './errors.js';
+
+const helpRegex = /^\?\s*(\w+)?\s*$/d;
 
 export default class StreamSession {
   constructor(savedVars) {
@@ -18,9 +21,33 @@ export default class StreamSession {
     this.sessReg = this.saveReg.child();
   }
 
-  eval(cmdLine, opts = {}) {
+  eval(input, opts = {}) {
     try {
-      let node = parse(cmdLine);
+      const helpMatch = helpRegex.exec(input);
+      if(helpMatch) {
+        if(!helpMatch[1])
+          return {result: 'help'};
+        const ident = helpMatch[1];
+        const topic = help.get(ident);
+        if(topic)
+          return {
+            result: 'help',
+            ident,
+            identCanon: topic.names[0],
+            get helpText() {
+              return help.formatText(topic);
+            }
+          };
+        else
+          return {
+            result: 'error',
+            input,
+            errPos: helpMatch.indices[1][0],
+            errLen: helpMatch.indices[1][1] - helpMatch.indices[1][0],
+            error: `Help on ${ident} not found`
+          };
+      }
+      let node = parse(input);
       if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol')
         node = node.toAssign();
       const [pnode, output] = node.timed(n => {
@@ -34,6 +61,7 @@ export default class StreamSession {
       }, opts.time);
       return {
         result: 'ok',
+        input,
         output,
         histName: `$${this.history.add(pnode)}`
       };
@@ -41,7 +69,7 @@ export default class StreamSession {
       if(e instanceof ParseError || e instanceof StreamError || e instanceof TimeoutError)
         return {
           result: 'error',
-          input: cmdLine,
+          input,
           errPos: e.pos,
           errLen: e.len,
           errNode: e.desc,

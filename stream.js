@@ -1,5 +1,4 @@
 import StreamSession from './interface.js';
-import {help} from './help.js';
 
 import repl from 'repl';
 import * as fs from 'fs/promises';
@@ -14,16 +13,6 @@ const prompt = repl.start({eval: str => {
   str = str.replace(/[\n\r]+$/, '');
   if(!str.replace(/[ \t\n\r]/g, ''))
     return;
-  const helpMatch = /^\?\s*(\w+)\s*$/.exec(str);
-  if(helpMatch) {
-    const topic = helpMatch[1];
-    help.dumpTopic(topic);
-    return;
-  } else if(str === '?' || str === 'help') {
-    console.log('Use \'? topic\' to see help on a specific command.');
-    console.log('For general information visit: https://vasekp.github.io/spa3/js/stream/help.html');
-    return;
-  }
   const res = sess.eval(str);
   switch(res.result) {
     case 'ok':
@@ -35,6 +24,14 @@ const prompt = repl.start({eval: str => {
         console.error(' '.repeat(res.errPos) + '^'.repeat(res.errLen));
       }
       console.error(res.errNode ? `${res.errNode}: ${res.error}` : res.error);
+      break;
+    case 'help':
+      if(res.ident)
+        console.log(res.helpText);
+      else {
+        console.log('Use \'? topic\' to see help on a specific command.');
+        console.log('For general information visit: https://vasekp.github.io/spa3/js/stream/help.html');
+      }
       break;
   }
 }});
