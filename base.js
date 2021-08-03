@@ -1,4 +1,4 @@
-import {StreamError} from './errors.js';
+import {StreamError, TimeoutError} from './errors.js';
 import watchdog from './watchdog.js';
 import Enum from './enum.js';
 import mainReg from './register.js';
@@ -438,11 +438,20 @@ export class Stream extends Base {
   *writeout_gen() {
     yield '[';
     let first = true;
-    for(const value of this) {
-      if(!first)
-        yield ',';
-      first = false;
-      yield* value.eval().writeout_gen();
+    try {
+      for(const value of this) {
+        if(!first)
+          yield ',';
+        first = false;
+        yield* value.eval().writeout_gen();
+      }
+    } catch(e) {
+      if(e instanceof TimeoutError) {
+        if(!first)
+          yield ',';
+        yield '...?';
+      } else
+        throw e;
     }
     yield ']';
   }
