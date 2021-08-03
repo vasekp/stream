@@ -56,16 +56,16 @@ function regMathOp(name, sign, fun, type, help) {
       );
     },
     toString() {
-      let ret = '';
-      if(this.src)
-        ret = this.src.toString() + '.';
-      if(this.args.length > 0) {
+      if(this.args.length > 1) {
+        let ret = '';
+        if(this.src)
+          ret = this.src.toString() + '.';
         ret += '(';
         ret += this.args.map(n => n.toString()).join(sign);
         ret += ')';
+        return ret;
       } else
-        ret += this.ident;
-      return ret;
+        return Node.prototype.toString.call(this);
     },
     help
   });
