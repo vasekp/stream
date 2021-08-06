@@ -4,7 +4,9 @@ import Enum from './enum.js';
 import mainReg from './register.js';
 
 const DEFLEN = 100;
+const DESCLEN = 10;
 export const MAXMEM = 1000;
+export const INF = Symbol('infinite');
 
 export const debug = globalThis.process?.argv?.includes('debug');
 
@@ -123,12 +125,12 @@ export class Node extends Base {
           return nnode;
         };
       }
-      const pPE = this.preeval;
-      if(pPE) {
-        this.preeval = _ => {
-          const nnode = pPE.call(this);
+      const pEval = this.eval;
+      if(pEval) {
+        this.eval = _ => {
+          const nnode = pEval.call(this);
           if(nnode !== this)
-            console.log(`preeval ${this.toString()} => ${nnode.toString()}`);
+            console.log(`eval ${this.toString()} => ${nnode.desc()}`);
           return nnode;
         };
       }
@@ -184,13 +186,9 @@ export class Node extends Base {
     for(const key in metaAdd)
       if(metaAdd[key] !== undefined)
         meta[key] = metaAdd[key];
-    const mnode = this
+    return this
       .modify({src, args, meta})
       .check(scope.partial);
-    if(!scope.partial && mnode.preeval)
-      return mnode.preeval();
-    else
-      return mnode;
   }
 
   prepareDefault(scope) {
@@ -239,12 +237,12 @@ export class Node extends Base {
   }
 
   eval() {
-    throw new Error(`Node.prototype.eval() (${this.toString()})`);
+    return this;
   }
 
   evalAlphabet(lcase = false) {
     if(!this._cache) {
-      this._cache = [...this.evalStream({finite: true})].map(s => s.evalAtom(types.S));
+      this._cache = [...this.evalStream({finite: true}).read()].map(s => s.evalAtom(types.S));
       this._cacheL = this._cache.map(c => c.toLowerCase());
     }
     if(!this._cache.length)
@@ -268,13 +266,31 @@ export class Node extends Base {
   }
 
   toString() {
+    return this.inputForm();
+  }
+
+  inputForm() {
     let ret = '';
     if(this.src)
       ret = this.src.toString() + '.';
-    ret += this.ident;
-    if(this.args.length)
-      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
+    let bf;
+    if(this.bodyForm && (bf = this.bodyForm())) {
+      ret += bf;
+    } else {
+      ret += this.ident;
+      if(this.args.length)
+        ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
+    }
     return ret;
+  }
+
+  static operatorForm(sign) {
+    return function() {
+      if(this.args.length > 1)
+        return '(' + this.args.map(n => n.toString()).join(sign) + ')';
+      else
+        return null;
+    }
   }
 
   *writeout_gen() {
@@ -395,42 +411,81 @@ export class Atom extends Node {
   }
 }
 
-export class Stream extends Base {
-  constructor(node, iter, opts) {
-    super();
+function defaultSkip(c) {
+  for(let i = 0n; i < c; i++)
+    this.next();
+}
+
+export class Stream extends Node {
+  constructor(node, readFun, length) {
+    super(node.ident, node.token, node.src, node.args, node.meta);
     this.isAtom = false;
-    this.node = node;
-    this.iter = iter;
     this.type = types.stream;
-    Object.assign(this, opts);
+    this.readFun = readFun;
+    this.length = length;
   }
 
-  next() {
-    try {
-      return this.iter.next();
-    } catch(e) {
-      if(e instanceof StreamError)
-        throw e.withNode(this.node);
+  static fromArray(arr) {
+    return new Stream(new Node('array', null, null, arr),
+      arr.values.bind(arr), BigInt(arr.length));
+  }
+
+  read() {
+    if(debug)
+      console.log(`read ${this.toString()}`);
+    const [bareGen, skip] = (_ => {
+      const ret = this.readFun();
+      if(ret instanceof Array)
+        return ret;
+      else if(ret.skip)
+        return [ret, ret.skip.bind(ret)];
       else
-        throw e;
+        return [ret, defaultSkip];
+    })();
+    const self = this;
+    const generator = {
+      [Symbol.iterator]() {
+        return this;
+      },
+
+      next() {
+        watchdog.tick();
+        try {
+          return bareGen.next();
+        } catch(e) {
+          if(e instanceof StreamError)
+            throw e.withNode(self);
+          else
+            throw e;
+        }
+      }
     }
+    generator.skip = skip;
+    generator.length = this.length;
+    return generator;
   }
 
-  [Symbol.iterator]() {
-    return this;
+  adapt(trf) {
+    const generator = this.read();
+    const pNext = generator.next.bind(generator);
+    generator.next = _ => {
+      const ret = pNext();
+      if(ret.value)
+        ret.value = trf(ret.value);
+      return ret;
+    };
+    return generator;
   }
 
-  skip(c) {
-    for(let i = 0n; i < c; i++)
-      this.next();
-  }
-
-  toString() {
-    return this.node.toString();
+  desc() {
+    if(debug)
+      return `stream *${this.toString()}`; // writeout would produce extra output
+    else
+      return `stream ${this.writeout(DESCLEN)}`;
   }
 
   checkFinite() {
-    if(this.len === null)
+    if(this.length === INF)
       throw new StreamError('infinite stream');
     return this;
   }
@@ -439,11 +494,11 @@ export class Stream extends Base {
     yield '[';
     let first = true;
     try {
-      for(const value of this) {
+      for(const value of this.read()) {
         if(!first)
           yield ',';
         first = false;
-        yield* value.eval().writeout_gen();
+        yield* value.writeout_gen();
       }
     } catch(e) {
       if(e instanceof TimeoutError) {
@@ -458,21 +513,21 @@ export class Stream extends Base {
 }
 
 export function compareStreams(...args) {
-  const ins = args.map(arg => arg.eval());
-  if(ins.every(i => i.isAtom)) {
-    const vals = ins.map(i => i.value);
+  if(args.every(arg => arg.isAtom)) {
+    const vals = args.map(arg => arg.value);
     return vals.every(val => val === vals[0]);
-  } else if(ins.some(i => i.isAtom))
+  } else if(args.some(arg => arg.isAtom))
     return false;
   // else
-  /* all ins confirmed streams now */
-  const lens = ins.map(i => i.len).filter(i => i !== undefined);
+  /* all args confirmed streams now */
+  const lens = args.map(arg => arg.length).filter(arg => arg !== undefined);
   if(lens.length > 1 && lens.some(l => l !== lens[0]))
     return false;
-  if(lens.some(l => l === null))
+  if(lens.some(l => l === INF))
     throw new StreamError('can\'t determine equality');
+  const streams = args.map(arg => arg.read());
   for(;;) {
-    const rs = ins.map(i => i.next());
+    const rs = streams.map(stm => stm.next());
     if(rs.every(r => r.done))
       return true;
     else if(rs.some(r => r.done))

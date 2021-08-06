@@ -1,85 +1,69 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, MAXMEM} from '../base.js';
+import {Node, Atom, Stream, types, INF, MAXMEM} from '../base.js';
 import watchdog from '../watchdog.js';
 import R from '../register.js';
 import RNG from '../random.js';
 import {catg} from '../help.js';
 
-function regMathOp(name, sign, fun, type, help) {
-  R.register(name, {
-    minArg: 1,
-    sourceOrArgs: 2,
-    preeval() {
-      if(this.args.length > 1 && this.args.every(arg => arg.isAtom))
-        return new Atom(this.args.map(arg => arg.checkType(type).value).reduce(fun));
-      else
-        return this;
-    },
-    eval() {
-      if(this.args.length === 1) {
-        const a = this.src.evalAtom(type);
-        const b = this.args[0].evalAtom(type);
-        return new Atom(fun(a, b));
-      }
-      const is = this.args.map(arg => arg.eval());
-      if(is.every(i => i.isAtom))
-        return new Atom(is.map(a => a.checkType(type).value).reduce(fun));
-      // else
-      const lens = is.filter(i => !i.isAtom).map(i => i.len);
-      const len = lens.some(len => len === undefined) ? undefined
-        : lens.every(len => len === null) ? null
-        : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
-      return new Stream(this,
-        (function*() {
-          for(;;) {
-            const vs = [];
-            for(const i of is)
-              if(i.isAtom)
-                vs.push(i.value);
-              else {
-                const r = i.next().value;
-                if(!r)
-                  return;
-                vs.push(r.evalAtom(type));
-              }
-            yield new Atom(vs.reduce(fun));
-          }
-        }()),
-        {
-          len,
-          skip: c => {
+function mathOp(func, type = types.N) {
+  return function() {
+    // source + 1 arg
+    if(this.args.length === 1) {
+      const a = this.src.evalAtom(type);
+      const b = this.args[0].evalAtom(type);
+      return new Atom(func(a, b));
+    }
+    // all atoms
+    const args = this.args.map(arg => arg.eval());
+    if(args.every(i => i.isAtom))
+      return new Atom(args.map(a => a.checkType(type).value).reduce(func));
+    // one or more streams
+    const lens = args.filter(i => !i.isAtom).map(i => i.length);
+    const length = lens.some(len => len === undefined) ? undefined
+      : lens.every(len => len === INF) ? INF
+      : lens.filter(len => len !== INF).reduce((a,b) => a < b ? a : b);
+    return new Stream(this,
+      _ => {
+        const is = args.map(arg => arg.isAtom ? arg : arg.read());
+        return [
+          (function*() {
+            for(;;) {
+              const vs = [];
+              for(const i of is)
+                if(i.isAtom)
+                  vs.push(i.value);
+                else {
+                  const r = i.next().value;
+                  if(!r)
+                    return;
+                  vs.push(r.evalAtom(type));
+                }
+              yield new Atom(vs.reduce(func));
+            }
+          }()),
+          c => {
             for(const i of is)
               if(!i.isAtom)
                 i.skip(c);
           }
-        }
-      );
-    },
-    toString() {
-      if(this.args.length > 1) {
-        let ret = '';
-        if(this.src)
-          ret = this.src.toString() + '.';
-        ret += '(';
-        ret += this.args.map(n => n.toString()).join(sign);
-        ret += ')';
-        return ret;
-      } else
-        return Node.prototype.toString.call(this);
-    },
-    help
-  });
+        ];
+      },
+      length
+    );
+  };
 }
 
-regMathOp(['plus', 'add'], '+',
-  (a, b) => {
-    if(typeof a !== typeof b)
-      throw new StreamError(`${Atom.format(a)} and ${Atom.format(b)} have different types`);
-    else
-      return a + b;
-  },
-  [types.N, types.S],
-  {
+R.register(['plus', 'add'], {
+  minArg: 1,
+  sourceOrArgs: 2,
+  eval: mathOp((a, b) => {
+      if(typeof a !== typeof b)
+        throw new StreamError(`${Atom.format(a)} and ${Atom.format(b)} have different types`);
+      else
+        return a + b;
+    }, [types.N, types.S]),
+  bodyForm: Node.operatorForm('+'),
+  help: {
     en: ['Adds numbers or concatenates strings. Long form of `x+y+...`.',
       'If any of the arguments are streams, they are processed element by element.',
       'Form with one argument: adds the argument to the source (number).'],
@@ -96,51 +80,71 @@ regMathOp(['plus', 'add'], '+',
       ['iota.fold(plus)', '[1,3,6,10,15,...]', {en: 'long form used as an operand (also see `accum`)', cs: 'textová forma použitá jako operand (viz též `accum`)'}]],
     see: ['minus', 'accum', 'total']
   }
-);
-
-regMathOp('minus', '-', (a, b) => a - b, types.N, {
-  en: ['Subtracts second and higher arguments from first. Long form of `x-y-...`.',
-    'If any of the arguments are streams, they are processed element by element.',
-    'Form with one argument: subtracts the argument from the source (number).'],
-  cs: ['Odečítá od prvního argumentu všechny následující. Alternativní zápis `x-y-...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
-    'Forma s jedním argumentem: odečítá argument od vstupu (čísla).'],
-  cat: catg.numbers,
-  ex: [['1-2-3', '-4'],
-    ['[1,2,3]-4', '[-3,-2,-1]'],
-    ['[1,2,3]:minus(4)', '[-3,-2,-1]'],
-    ['[10,20,30]-[1,2,3,4,5]', '[9,18,27]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
-    ['[1,2,[3,4]]-5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
-    ['1.repeat.fold(minus)', '[1,0,-1,-2,-3,...]', {en: 'long form used as an operand', cs: 'textová forma použitá jako operand'}]],
-  see: ['plus', 'diff']
 });
 
-regMathOp('times', '*', (a, b) => a * b, types.N, {
-  en: ['Multiplies its arguments. Long form of `x*y*...`.',
-    'If any of the arguments are streams, they are processed element by element.',
-    'Form with one argument: multiplies the argument and the source (number).'],
-  cs: ['Násobí své argumenty. Alternativní zápis `x*y*...`.',
-    'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
-    'Forma s jedním argumentem: součin vstupu (čísla) a argumentu.'],
-  cat: catg.numbers,
-  ex: [['1*2*3', '6'],
-    ['[1,2,3]*4', '[4,8,12]'],
-    ['[1,2,3]:times(4)', '[4,8,12]'],
-    ['[10,20,30]*[1,2,3,4,5]', '[10,40,90]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
-    ['[1,2,[3,4]]*5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
-    ['range(7).reduce(times)', '5040', {en: 'long form used as an operand (also see `product`, `factorial`)', cs: 'textová forma použitá jako operand (viz též `product`, `factorial`)'}]],
-  see: ['divide', 'product']
+
+R.register('minus', {
+  minArg: 1,
+  sourceOrArgs: 2,
+  eval: mathOp((a, b) => a - b),
+  bodyForm() {
+    if(this.args.length === 2 && this.args[0].isAtom && this.args[0].value === 0n)
+      return '(-' + this.args[1].toString() + ')';
+    else
+      return Node.operatorForm('-');
+  },
+  help: {
+    en: ['Subtracts second and higher arguments from first. Long form of `x-y-...`.',
+      'If any of the arguments are streams, they are processed element by element.',
+      'Form with one argument: subtracts the argument from the source (number).'],
+    cs: ['Odečítá od prvního argumentu všechny následující. Alternativní zápis `x-y-...`.',
+      'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+      'Forma s jedním argumentem: odečítá argument od vstupu (čísla).'],
+    cat: catg.numbers,
+    ex: [['1-2-3', '-4'],
+      ['[1,2,3]-4', '[-3,-2,-1]'],
+      ['[1,2,3]:minus(4)', '[-3,-2,-1]'],
+      ['[10,20,30]-[1,2,3,4,5]', '[9,18,27]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
+      ['[1,2,[3,4]]-5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
+      ['1.repeat.fold(minus)', '[1,0,-1,-2,-3,...]', {en: 'long form used as an operand', cs: 'textová forma použitá jako operand'}]],
+    see: ['plus', 'diff']
+  }
 });
 
-regMathOp(['divide', 'div'], '/',
-  (a, b) => {
+R.register('times', {
+  minArg: 1,
+  sourceOrArgs: 2,
+  eval: mathOp((a, b) => a * b),
+  bodyForm: Node.operatorForm('*'),
+  help: {
+    en: ['Multiplies its arguments. Long form of `x*y*...`.',
+      'If any of the arguments are streams, they are processed element by element.',
+      'Form with one argument: multiplies the argument and the source (number).'],
+    cs: ['Násobí své argumenty. Alternativní zápis `x*y*...`.',
+      'Jestliže některé z argumentů jsou proudy, zpracovává je prvek po prvku.',
+      'Forma s jedním argumentem: součin vstupu (čísla) a argumentu.'],
+    cat: catg.numbers,
+    ex: [['1*2*3', '6'],
+      ['[1,2,3]*4', '[4,8,12]'],
+      ['[1,2,3]:times(4)', '[4,8,12]'],
+      ['[10,20,30]*[1,2,3,4,5]', '[10,40,90]', {en: 'shortest argument defines the length of output', cs: 'délku výstupu definuje nejkratší argument'}],
+      ['[1,2,[3,4]]*5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
+      ['range(7).reduce(times)', '5040', {en: 'long form used as an operand (also see `product`, `factorial`)', cs: 'textová forma použitá jako operand (viz též `product`, `factorial`)'}]],
+    see: ['divide', 'product']
+  }
+});
+
+R.register(['divide', 'div'], {
+  minArg: 1,
+  sourceOrArgs: 2,
+  eval: mathOp((a, b) => {
     if(b === 0n)
       throw new StreamError('division by zero');
     else
       return a / b;
-  },
-  types.N,
-  {
+  }),
+  bodyForm: Node.operatorForm('/'),
+  help: {
     en: ['Divides its first argument by all the others. Long form of `x/y/...`.',
       'If any of the arguments are streams, they are processed element by element.',
       'Form with one argument: divides the source (number) with the argument.',
@@ -157,32 +161,33 @@ regMathOp(['divide', 'div'], '/',
       ['[1,2,[3,4]]/5', '!expected number, got stream [3,4]', {en: 'unpacking works only to first level', cs: 'vstup do proudu funguje jen do první úrovně'}],
       ['1/0', '!division by zero']],
     see: ['times', 'mod', 'divmod']
-  });
+  }
+});
 
-R.register('min', {
+R.register(['min', 'max'], {
   sourceOrArgs: 2,
   prepare(scope) {
     return this.args.length === 1
       ? this.prepareForeach(scope)
       : this.prepareDefault(scope);
   },
-  preeval() {
+  eval() {
+    const func = this.ident === 'max' ? (a, b) => b > a : (a, b) => b < a;
+    // multi-argument
     if(this.args.length >= 2) {
       const ins = this.args.map(arg => arg.evalNum());
-      const res = ins.reduce((a, b) => b < a ? b : a);
+      const res = ins.reduce((a, b) => func(a, b) ? b : a);
       return new Atom(res);
-    } else
-      return this;
-  },
-  eval() {
-    const sIn = this.src.evalStream({finite: true});
+    }
+    const src = this.src.evalStream({finite: true});
     if(this.args[0]) {
+      // stream with transformer
       let res = null;
       let best = null;
       const body = this.args[0].checkType([types.symbol, types.expr]);
-      for(const r of sIn) {
+      for(const r of src.read()) {
         const curr = body.prepare({src: r}).evalNum();
-        if(best === null || curr < best) {
+        if(best === null || func(best, curr)) {
           best = curr;
           res = r;
         }
@@ -190,123 +195,58 @@ R.register('min', {
       if(res === null)
         throw new StreamError('empty stream');
       else
-        return res.eval();
+        return res;
     } else {
-      let res = null;
-      for(const s of sIn) {
-        const curr = s.evalNum();
-        if(res === null || curr < res)
-          res = curr;
+      // numeric stream
+      let best = null;
+      for(const curr of src.read()) {
+        curr.checkType(types.N);
+        if(best === null || func(best.value, curr.value))
+          best = curr;
       }
-      if(res === null)
+      if(best === null)
         throw new StreamError('empty stream');
-      return new Atom(res);
+      return best;
     }
   },
   help: {
-    en: ['Form with several arguments: returns the least of them.',
-      'Form without arguments: finds the least in the input stream of numbers.',
-      'Form with one argument: applies the argument on elements of the input stream and returns that which gives the least result.'],
-    cs: ['Forma s několika argumenty: vrátí nejmenší z nich.',
-      'Forma bez argumentů: najde nejmenší ze vstupního proudu čísel.',
-      'Forma s jedním argumentem: aplikuje argument na každý prvek vstupního proudu a vrátí ten, který dává nejmenší výsledek.'],
+    en: ['Form with several arguments: returns the least / greatest of them.',
+      'Form without arguments: finds the least / greatest in the input stream of numbers.',
+      'Form with one argument: applies the argument on elements of the input stream and returns that which gives the least / greatest result.'],
+    cs: ['Forma s několika argumenty: vrátí nejmenší / největší z nich.',
+      'Forma bez argumentů: najde nejmenší / největší ze vstupního proudu čísel.',
+      'Forma s jedním argumentem: aplikuje argument na každý prvek vstupního proudu a vrátí ten, který dává nejmenší / největší výsledek.'],
     cat: catg.numbers,
     src: 'stream?',
     ex: [['range(3,5).min', '3', {en: 'input stream', cs: 'vstupní proud'}],
       ['min(6,2,7)', '2', {en: 'arguments', cs: 'argumenty'}],
-      ['["xyz",".","abcde"].min(#.length)', '"."', {en: '1 argument', cs: '1 argument'}]],
-    see: ['max', 'selmin']
+      ['["xyz",".","abcde"].max(#.length)', '"abcde"', {en: '1 argument', cs: '1 argument'}]],
+    see: ['selmin', 'selmax']
   }
 });
 
-R.register('max', {
-  sourceOrArgs: 2,
-  prepare(scope) {
-    return this.args.length === 1
-      ? this.prepareForeach(scope)
-      : this.prepareDefault(scope);
-  },
-  preeval() {
+function reduceOp(func, numOpts) {
+  return function() {
     if(this.args.length >= 2) {
       const ins = this.args.map(arg => arg.evalNum());
-      const res = ins.reduce((a, b) => b > a ? b : a);
+      const res = ins.reduce(func);
       return new Atom(res);
-    } else
-      return this;
-  },
-  eval() {
-    const sIn = this.src.evalStream({finite: true});
-    if(this.args[0]) {
-      let res = null;
-      let best = null;
-      const body = this.args[0].checkType([types.symbol, types.expr]);
-      for(const r of sIn) {
-        const curr = body.prepare({src: r}).evalNum();
-        if(best === null || curr > best) {
-          best = curr;
-          res = r;
-        }
-      }
-      if(res === null)
-        throw new StreamError('empty stream');
-      else
-        return res.eval();
+    } else if(this.args.length === 1) {
+      const inp = this.src.evalNum(numOpts);
+      const arg = this.args[0].evalNum(numOpts);
+      return new Atom(func(inp, arg));
     } else {
+      const src = this.src.evalStream({finite: true});
       let res = null;
-      for(const s of sIn) {
-        const curr = s.evalNum();
-        if(res === null || curr > res)
-          res = curr;
+      for(const r of src.read()) {
+        const curr = r.evalNum(numOpts);
+        res = res === null ? curr : func(res, curr);
       }
       if(res === null)
         throw new StreamError('empty stream');
       return new Atom(res);
     }
-  },
-  help: {
-    en: ['Form with several arguments: returns the greatest of them.',
-      'Form without arguments: finds the greatest in the input stream of numbers.',
-      'Form with one argument: applies the argument on elements of the input stream and returns that which gives the greatest result.'],
-    cs: ['Forma s několika argumenty: vrátí největší z nich.',
-      'Forma bez argumentů: najde největší ze vstupního proudu čísel.',
-      'Forma s jedním argumentem: aplikuje argument na každý prvek vstupního proudu a vrátí ten, který dává největší výsledek.'],
-    cat: catg.numbers,
-    src: 'stream?',
-    ex: [['range(3,5).max', '5', {en: 'input stream', cs: 'vstupní proud'}],
-      ['max(6,2,7)', '7', {en: 'arguments', cs: 'argumenty'}],
-      ['["xyz",".","abcde"].max(#.length)', '"abcde"', {en: '1 argument', cs: '1 argument'}]],
-    see: ['min', 'selmax']
-  }
-});
-
-function regReducerS(name, fun, numOpts, help) {
-  R.register(name, {
-    sourceOrArgs: 2,
-    preeval() {
-      if(this.args.length >= 2) {
-        const ins = this.args.map(arg => arg.evalNum());
-        const res = ins.reduce(fun);
-        return new Atom(res);
-      } else if(this.args.length === 1) {
-        const inp = this.src.evalNum(numOpts);
-        const arg = this.args[0].evalNum(numOpts);
-        return new Atom(fun(inp, arg));
-      } else
-        return this;
-    },
-    eval() {
-      const sIn = this.src.evalStream({finite: true});
-      let res = null;
-      for(const s of sIn) {
-        const curr = s.evalNum(numOpts);
-        res = res === null ? curr : fun(res, curr);
-      }
-      if(res === null)
-        throw new StreamError('empty stream');
-      return new Atom(res);
-    },
-    help
-  });
+  };
 }
 
 function gcd(a, b) {
@@ -320,100 +260,120 @@ function gcd(a, b) {
   }
 }
 
-regReducerS('gcd', gcd, {min: 1n}, {
-  en: ['Form with several arguments: calculates the greatest common divisor of them.',
-    'Form without arguments: calculates the GCD of the input stream.',
-    'Form with one argument: calculates the GCD of the source (number) and the argument.'],
-  cs: ['Forma s několika argumenty: počítá jejich největší společný dělitel (GCD).',
-    'Forma bez argumentů: počítá GCD vstupního proudu.',
-    'Forma s jedním argumentem: počítá GCD vstupu (čísla) a argumentu.'],
-  cat: catg.numbers,
-  src: 'stream?',
-  args: 'list?',
-  ex: [['range(4,8,2).gcd', '2', {en: 'input stream', cs: 'vstupní proud'}],
-    ['gcd(100,125,145)', '5', {en: 'arguments', cs: 'argumenty'}],
-    ['iota:gcd(4)', '[1,2,1,4,1,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
-  see: 'lcm'
+R.register('gcd', {
+  sourceOrArgs: 2,
+  eval: reduceOp(gcd, {min: 1n}),
+  help: {
+    en: ['Form with several arguments: calculates the greatest common divisor of them.',
+      'Form without arguments: calculates the GCD of the input stream.',
+      'Form with one argument: calculates the GCD of the source (number) and the argument.'],
+    cs: ['Forma s několika argumenty: počítá jejich největší společný dělitel (GCD).',
+      'Forma bez argumentů: počítá GCD vstupního proudu.',
+      'Forma s jedním argumentem: počítá GCD vstupu (čísla) a argumentu.'],
+    cat: catg.numbers,
+    src: 'stream?',
+    args: 'list?',
+    ex: [['range(4,8,2).gcd', '2', {en: 'input stream', cs: 'vstupní proud'}],
+      ['gcd(100,125,145)', '5', {en: 'arguments', cs: 'argumenty'}],
+      ['iota:gcd(4)', '[1,2,1,4,1,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+    see: 'lcm'
+  }
 });
 
-regReducerS('lcm', (a, b) => a * (b / gcd(a, b)), {min: 1n}, {
-  en: ['Form with several arguments: calculates the least common multiple of them.',
-    'Form without arguments: calculates the LCM of the input stream.',
-    'Form with one argument: calculates the LCM of the source (number) and the argument.'],
-  cs: ['Forma s několika argumenty: počítá jejich nejmenší společný násobek (LCM).',
-    'Forma bez argumentů: počítá LCM vstupního proudu.',
-    'Forma s jedním argumentem: počítá LCM vstupu (čísla) a argumentu.'],
-  cat: catg.numbers,
-  src: 'stream?',
-  args: 'list?',
-  ex: [['range(4,8,2).lcm', '24', {en: 'input stream', cs: 'vstupní proud'}],
-    ['lcm(10,12,15)', '60', {en: 'arguments', cs: 'argumenty'}],
-    ['iota:lcm(4)', '[4,4,12,4,20,12,28,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
-  see: 'gcd'
+R.register('lcm', {
+  sourceOrArgs: 2,
+  eval: reduceOp((a, b) => a * (b / gcd(a, b)), {min: 1n}),
+  help: {
+    en: ['Form with several arguments: calculates the least common multiple of them.',
+      'Form without arguments: calculates the LCM of the input stream.',
+      'Form with one argument: calculates the LCM of the source (number) and the argument.'],
+    cs: ['Forma s několika argumenty: počítá jejich nejmenší společný násobek (LCM).',
+      'Forma bez argumentů: počítá LCM vstupního proudu.',
+      'Forma s jedním argumentem: počítá LCM vstupu (čísla) a argumentu.'],
+    cat: catg.numbers,
+    src: 'stream?',
+    args: 'list?',
+    ex: [['range(4,8,2).lcm', '24', {en: 'input stream', cs: 'vstupní proud'}],
+      ['lcm(10,12,15)', '60', {en: 'arguments', cs: 'argumenty'}],
+      ['iota:lcm(4)', '[4,4,12,4,20,12,28,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+    see: 'gcd'
+  }
 });
 
-regReducerS('bitand', (a, b) => a & b, {min: 1n}, {
-  en: ['Form with several arguments: calculates the bitwise logical AND of them.',
-    'Form without arguments: calculates the same operation the input stream.',
-    'Form with one argument: calculates the same operation the source (number) and the argument.'],
-  cs: ['Forma s několika argumenty: počítá jejich bitový logický součin (AND).',
-    'Forma bez argumentů: počítá bitový součin vstupního proudu.',
-    'Forma s jedním argumentem: počítá bitový součin vstupu (čísla) a argumentu.'],
-  cat: catg.numbers,
-  src: 'stream?',
-  args: 'list?',
-  ex: [['range(7,21,4).bitand', '3', {en: 'input stream', cs: 'vstupní proud'}],
-    ['bitand("a".ord, "b".ord)', '96', {en: 'arguments', cs: 'argumenty'}],
-    ['iota:bitand(6)', '[0,2,2,4,4,6,6,0,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
-  see: ['bitor', 'bitxor']
+R.register('bitand', {
+  sourceOrArgs: 2,
+  eval: reduceOp((a, b) => a & b, {min: 1n}),
+  help: {
+    en: ['Form with several arguments: calculates the bitwise logical AND of them.',
+      'Form without arguments: calculates the same operation the input stream.',
+      'Form with one argument: calculates the same operation the source (number) and the argument.'],
+    cs: ['Forma s několika argumenty: počítá jejich bitový logický součin (AND).',
+      'Forma bez argumentů: počítá bitový součin vstupního proudu.',
+      'Forma s jedním argumentem: počítá bitový součin vstupu (čísla) a argumentu.'],
+    cat: catg.numbers,
+    src: 'stream?',
+    args: 'list?',
+    ex: [['range(7,21,4).bitand', '3', {en: 'input stream', cs: 'vstupní proud'}],
+      ['bitand("a".ord, "b".ord)', '96', {en: 'arguments', cs: 'argumenty'}],
+      ['iota:bitand(6)', '[0,2,2,4,4,6,6,0,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+    see: ['bitor', 'bitxor']
+  }
 });
 
-regReducerS('bitor', (a, b) => a | b, {min: 1n}, {
-  en: ['Form with several arguments: calculates the bitwise logical OR of them.',
-    'Form without arguments: calculates the same operation the input stream.',
-    'Form with one argument: calculates the same operation the source (number) and the argument.'],
-  cs: ['Forma s několika argumenty: počítá jejich bitový logický součet (OR).',
-    'Forma bez argumentů: počítá bitový součet vstupního proudu.',
-    'Forma s jedním argumentem: počítá bitový součet vstupu (čísla) a argumentu.'],
-  cat: catg.numbers,
-  src: 'stream?',
-  args: 'list?',
-  ex: [['range(7,21,4).bitor', '31', {en: 'input stream', cs: 'vstupní proud'}],
-    ['bitor("a".ord,"b".ord).chr', '"c"', {en: 'arguments', cs: 'argumenty'}],
-    ['iota:bitor(2)', '[3,2,3,6,7,6,7,10,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
-  see: ['bitand', 'bitxor']
+R.register('bitor', {
+  sourceOrArgs: 2,
+  eval: reduceOp((a, b) => a | b, {min: 1n}),
+  help: {
+    en: ['Form with several arguments: calculates the bitwise logical OR of them.',
+      'Form without arguments: calculates the same operation the input stream.',
+      'Form with one argument: calculates the same operation the source (number) and the argument.'],
+    cs: ['Forma s několika argumenty: počítá jejich bitový logický součet (OR).',
+      'Forma bez argumentů: počítá bitový součet vstupního proudu.',
+      'Forma s jedním argumentem: počítá bitový součet vstupu (čísla) a argumentu.'],
+    cat: catg.numbers,
+    src: 'stream?',
+    args: 'list?',
+    ex: [['range(7,21,4).bitor', '31', {en: 'input stream', cs: 'vstupní proud'}],
+      ['bitor("a".ord,"b".ord).chr', '"c"', {en: 'arguments', cs: 'argumenty'}],
+      ['iota:bitor(2)', '[3,2,3,6,7,6,7,10,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+    see: ['bitand', 'bitxor']
+  }
 });
 
-regReducerS('bitxor', (a, b) => a ^ b, {min: 1n}, {
-  en: ['Form with several arguments: calculates the bitwise logical XOR of them.',
-    'Form without arguments: calculates the same operation the input stream.',
-    'Form with one argument: calculates the same operation the source (number) and the argument.'],
-  cs: ['Forma s několika argumenty: počítá jejich bitový exkluzivní logický součin (XOR).',
-    'Forma bez argumentů: počítá stejnou operaci na vstupním proudu.',
-    'Forma s jedním argumentem: počítá stejnou operaci na vstupu (čísle) a argumentu.'],
-  cat: catg.numbers,
-  src: 'stream?',
-  args: 'list?',
-  ex: [['range(15).bitxor', '0', {en: 'input stream', cs: 'vstupní proud'}],
-    ['bitxor(3,6)', '5', {en: 'arguments', cs: 'argumenty'}],
-    ['iota:bitxor(1)', '[0,3,2,5,4,7,6,9,8,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
-  see: ['bitand', 'bitor']
+R.register('bitxor', {
+  sourceOrArgs: 2,
+  eval: reduceOp((a, b) => a ^ b, {min: 1n}),
+  help: {
+    en: ['Form with several arguments: calculates the bitwise logical XOR of them.',
+      'Form without arguments: calculates the same operation the input stream.',
+      'Form with one argument: calculates the same operation the source (number) and the argument.'],
+    cs: ['Forma s několika argumenty: počítá jejich bitový exkluzivní logický součin (XOR).',
+      'Forma bez argumentů: počítá stejnou operaci na vstupním proudu.',
+      'Forma s jedním argumentem: počítá stejnou operaci na vstupu (čísle) a argumentu.'],
+    cat: catg.numbers,
+    src: 'stream?',
+    args: 'list?',
+    ex: [['range(15).bitxor', '0', {en: 'input stream', cs: 'vstupní proud'}],
+      ['bitxor(3,6)', '5', {en: 'arguments', cs: 'argumenty'}],
+      ['iota:bitxor(1)', '[0,3,2,5,4,7,6,9,8,...]', {en: '1 argument (`foreach`)', cs: '1 argument (`foreach`)'}]],
+    see: ['bitand', 'bitor']
+  }
 });
 
 R.register(['accum', 'acc', 'ac'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const sIn = this.src.evalStream();
+    const src = this.src.evalStream();
     return new Stream(this,
-      (function*() {
+      function*() {
         let sum = 0n;
-        for(const next of sIn) {
+        for(const next of src.read()) {
           sum += next.evalNum();
           yield new Atom(sum);
         }
-      })(),
-      {len: sIn.len}
+      },
+      src.length
     );
   },
   help: {
@@ -428,10 +388,10 @@ R.register(['total', 'tot', 'sum'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const str = this.src.evalStream({finite: true});
+    const src = this.src.evalStream({finite: true});
     let tot = 0n;
-    for(const s of str)
-      tot += s.evalNum();
+    for(const r of src.read())
+      tot += r.evalNum();
     return new Atom(tot);
   },
   help: {
@@ -446,26 +406,36 @@ R.register('diff', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const sIn = this.src.evalStream();
+    const src = this.src.evalStream();
+    const length = src.length === undefined ? undefined
+          : src.length === INF ? INF
+          : src.length === 0n ? 0n
+          : src.length - 1n;
     return new Stream(this,
-      (function*() {
-        let prev = null;
-        for(const next of sIn) {
-          const curr = next.evalNum();
-          if(prev === null) {
-            prev = curr;
-            continue;
+      _ => {
+        const stm = src.read();
+        const first = stm.next().value;
+        if(!first)
+          return [].values();
+        let prev = first.evalNum();
+        return [
+          (function*() {
+            for(const next of stm) {
+              const curr = next.evalNum();
+              const res = curr - prev;
+              prev = curr;
+              yield new Atom(res);
+            }
+          })(),
+          c => {
+            if(c === 0n)
+              return;
+            stm.skip(c - 1n);
+            prev = stm.next().value.evalNum();
           }
-          yield new Atom(curr - prev);
-          prev = curr;
-        }
-      })(),
-      {
-        len: sIn.len === undefined ? undefined
-          : sIn.len === null ? null
-          : sIn.len === 0n ? 0n
-          : sIn.len - 1n
-      }
+        ];
+      },
+      length
     );
   },
   help: {
@@ -480,9 +450,9 @@ R.register(['product', 'prod'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const str = this.src.evalStream({finite: true});
+    const src = this.src.evalStream({finite: true});
     let prod = 1n;
-    for(const s of str) {
+    for(const s of src.read()) {
       prod *= s.evalNum();
       if(prod === 0n)
         break;
@@ -501,7 +471,7 @@ R.register(['power', 'pow'], {
   minArg: 1,
   maxArg: 2,
   sourceOrArgs: 2,
-  preeval() {
+  eval() {
     if(this.args.length === 1) {
       const base = this.src.evalNum();
       const pow = this.args[0].evalNum({min: 0n});
@@ -512,21 +482,11 @@ R.register(['power', 'pow'], {
       return new Atom(base ** pow);
     }
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length === 2) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('^');
-      ret += ')';
-    } else {
-      ret += this.ident;
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join(',');
-      ret += ')';
-    }
-    return ret;
+  bodyForm() {
+    if(this.args.length === 2)
+      return '(' + this.args.map(n => n.toString()).join('^') + ')';
+    else
+      return null;
   },
   help: {
     en: ['Calculates `_base` to the power of `_power`.',
@@ -569,7 +529,7 @@ R.register('mod', {
   reqSource: true,
   minArg: 1,
   maxArg: 2,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum();
     const mod = this.args[0].evalNum({min: 1n});
     const base = this.args[1] ? this.args[1].evalNum() : 0n;
@@ -595,7 +555,7 @@ R.register('modinv', {
   minArg: 1,
   maxArg: 2,
   sourceOrArgs: 2,
-  preeval() {
+  eval() {
     const [val, mod] = (this.args[1] ? [this.args[0], this.args[1]] : [this.src, this.args[0]])
       .map(arg => arg.evalNum({min: 1n}));
     let [a, b, c, d] = [1n, 0n, 0n, 1n];
@@ -627,7 +587,7 @@ R.register('modinv', {
 
 R.register('abs', {
   reqSource: true,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum();
     return new Atom(inp >= 0n ? inp : -inp);
   },
@@ -642,7 +602,7 @@ R.register('abs', {
 
 R.register(['sign', 'sgn'], {
   reqSource: true,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum();
     return new Atom(inp > 0n ? 1 : inp < 0n ? -1 : 0);
   },
@@ -658,7 +618,7 @@ R.register(['sign', 'sgn'], {
 R.register(['odd', 'isodd'], {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const val = this.src.evalNum();
     return new Atom((val & 1n) === 1n);
   },
@@ -678,7 +638,7 @@ R.register(['odd', 'isodd'], {
 R.register(['even', 'iseven'], {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const val = this.src.evalNum();
     return new Atom((val & 1n) === 0n);
   },
@@ -697,21 +657,10 @@ R.register(['even', 'iseven'], {
 R.register('and', {
   reqSource: false,
   minArg: 2,
-  preeval() {
+  eval() {
     return new Atom(this.args.map(arg => arg.evalAtom(types.B)).reduce((a, b) => a && b));
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length > 0) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('&');
-      ret += ')';
-    } else
-      ret += this.ident;
-    return ret;
-  },
+  bodyForm: Node.operatorForm('&'),
   help: {
     en: ['Takes a logical conjunction of its arguments, i.e., `true` only if all of them are `true`. Long form of `x&y&...`.',
       '-For bitwise operation on numbers, see `bitand`.'],
@@ -726,21 +675,10 @@ R.register('and', {
 R.register('or', {
   reqSource: false,
   minArg: 2,
-  preeval() {
+  eval() {
     return new Atom(this.args.map(arg => arg.evalAtom(types.B)).reduce((a, b) => a || b));
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length > 0) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('|');
-      ret += ')';
-    } else
-      ret += this.ident;
-    return ret;
-  },
+  bodyForm: Node.operatorForm('|'),
   help: {
     en: ['Takes a logical disjunction of its arguments, i.e., `true` only if at least one of them is `true`. Long form of `x|y|...`.',
       '-For bitwise operation on numbers, see `bitor`.'],
@@ -755,14 +693,9 @@ R.register('or', {
 R.register('not', {
   maxArg: 1,
   sourceOrArgs: 1,
-  preeval() {
-    if(this.args[0]) {
-      const val = this.args[0].evalAtom(types.B);
-      return new Atom(!val);
-    } else {
-      const val = this.src.evalAtom(types.B);
-      return new Atom(!val);
-    }
+  eval() {
+    const val = (this.args[0] || this.src).evalAtom(types.B);
+    return new Atom(!val);
   },
   help: {
     en: ['Negates a logical value.',
@@ -781,9 +714,9 @@ R.register(['every', 'each', 'all'], {
   maxArg: 1,
   prepare: Node.prototype.prepareForeach,
   eval() {
-    const sIn = this.src.evalStream({finite: true});
+    const src = this.src.evalStream({finite: true});
     const cond = this.args[0];
-    for(const value of sIn)
+    for(const value of src.read())
       if(!(cond ? cond.prepare({src: value}) : value).evalAtom('boolean'))
         return new Atom(false);
     return new Atom(true);
@@ -807,9 +740,9 @@ R.register(['some', 'any'], {
   maxArg: 1,
   prepare: Node.prototype.prepareForeach,
   eval() {
-    const sIn = this.src.evalStream({finite: true});
+    const src = this.src.evalStream({finite: true});
     const cond = this.args[0];
-    for(const value of sIn)
+    for(const value of src.read())
       if((cond ? cond.prepare({src: value}) : value).evalAtom('boolean'))
         return new Atom(true);
     return new Atom(false);
@@ -828,79 +761,58 @@ R.register(['some', 'any'], {
   }
 });
 
-function regComparer(name, sign, fun, help) {
-  R.register(name, {
+function compareRecord(sign, func, help) {
+  return {
     reqSource: false,
     minArg: 2,
-    preeval() {
-      if(this.args.every(arg => arg.isAtom)) {
-        const vals = this.args.map(arg => arg.numValue());
-        let res = true;
-        for(let i = 1; i < vals.length; i++)
-          res = res && fun(vals[i-1], vals[i]);
-        return new Atom(res);
-      } else
-        return this;
-    },
     eval() {
       const vals = this.args.map(arg => arg.evalNum());
       let res = true;
       for(let i = 1; i < vals.length; i++)
-        res = res && fun(vals[i-1], vals[i]);
+        res = res && func(vals[i-1], vals[i]);
       return new Atom(res);
     },
-    toString() {
-      let ret = '';
-      if(this.src)
-        ret = this.src.toString() + '.';
-      if(this.args.length > 0) {
-        ret += '(';
-        ret += this.args.map(n => n.toString()).join(sign);
-        ret += ')';
-      } else
-        ret += this.ident;
-      return ret;
-    },
+    bodyForm: Node.operatorForm(sign),
     help
-  });
+  };
 }
 
-regComparer('lt', '<', (a, b) => a < b, {
+R.register('lt', compareRecord('<', (a, b) => a < b, {
   en: ['Checks if the arguments are numbers in strictly increasing order. Long form of `x<y<...`.'],
   cs: ['Testuje, zda argumenty jsou čísla tvořící ostře rostoucí posloupnost. Alternativní zápis `x<y<...`.'],
   cat: catg.numbers,
   ex: [['1<3<5<6', 'true'], ['1<3<4<4', 'false']],
   see: ['le', 'gt']
-});
+}));
 
-regComparer('gt', '>', (a, b) => a > b, {
+R.register('gt', compareRecord('>', (a, b) => a > b, {
   en: ['Checks if the arguments are numbers in strictly decreasing order. Long form of `x>y...`.'],
   cs: ['Testuje, zda argumenty jsou čísla tvořící ostře klesající posloupnost. Alternativní zápis `x>y...`.'],
   cat: catg.numbers,
   ex: [['7>5>3', 'true'], ['7>5>5>3', 'false']],
   see: ['ge', 'lt']
-});
+}));
 
-regComparer('le', '<=', (a, b) => a <= b, {
+R.register('le', compareRecord('<=', (a, b) => a <= b, {
   en: ['Checks if the arguments are numbers in nondecreasing order. Long form of `x<=y...`.'],
   cs: ['Testuje, zda argumenty jsou čísla tvořící neklesající posloupnost. Alternativní zápis `x<=y...`.'],
   cat: catg.numbers,
   ex: [['1<=3<=5<=6', 'true'], ['1<=3<=4<=4', 'true']],
   see: ['lt', 'ge']
-});
+}));
 
-regComparer('ge', '>=', (a, b) => a >= b, {
+R.register('ge', compareRecord('>=', (a, b) => a >= b, {
   en: ['Checks if the arguments are numbers in nonincreasing order. Long form of `x>=y...`.'],
   cs: ['Testuje, zda argumenty jsou čísla tvořící nerostoucí posloupnost. Alternativní zápis `x>=y...`.'],
   cat: catg.numbers,
   ex: [['7>=5>=3', 'true'], ['7>=5>=5>=3', 'true']],
   see: ['gt', 'le']
-});
+}));
 
 R.register(['tobase', 'tbase', 'tb', 'str'], {
   reqSource: true,
   maxArg: 2,
-  preeval() {
+  eval() {
     let val = this.src.evalNum();
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     const minl = this.args[1] ? Number(this.args[1].evalNum({min: 1n})) : 0;
@@ -922,10 +834,10 @@ R.register(['tobase', 'tbase', 'tb', 'str'], {
       'If `_length` is given, the result is left padded with zeroes if it is shorter than `_length` digits.'],
     cs: ['Konvertuje číslo `_n` na řetězec jeho zápisu v soustavě `_base`. Jako číslice jsou použity `0`, ..., `9`, `_a`, ..., `_z`.',
       'Jestliže `_base` není dáno, pracuje v desítkové soustavě.',
-      'Jestliže je dána délka `_len`, výsledek je zleva doplněn nulami, pokud by měl menší počet číslic.'],
+      'Jestliže je dána délka `_length`, výsledek je zleva doplněn nulami, pokud by měl menší počet číslic.'],
     cat: [catg.numbers, catg.strings],
     src: 'n',
-    args: 'base?,len?',
+    args: 'base?,length?',
     ex: [['15.str', '"15"', {en: 'number to string conversion', cs: 'převod čísla na řetězec'}],
       ['(-100).tobase(15)', '"-6a"', {en: 'negative inputs are permitted', cs: 'záporná čísla jsou dovolena'}],
       ['"n".ord(abc).tobase(2,5)', '"01110"'],
@@ -937,7 +849,7 @@ R.register(['tobase', 'tbase', 'tb', 'str'], {
 R.register(['frombase', 'fbase', 'fb', 'num'], {
   reqSource: true,
   maxArg: 1,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom('string');
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
@@ -985,10 +897,7 @@ R.register(['todigits', 'tdig'], {
     }
     while(digits.length < minl)
       digits.push(0);
-    return new Stream(this,
-      digits.reverse().map(d => new Atom(d)).values(),
-      {len: BigInt(digits.length)}
-    );
+    return Stream.fromArray(digits.reverse().map(d => new Atom(d)));
   },
   help: {
     en: ['Converts number `_n` to a base `_base` and outputs its digits as a stream.',
@@ -996,10 +905,10 @@ R.register(['todigits', 'tdig'], {
       'If `_length` is given, the result is left padded with zeroes if it is shorter than `_length` digits.'],
     cs: ['Konvertuje číslo `_n` na zápis v soustavě `_base` a vrátí jeho číslice jako proud.',
       'Jestliže `_base` není dáno, pracuje v desítkové soustavě.',
-      'Jestliže je dána délka `_len`, výsledek je zleva doplněn nulami, pokud by měl menší počet číslic.'],
+      'Jestliže je dána délka `_length`, výsledek je zleva doplněn nulami, pokud by měl menší počet číslic.'],
     cat: [catg.numbers, catg.streams],
     src: 'n',
-    args: 'base?,len?',
+    args: 'base?,length?',
     ex: [['(2^100).todigits', '[1,2,6,7,6,5,0,6,0,...]'],
       ['65536.todigits(100)', '[6,55,36]', {en: 'allows bases larger than 36', cs: 'umožňuje soustavy vyšší než 36'}]],
     see: ['fromdigits', 'tobase']
@@ -1010,10 +919,10 @@ R.register(['fromdigits', 'fdig'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const sIn = this.src.evalStream({finite: true});
+    const src = this.src.evalStream({finite: true});
     const base = this.args[0] ? this.args[0].evalNum({min: 2n}) : 10n;
     let val = 0n;
-    for(const r of sIn) {
+    for(const r of src.read()) {
       const digit = r.evalNum({min: 0n, max: base - 1n});
       val = val * base + digit;
     }
@@ -1059,11 +968,11 @@ R.register('primes', {
   numArg: 0,
   eval() {
     return new Stream(this,
-      (function*() {
+      function*() {
         for(const p of primes())
           yield new Atom(p);
-      })(),
-      {len: null}
+      },
+      INF
     );
   },
   help: {
@@ -1078,7 +987,7 @@ R.register('primes', {
 R.register('isprime', {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const val = this.src.evalNum();
     if(val <= 1n)
       return new Atom(false);
@@ -1108,18 +1017,16 @@ R.register('factor', {
   numArg: 0,
   eval() {
     let val = this.src.evalNum({min: 1n});
-    return new Stream(this,
-      (function*() {
-        for(const p of primes()) {
-          while((val % p) === 0n) {
-            yield new Atom(p);
-            val /= p;
-          }
-          if(val === 1n)
-            return;
-        }
-      })()
-    );
+    const ret = [];
+    for(const p of primes()) {
+      if(val === 1n)
+        break;
+      while((val % p) === 0n) {
+        ret.push(new Atom(p));
+        val /= p;
+      }
+    }
+    return Stream.fromArray(ret);
   },
   help: {
     en: ['Prime divisors of `_n` in nondecreasing order.'],
@@ -1127,7 +1034,7 @@ R.register('factor', {
     cat: catg.numbers,
     src: 'n',
     ex: [['1552668.factor', '[2,2,3,13,37,269]'],
-      ['iota.select(#.factor.rle.every(#[2]=1))', '[2,3,5,6,7,10,11,13,...]', {en: 'squarefree numbers', cs: 'bezčtvercová čísla'}]],
+      ['iota.select(#.factor.rle.every(#[2]=1))', '[1,2,3,5,6,7,10,11,13,...]', {en: 'squarefree numbers', cs: 'bezčtvercová čísla'}]],
     see: 'rle'
   }
 });
@@ -1149,30 +1056,32 @@ R.register('divisors', {
       if(val === 1n)
         break;
     }
-    const len = [...fact.values()].reduce((a, b) => a * (b + 1n), 1n);
-    let i = 0n;
+    const length = [...fact.values()].reduce((a, b) => a * (b + 1n), 1n);
     return new Stream(this,
-      (function*() {
-        for(;;) {
-          if(i >= len)
-            return;
-          let x = i;
-          let res = 1n;
-          for(const [prime, pow] of fact) {
-            if(x === 0n)
-              break;
-            const p = x % (pow + 1n);
-            res *= prime ** p;
-            x /= (pow + 1n);
-          }
-          yield new Atom(res);
-          i++;
-        }
-      })(),
-      {
-        len,
-        skip: c => i += c
-      }
+      _ => {
+        let i = 0n;
+        return [
+          (function*() {
+            for(;;) {
+              if(i >= length)
+                return;
+              let x = i;
+              let res = 1n;
+              for(const [prime, pow] of fact) {
+                if(x === 0n)
+                  break;
+                const p = x % (pow + 1n);
+                res *= prime ** p;
+                x /= (pow + 1n);
+              }
+              yield new Atom(res);
+              i++;
+            }
+          })(),
+          c => i += c
+        ];
+      },
+      length
     );
   },
   help: {
@@ -1189,7 +1098,7 @@ R.register('divisors', {
 R.register(['isnumber', 'isnum'], {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const c = this.src.eval();
     return new Atom(c.type === types.N);
   },
@@ -1216,7 +1125,7 @@ R.register('pi', {
       return carry;
     };
     return new Stream(this,
-      (function*() {
+      function*() {
         const v = [];
         let wait = [];
         for(let j = 0; ; j++) {
@@ -1249,8 +1158,8 @@ R.register('pi', {
             }
           }
         }
-      })(),
-      {len: null}
+      },
+      INF
     );
   },
   help: {
@@ -1283,72 +1192,67 @@ R.register(['random', 'rnd', 'sample'], {
   prepare(scope) {
     return this.prepareBase(scope, {}, {}, {_seed: scope.seed});
   },
-  preeval() {
+  eval() {
     if(this.args.length === 2) {
-      /*** 2-arg: min, max - resolve in preeval() ***/
+      /*** 2-arg: min, max ***/
       const min = this.args[0].evalNum();
       const max = this.args[1].evalNum();
       return new Atom(rnd1(this.meta._seed, min, max));
-    } else
-      return this;
-  },
-  eval() {
-    if(this.args.length === 3) {
+    } else if(this.args.length === 3) {
       /*** 3-arg: min, max, count ***/
       const min = this.args[0].evalNum();
       const max = this.args[1].evalNum();
       const count = this.args[2].evalNum({min: 1n});
       const gen = rnds(this.meta._seed, min, max);
       return new Stream(this,
-        (function*() {
+        function*() {
           for(let i = 0n; i < count; i++)
             yield new Atom(gen.next().value);
-        })(),
-        {count}
+        },
+        count
       );
     } else {
-      let sIn = this.src.evalStream({finite: true});
+      const src = this.src.evalStream({finite: true});
       let sLen;
-      if(typeof sIn.len === 'bigint')
-        sLen = sIn.len;
+      if(typeof src.length === 'bigint')
+        sLen = src.length;
       else {
         sLen = 0n;
-        for(const _ of sIn)
+        for(const _ of src.read())
           sLen++;
-        sIn = this.src.evalStream();
       }
       if(sLen === 0n)
         throw new StreamError('empty stream');
-      const gen = rnds(this.meta._seed, 0n, sLen - 1n);
+      const gen = rnds(this.meta._seed, 1n, sLen);
       if(!this.args[0]) {
         /*** 0-arg: one sample from source ***/
-        sIn.skip(gen.next().value);
-        return sIn.next().value.eval();
+        const stm = src.read();
+        stm.skip(gen.next().value - 1n);
+        return stm.next().value.eval();
       } else {
         /*** 1-arg: source + count ***/
         const count = this.args[0].evalNum({min: 1n});
         if(sLen < MAXMEM) {
           // Memoize
-          const data = [...sIn];
+          const data = [...src.read()];
           return new Stream(this,
-            (function*() {
+            function*() {
               for(let i = 0n; i < count; i++)
-                yield data[gen.next().value];
-            })(),
-            {len: count}
+                yield data[gen.next().value - 1n];
+            },
+            count
           );
         } else {
-          // Skip + reinit
+          // Reset + skip
           return new Stream(this,
-            (function*(self) {
+            function*() {
               for(let i = 0n; i < count; i++) {
-                const ix = gen.next().value;
-                sIn.skip(ix);
-                yield sIn.next().value;
-                sIn = self.src.evalStream();
+                const stm = src.read();
+                stm.skip(gen.next().value - 1n);
+                yield stm.next().value;
               }
-            })(this),
-            {len: count}
+            },
+            count
           );
         }
       }
@@ -1392,48 +1296,47 @@ R.register(['rndstream', 'rnds'], {
       const max = this.args[1].evalNum();
       const gen = rnds(this.meta._seed, min, max);
       return new Stream(this,
-        (function*() {
+        function*() {
           for(const ix of gen)
             yield new Atom(ix);
-        })(),
-        {len: null}
+        },
+        INF
       );
     } else {
       /*** 0-arg: source */
-      let sIn = this.src.evalStream({finite: true});
+      const src = this.src.evalStream({finite: true});
       let sLen;
-      if(typeof sIn.len === 'bigint')
-        sLen = sIn.len;
+      if(typeof src.length === 'bigint')
+        sLen = src.length;
       else {
         sLen = 0n;
-        for(const _ of sIn)
+        for(const _ of src.read())
           sLen++;
-        sIn = this.src.evalStream();
       }
       if(sLen === 0n)
         throw new StreamError('empty stream');
-      const gen = rnds(this.meta._seed, 0n, sLen - 1n);
+      const gen = rnds(this.meta._seed, 1n, sLen);
       if(sLen < MAXMEM) {
         // Memoize
-        const data = [...sIn];
+        const data = [...src.read()];
         return new Stream(this,
-          (function*() {
+          function*() {
             for(const ix of gen)
               yield data[ix];
-          })(),
-          {len: null}
+          },
+          INF
         );
       } else {
         // Skip + reinit
         return new Stream(this,
-          (function*(self) {
+          function*() {
             for(const ix of gen) {
-              sIn.skip(ix);
-              yield sIn.next().value;
-              sIn = self.src.evalStream();
+              const stm = src.read();
+              stm.skip(ix - 1n);
+              yield stm.next().value;
             }
-          })(this),
-          {len: null}
+          },
+          INF
         );
       }
     }
@@ -1461,14 +1364,14 @@ R.register(['divmod', 'quotrem'], {
   reqSource: true,
   minArg: 1,
   maxArg: 2,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum();
     const mod = this.args[0].evalNum({min: 1n});
     const base = this.args[1] ? this.args[1].evalNum() : 0n;
     let rem = (inp - base) % mod;
     rem = (rem >= 0n ? rem : rem + mod) + base;
     const div = (inp - rem) / mod;
-    return new Node('array', this.token, null, [new Atom(div), new Atom(rem)]);
+    return Stream.fromArray([new Atom(div), new Atom(rem)]);
   },
   help: {
     en: ['Returns a pair comprising the quotient and remainder of dividing `_n` by `_k`.',
@@ -1487,7 +1390,7 @@ R.register(['divmod', 'quotrem'], {
 R.register(['mantexp', 'manexp'], {
   reqSource: true,
   numArg: 1,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum({min: 1n});
     const base = this.args[0].evalNum({min: 1n});
     let exp = 0n, rem = inp;
@@ -1495,7 +1398,7 @@ R.register(['mantexp', 'manexp'], {
       rem /= base;
       exp++;
     }
-    return new Node('array', this.token, null, [new Atom(rem), new Atom(exp)]);
+    return Stream.fromArray([new Atom(rem), new Atom(exp)]);
   },
   help: {
     en: ['Returns a pair comprising the mantissa and exponent of `_n` in base `_base`, such that `_n = _mantissa * _base^_exponent` and `_mantissa.mod(_base) <> 0`.'],
@@ -1510,7 +1413,7 @@ R.register(['mantexp', 'manexp'], {
 R.register('dlog', {
   reqSource: true,
   maxArg: 1,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum({min: 0n});
     const base = this.args[0]?.evalNum({min: 2n}) || 10n;
     for(let x = inp, exp = 0; ; x /= base, exp++)
@@ -1544,7 +1447,7 @@ function sqrt(n) {
 R.register('sqrt', {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum({min: 0n});
     return new Atom(sqrt(inp));
   },
@@ -1561,10 +1464,10 @@ R.register('sqrt', {
 R.register('sqrem', {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum({min: 0n});
     const sqr = sqrt(inp);
-    return new Node('array', this.token, null, [new Atom(sqr), new Atom(inp - sqr * sqr)]);
+    return Stream.fromArray([new Atom(sqr), new Atom(inp - sqr * sqr)]);
   },
   help: {
     en: ['Returns a pair comprising the integer square root of `_n` and the remaining difference.'],
@@ -1580,10 +1483,10 @@ R.register('sqrem', {
 R.register('trirem', {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const inp = this.src.evalNum({min: 0n});
     const row = (sqrt(1n + 8n * inp) - 1n) / 2n;
-    return new Node('array', this.token, null, [new Atom(row), new Atom(inp - row * (row + 1n) / 2n)]);
+    return Stream.fromArray([new Atom(row), new Atom(inp - row * (row + 1n) / 2n)]);
   },
   help: {
     en: ['Returns a pair `[_k,_l]` such that `_n = _k*(_k-1) + _l` and `_k <= _n`.'],

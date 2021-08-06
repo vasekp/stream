@@ -26,9 +26,8 @@ export default {
   utick() {
     if(!timeEnd)
       throw new Error('Watchdog tick() called without start()');
-    if(Date.now() > timeEnd) {
+    if(Date.now() > timeEnd)
       throw new TimeoutError(counter);
-    }
   },
 
   timed(func, limit = DEFTIME) {

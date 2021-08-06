@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, compareStreams, MAXMEM} from '../base.js';
+import {Node, Atom, Stream, types, compareStreams, INF, MAXMEM} from '../base.js';
 import R from '../register.js';
 import {catg} from '../help.js';
 
@@ -7,18 +7,12 @@ R.register('array', {
   reqSource: false,
   eval() {
     return new Stream(this,
-      this.args.values(),
-      {len: BigInt(this.args.length)}
+      _ => this.args.map(arg => arg.eval()).values(),
+      BigInt(this.args.length)
     );
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    ret += '[';
-    ret += this.args.map(n => n.toString()).join(',');
-    ret += ']';
-    return ret;
+  bodyForm() {
+    return '[' + this.args.map(n => n.toString()).join(',') + ']';
   },
   help: {
     en: ['A finite stream made of the arguments. Long form of `[...]`.'],
@@ -33,27 +27,29 @@ R.register('foreach', {
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
   eval() {
-    const sIn = this.src.evalStream();
+    const in0 = this.src.evalStream();
     const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
-      (function*() {
-        for(const r of sIn)
-          yield body.prepare({src: r});
-      })(),
-      {
-        skip: sIn.skip,
-        len: sIn.len
-      }
+      _ => {
+        const gen = in0.read();
+        return [
+          (function*() {
+            for(const r of gen)
+              yield body.prepare({src: r}).eval();
+          })(),
+          c => gen.skip(c)
+        ];
+      },
+      in0.length
     );
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + ':';
-    else
-      ret = 'foreach';
-    ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
-    return ret;
+  inputForm() {
+    if(this.src) {
+      let ret = this.src.toString() + ':';
+      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
+      return ret;
+    } else
+      return Node.prototype.inputForm.call(this);
   },
   help: {
     en: ['Applies `body` on each element of `source`. Long form of `source:body`.'],
@@ -69,15 +65,16 @@ R.register('foreach', {
 R.register('#id', {
   reqSource: true,
   numArg: 0,
-  preeval() {
-    return this.src;
-  },
-  toString() {
-    let ret = '';
+  prepare(scope) {
     if(this.src)
-      ret = this.src.toString() + '.';
-    ret += '#';
-    return ret;
+      return this.src.prepare(scope);
+    else if(scope.src)
+      return scope.src;
+    else
+      return this;
+  },
+  bodyForm() {
+    return '#';
   }
 });
 
@@ -85,33 +82,27 @@ R.register('join', {
   reqSource: false,
   eval() {
     const args = this.args.map(arg => arg.eval());
-    const lens = args.map(arg => arg.isAtom ? 1n : arg.len);
-    const len = lens.some(len => len === undefined) ? undefined
-      : lens.some(len => len === null) ? null
+    const lens = args.map(arg => arg.isAtom ? 1n : arg.length);
+    const length = lens.some(len => len === undefined) ? undefined
+      : lens.some(len => len === INF) ? INF
       : lens.reduce((a,b) => a+b);
     return new Stream(this,
-      (function*() {
+      function*() {
         for(const arg of args) {
           if(arg.isAtom)
             yield arg;
           else
-            yield* arg;
+            yield* arg.read();
         }
-      })(),
-      {len}
+      },
+      length
     );
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length > 0) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('~');
-      ret += ')';
-    } else
-      ret += 'join()';
-    return ret;
+  bodyForm() {
+    if(this.args.length > 1)
+      return '(' + this.args.map(n => n.toString()).join('~') + ')';
+    else
+      return null;
   },
   help: {
     en: ['Concatenates all arguments into a stream. Long form of `x~y~...`'],
@@ -129,35 +120,33 @@ R.register('zip', {
   reqSource: false,
   eval() {
     const args = this.args.map(arg => arg.evalStream());
-    const lens = args.map(arg => arg.len);
-    const len = lens.some(len => len === undefined) ? undefined
-      : lens.every(len => len === null) ? null
-      : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
-    const node = this;
+    const lens = args.map(arg => arg.length);
+    const length = lens.some(len => len === undefined) ? undefined
+      : lens.every(len => len === INF) ? INF
+      : lens.filter(len => len !== INF).reduce((a,b) => a < b ? a : b);
     return new Stream(this,
-      (function*() {
-        for(;;) {
-          const rs = args.map(arg => arg.next());
-          if(rs.some(r => r.done))
-            break;
-          const vs = rs.map(r => r.value);
-          yield new Node('array', node.token, null, vs);
-        }
-      })(),
-      {len}
+      _ => {
+        const ins = args.map(arg => arg.read());
+        return [
+          (function*() {
+            for(;;) {
+              const vals = ins.map(inp => inp.next().value);
+              if(vals.some(val => !val))
+                break;
+              yield Stream.fromArray(vals);
+            }
+          })(),
+          c => ins.forEach(inp => inp.skip(c))
+        ];
+      },
+      length
     );
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length > 0) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('%');
-      ret += ')';
-    } else
-      ret += 'zip()';
-    return ret;
+  bodyForm() {
+    if(this.args.length > 1)
+      return '(' + this.args.map(n => n.toString()).join('%') + ')';
+    else
+      return null;
   },
   help: {
     en: [
@@ -173,135 +162,132 @@ R.register('zip', {
   }
 });
 
-function part(src, iter) {
-  return (function*() {
-    const mem = [];
-    const stMem = src.evalStream();
-    let stSkip = null;
-    let read = 0n;
-    let len = stMem.len;
-    for(const ix of iter) {
-      if(ix === 0n)
-        throw new StreamError(`requested part 0`);
-      else if(ix < 0n) {
-        const nix = -ix;
-        if(len === null)
-          throw new StreamError('infinite stream');
-        else if(len === undefined) {
-          stSkip = src.evalStream();
-          read = 0n;
-          const temp = [];
-          for(const v of stSkip) {
-            temp.push(v);
-            if(temp.length > len)
-              temp.shift();
-            read++;
-          }
-          if(read < nix)
-            throw new StreamError(`requested part ${ix} beyond end`);
-          len = read;
-          yield temp[read - nix];
-        } else if(len < MAXMEM) {
-          if(nix > len)
-            throw new StreamError(`requested part ${ix} beyond end`);
-          for(let i = mem.length; i <= len - nix; i++)
-            mem.push(stMem.next().value);
-          yield mem[len - nix];
-        } else {
-          if(!stSkip || len - nix <= read) {
-            stSkip = src.evalStream();
-            read = 0n;
-          }
-          stSkip.skip(len - nix - read - 1n);
-          yield stSkip.next().value;
-          read = len - nix;
+function* part(src, gen) {
+  const mem = [];
+  const stMem = src.read();
+  let stSkip = null;
+  let read = 0n;
+  let sLen = src.length;
+  for(const ix of gen) {
+    if(ix === 0n)
+      throw new StreamError(`requested part 0`);
+    else if(ix < 0n) {
+      src.checkFinite();
+      const nix = -ix;
+      if(sLen === undefined) {
+        stSkip = src.read();
+        read = 0n;
+        const temp = [];
+        for(const v of stSkip) {
+          temp.push(v);
+          if(temp.length > sLen)
+            temp.shift();
+          read++;
         }
-      } else if(ix < MAXMEM) {
-        if(ix > mem.length)
-          for(let i = mem.length; i < ix; i++) {
-            const next = stMem.next().value;
-            if(!next)
-              throw new StreamError(`requested part ${ix} beyond end`);
-            mem.push(next);
-          }
-        yield mem[Number(ix) - 1];
-      } else {
-        if(!stSkip || ix <= read) {
-          stSkip = src.evalStream();
-          read = 0n;
-        }
-        stSkip.skip(ix - read - 1n);
-        const next = stSkip.next().value;
-        if(!next)
+        if(read < nix)
           throw new StreamError(`requested part ${ix} beyond end`);
-        yield next;
-        read = ix;
+        sLen = read;
+        yield temp[read - nix];
+      } else if(sLen < MAXMEM) {
+        if(nix > sLen)
+          throw new StreamError(`requested part ${ix} beyond end`);
+        for(let i = mem.length; i <= sLen - nix; i++)
+          mem.push(stMem.next().value);
+        yield mem[sLen - nix];
+      } else {
+        if(!stSkip || sLen - nix <= read) {
+          stSkip = src.read();
+          read = 0n;
+        }
+        stSkip.skip(sLen - nix - read - 1n);
+        yield stSkip.next().value;
+        read = sLen - nix;
       }
+    } else if(ix < MAXMEM) {
+      if(ix > mem.length)
+        for(let i = mem.length; i < ix; i++) {
+          const next = stMem.next().value;
+          if(!next)
+            throw new StreamError(`requested part ${ix} beyond end`);
+          mem.push(next);
+        }
+      yield mem[Number(ix) - 1];
+    } else {
+      if(!stSkip || ix <= read) {
+        stSkip = src.read();
+        read = 0n;
+      }
+      stSkip.skip(ix - read - 1n);
+      const next = stSkip.next().value;
+      if(!next)
+        throw new StreamError(`requested part ${ix} beyond end`);
+      yield next;
+      read = ix;
     }
-  })();
+  }
 }
 
 R.register('part', {
   reqSource: false,
   minArg: 1,
   eval() {
-    const ins = this.args.slice(1).map(arg => arg.eval());
-    if(ins.every(i => i.isAtom)) {
-      if(ins.length === 1) {
-        const ix = ins[0].numValue();
+    const args = this.args.slice(1).map(arg => arg.eval());
+    const src = this.args[0].evalStream();
+    if(args.every(i => i.isAtom)) {
+      if(args.length === 1) {
+        const ix = args[0].numValue();
         if(ix > 0n) {
-          const sIn = this.args[0].evalStream();
-          sIn.skip(ix - 1n);
-          const r = sIn.next().value;
-          if(!r)
+          const stm = src.read();
+          stm.skip(ix - 1n);
+          const r = stm.next().value;
+          if(r)
+            return r;
+          else
             throw new StreamError(`requested part ${ix} beyond end`);
-          return r.eval();
         } else if(ix < 0n) {
+          src.checkFinite();
           const nix = -ix;
-          const sIn = this.args[0].evalStream({finite: true});
-          if(sIn.len === undefined) {
+          const stm = src.read();
+          if(src.length === undefined) {
             const mem = [];
-            for(const v of sIn) {
+            for(const v of stm) {
+              console.log(v);
               mem.push(v);
               if(mem.length > nix)
                 mem.shift();
             }
-            if(mem.length === nix)
-              return mem[mem.length + ix];
+            if(mem.length == nix)
+              return mem[0];
             else
               throw new StreamError(`requested part ${ix} beyond end`);
-          } else if(sIn.len !== null) {
-            if(sIn.len >= nix) {
-              sIn.skip(sIn.len - nix);
-              return sIn.next().value;
+          } else {
+            if(src.length >= nix) {
+              stm.skip(src.length - nix);
+              return stm.next().value;
             } else
               throw new StreamError(`requested part ${ix} beyond end`);
-          } else
-            throw new Error('assertion failed');
+          }
         } else
-            throw new StreamError(`requested part 0`);
+          throw new StreamError(`requested part 0`);
       } else
-        return new Stream(this,
-          part(this.args[0], ins.map(i => i.numValue())),
-            {len: BigInt(ins.length)});
-    } else if(ins.length > 1)
+        return Stream.fromArray([...part(src, args.map(i => i.numValue()))]);
+    } else if(args.length === 1) {
+      const sParts = args[0];
+      return new Stream(this,
+        _ => {
+          const rParts = sParts.adapt(val => val.evalNum());
+          return [
+            part(src, rParts),
+            c => rParts.skip(c)
+          ];
+        },
+        sParts.length
+      );
+    } else
       throw new StreamError('required list of values or a single stream');
-    const sPart = ins[0];
-    return new Stream(this,
-      part(this.args[0], (function*() {
-        for(const s of sPart)
-          yield s.evalNum();
-      })()),
-      {
-        len: sPart.len,
-        skip: sPart.skip
-      }
-    );
   },
-  toString() {
+  bodyForm() {
     let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
     ret += `(${this.args[0].toString()})`;
     ret += '[' + this.args.slice(1).map(a => a.toString()).join(',') + ']';
     return ret;
@@ -339,22 +325,11 @@ R.register('#in', {
   eval() {
     throw new StreamError('out of scope');
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length === 0)
-      ret += '##';
-    else if(this.args.length === 1
-        && this.args[0].isAtom
-        && this.args[0].type === types.N
-        && this.args[0].value > 0n)
-      ret += '#' + this.args[0].value;
-    else {
-      ret = 'in';
-      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
-    }
-    return ret;
+  bodyForm() {
+    if(this.args[0])
+      return '#' + this.args[0].value;
+    else
+      return '##';
   }
 });
 
@@ -367,36 +342,36 @@ R.register('over', {
   eval() {
     const body = this.src.checkType([types.symbol, types.expr]);
     const args = this.args.map(arg => arg.evalStream());
-    const lens = args.map(arg => arg.len);
-    const len = lens.some(len => len === undefined) ? undefined
-      : lens.every(len => len === null) ? null
-      : lens.filter(len => len !== undefined && len !== null).reduce((a,b) => a < b ? a : b);
+    const lens = args.map(arg => arg.length);
+    const length = lens.some(len => len === undefined) ? undefined
+      : lens.every(len => len === INF) ? INF
+      : lens.filter(len => len !== INF).reduce((a,b) => a < b ? a : b);
     return new Stream(this,
-      (function*() {
-        for(;;) {
-          const rs = args.map(arg => arg.next());
-          if(rs.some(r => r.done))
-            break;
-          const vs = rs.map(r => r.value);
-          yield body.applyOver(vs);
-        }
-      })(),
-      {len}
+      _ => {
+        const ins = args.map(arg => arg.read());
+        return [
+          (function*() {
+            for(;;) {
+              const vals = ins.map(inp => inp.next().value);
+              if(vals.some(val => !val))
+                break;
+              yield body.applyOver(vals).eval();
+            }
+          })(),
+          c => ins.forEach(inp => inp.skip(c))
+        ];
+      },
+      length
     );
   },
-  toString() {
+  inputForm() {
     let ret = '';
-    if(this.src && this.args.length === 1)
+    if(this.src && this.args.length === 1) {
       ret = this.src.toString() + '@'
-    else {
-      if(this.src)
-        ret = this.src.toString() + '.';
-      ret += this.ident;
-    }
-    ret += '(';
-    ret += this.args.map(n => n.toString()).join(',');
-    ret += ')';
-    return ret;
+      ret += '(' + this.args.map(n => n.toString()).join(',') + ')';
+      return ret;
+    } else
+      return Node.prototype.inputForm.call(this);
   },
   help: {
     en: ['Reads all arguments concurrently and uses their elements as arguments for `body`. Long form of `body@args`.'],
@@ -411,26 +386,14 @@ R.register('over', {
 R.register('equal', {
   reqSource: false,
   minArg: 2,
-  preeval() {
-    if(this.args.every(arg => arg.isAtom))
-      return new Atom(compareStreams(...this.args));
-    else
-      return this;
-  },
   eval() {
-    return new Atom(compareStreams(...this.args));
+    return new Atom(compareStreams(...this.args.map(arg => arg.eval())));
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length > 0) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('==');
-      ret += ')';
-    } else
-      ret += this.ident;
-    return ret;
+  bodyForm() {
+    if(this.args.length > 1)
+      return '(' + this.args.map(n => n.toString()).join('==') + ')';
+    else
+      return null;
   },
   toAssign() {
     return new Node('assign', this.token, this.src, this.args, this.meta);
@@ -453,26 +416,14 @@ R.register('equal', {
 R.register('ineq', {
   reqSource: false,
   numArg: 2,
-  preeval() {
-    if(this.args.every(arg => arg.isAtom))
-      return new Atom(!compareStreams(...this.args));
-    else
-      return this;
-  },
   eval() {
-    return new Atom(!compareStreams(...this.args));
+    return new Atom(!compareStreams(...this.args.map(arg => arg.eval())));
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length > 0) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('<>');
-      ret += ')';
-    } else
-      ret += this.ident;
-    return ret;
+  bodyForm() {
+    if(this.args.length > 1)
+      return '(' + this.args.map(n => n.toString()).join('<>') + ')';
+    else
+      return null;
   },
   help: {
     en: ['Compares two values for inequality. The result is `true` or `false`. Long form of `x<>y`.'],
@@ -498,31 +449,25 @@ R.register('assign', {
       },
       {_register: scope.register});
   },
-  preeval() {
+  eval() {
     const args = this.args.slice();
     const body = args.pop();
     const idents = args.map(arg => arg.checkType(types.symbol).ident);
     const reg = this.meta._register;
     if(!reg)
-      throw new StreamError('out of scope');
+      throw new Error('register not set');
     const ret = [];
     for(const ident of idents) {
       reg.register(ident, {body});
       ret.push(new Atom(ident));
     }
-    return new Node('array', this.token, null, ret);
+    return Stream.fromArray(ret);
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length > 0) {
-      ret += '(';
-      ret += this.args.map(n => n.toString()).join('=');
-      ret += ')';
-    } else
-      ret += this.ident;
-    return ret;
+  bodyForm() {
+    if(this.args.length > 1)
+      return '(' + this.args.map(n => n.toString()).join('=') + ')';
+    else
+      return null;
   },
   toAssign() {
     return this;
@@ -574,21 +519,10 @@ R.register('#history', {
     } else
       throw new Error('initial prepare without scope.history');
   },
-  toString() {
-    let ret = '';
-    if(this.src)
-      ret = this.src.toString() + '.';
-    if(this.args.length === 0)
-      ret += '$';
-    else if(this.args.length === 1
-        && this.args[0].isAtom
-        && this.args[0].type === types.N
-        && this.args[0].value > 0n)
-      ret += '$' + this.args[0].value;
-    else {
-      ret = this.ident;
-      ret += '(' + this.args.map(a => a.toString()).join(',') + ')';
-    }
-    return ret;
+  bodyForm() {
+    if(this.args[0])
+      return '$' + this.args[0].value;
+    else
+      return '$';
   }
 });

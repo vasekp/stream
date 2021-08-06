@@ -94,31 +94,29 @@ export default class StreamSession {
       if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol' && !opts.browse)
         node = node.toAssign();
       return watchdog.timed(_ => {
-        const pnode = node.prepare({
-          history: this.history,
-          register: this.sessReg,
-          seed: RNG.seed(),
-          referrer: node});
-        const ev = pnode.eval();
-        if(ev.type === 'stream' && opts.browse) {
+        const result = node.prepare({
+            history: this.history,
+            register: this.sessReg,
+            seed: RNG.seed(),
+            referrer: node})
+          .eval();
+        if(result.type === 'stream' && opts.browse) {
           return {
             result: 'ok',
             input,
-            handle: new StreamHandle(ev),
-            type: ev.type,
-            outRaw: ev.isAtom ? ev.value.toString() : null
+            handle: new StreamHandle(result)
           };
         } else {
-          const output = ev.writeout(opts.length);
+          const output = result.writeout(opts.length);
           return {
             result: 'ok',
             input,
             output,
-            histName: `$${this.history.add(pnode)}`,
-            histRecord: pnode.toString(),
+            histName: `$${this.history.add(result)}`,
+            histRecord: result.toString(),
             regEvents,
-            type: ev.type,
-            outRaw: ev.isAtom ? ev.value.toString() : null
+            type: result.type,
+            outRaw: result.isAtom ? result.value.toString() : null
           };
         }
       }, opts.time);

@@ -12,16 +12,16 @@ R.register('clear', {
       throw new StreamError('cannot appear here');
     return this.prepareBase(scope, {}, null, {_register: scope.register});
   },
-  preeval() {
+  eval() {
     const reg = this.meta._register;
     if(!reg)
-      throw new StreamError('out of scope');
+      throw new Error('register not set');
     const idents = this.args.map(arg => arg.checkType(types.symbol).ident);
     const ret = [];
     for(const ident of idents)
       if(reg.clear(ident, true))
         ret.push(new Atom(ident));
-    return new Node('array', this.token, null, ret);
+    return Stream.fromArray(ret);
   },
   help: {
     en: ['Clears one or more variables. The affected identifiers are returned as a list of strings.',
@@ -43,13 +43,13 @@ R.register('vars', {
   prepare(scope) {
     return this.prepareBase(scope, {}, null, {_register: scope.register});
   },
-  preeval() {
+  eval() {
     const reg = this.meta._register;
     if(!reg)
-      throw new StreamError('out of scope');
+      throw new Error('register not set');
     const ret = reg.dump().map(([key, node]) =>
-      new Node('array', this.token, null, [new Atom(key), new Atom(node.toString())]));
-    return new Node('array', this.token, null, ret);
+      Stream.fromArray([new Atom(key), new Atom(node.toString())]));
+    return Stream.fromArray(ret);
   },
   help: {
     en: ['Lists all user-defined variables and their assignments.'],
@@ -62,11 +62,8 @@ R.register('vars', {
 R.register('desc', {
   reqSource: true,
   numArg: 0,
-  prepare(scope) {
-    return this.prepareBase(scope, {partial: true, expand: !scope.partial}, null);
-  },
-  preeval() {
-    return new Atom(this.src.toString());
+  eval() {
+    return new Atom(this.src.eval().toString());
   },
   help: {
     en: ['Provides a valid input-form description of the input stream.'],
@@ -94,10 +91,10 @@ R.register('save', {
       .modify({args})
       .prepareBase(scope, {}, {partial: true, expand: !scope.partial}, {_register: scope.register});
   },
-  preeval() {
+  eval() {
     const innerReg = this.meta._register;
     if(!innerReg)
-      throw new Error('register not defined');
+      throw new Error('register not set');
     const outerReg = innerReg.parent;
     if(outerReg === R || outerReg.parent !== R)
       throw new Error('register mismatch');
@@ -111,14 +108,14 @@ R.register('save', {
           ret.push(new Atom(arg.ident));
         }
       } else {
-        ret.push(...arg.prepare({register: outerReg, referrer: arg}).eval());
+        ret.push(...arg.prepare({register: outerReg, referrer: arg}).evalStream().read());
         arg.args.forEach((anode, ix, arr) => {
           if(ix < arr.length - 1)
             innerReg.clear(anode.ident);
         });
       }
     });
-    return new Node('array', this.token, null, ret);
+    return Stream.fromArray(ret);
   },
   help: {
     en: ['Saves a temporary variable or variables into a persistent register.',
@@ -139,7 +136,7 @@ R.register(['restore', 'revert'], {
       throw new StreamError('cannot appear here');
     return this.prepareBase(scope, {}, null, {_register: scope.register});
   },
-  preeval() {
+  eval() {
     const innerReg = this.meta._register;
     if(!innerReg)
       throw new Error('register not defined');
@@ -151,7 +148,7 @@ R.register(['restore', 'revert'], {
       if(innerReg.clear(arg.checkType(types.symbol).ident))
         ret.push(new Atom(arg.ident));
     });
-    return new Node('array', this.token, null, ret);
+    return Stream.fromArray(ret);
   },
   help: {
     en: ['Clears one or more temporary variables, effectively restoring its assignment in the persistent register.',

@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, types} from '../base.js';
+import {Node, Atom, Block, Stream, INF, types} from '../base.js';
 import R from '../register.js';
 import {catg} from '../help.js';
 
@@ -54,40 +54,40 @@ R.register(['split', 'chars'], {
         const sep = ev.value;
         const split = str.split(sep);
         return new Stream(this,
-          (function*() {
+          function*() {
             for(const c of split)
               yield new Atom(c);
-          })(),
-          {len: BigInt(split.length)}
+          },
+          BigInt(split.length)
         );
       } else if(ev.type === types.N) {
         const l = ev.value;
         const re = new RegExp(`.{1,${l}}`, 'ug');
         const split = [...str.match(re)];
         return new Stream(this,
-          (function*() {
+          function*() {
             for(const c of split)
               yield new Atom(c);
-          })(),
-          {len: BigInt(split.length)}
+          },
+          BigInt(split.length)
         );
       } else if(ev.type === types.stream) {
         const abc = this.args[0].evalAlphabet(true);
         return new Stream(this,
-          (function*() {
+          function*() {
             for(const [ch, _] of splitABC(str, abc))
               yield new Atom(ch);
-          })()
+          }
         );
       }
     } else {
       const chars = [...str];
       return new Stream(this,
-        (function*() {
+        function*() {
           for(const c of chars)
             yield new Atom(c);
-        })(),
-        {len: BigInt(chars.length)}
+        },
+        BigInt(chars.length)
       );
     }
   },
@@ -116,7 +116,7 @@ R.register('cat', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const strs = [...this.src.evalStream({finite: true})].map(a => a.evalAtom(types.S));
+    const strs = [...this.src.evalStream({finite: true}).read()].map(a => a.evalAtom(types.S));
     const sep = this.args[0] ? this.args[0].evalAtom(types.S) : '';
     return new Atom(strs.join(sep));
   },
@@ -136,7 +136,7 @@ R.register('cat', {
 R.register('ord', {
   reqSource: true,
   maxArg: 1,
-  preeval() {
+  eval() {
     const c = this.src.evalAtom(types.S);
     if(this.args[0]) {
       const abc = this.args[0].evalAlphabet(true);
@@ -165,7 +165,7 @@ R.register('ord', {
 R.register('chr', {
   reqSource: true,
   maxArg: 1,
-  preeval() {
+  eval() {
     if(this.args[0]) {
       const ix = this.src.evalNum({min: 1n});
       const abc = this.args[0].evalAlphabet();
@@ -195,7 +195,7 @@ R.register('chr', {
 R.register('chrm', {
   reqSource: true,
   numArg: 1,
-  preeval() {
+  eval() {
     let ix = this.src.evalNum() - 1n;
     const abc = this.args[0].evalAlphabet();
     ix = Number(ix % BigInt(abc.length));
@@ -223,10 +223,10 @@ R.register('ords', {
     const str = this.src.evalAtom(types.S);
     const abc = this.args[0].evalAlphabet(true);
     return new Stream(this,
-      (function*() {
+      function*() {
         for(const [_, ix] of splitABC(str, abc, true))
           yield new Atom(ix + 1);
-      })()
+      }
     );
   },
   help: {
@@ -245,7 +245,7 @@ R.register('ords', {
 R.register(['lcase', 'lc'], {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S);
     return new Atom(str.toLowerCase());
   },
@@ -262,7 +262,7 @@ R.register(['lcase', 'lc'], {
 R.register(['ucase', 'uc'], {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S);
     return new Atom(str.toUpperCase());
   },
@@ -280,13 +280,18 @@ R.register('abc', {
   reqSource: false,
   numArg: 0,
   eval() {
-    let i = 97;
     return new Stream(this,
-      (function*() { while(i < 97 + 26) yield new Atom(String.fromCharCode(i++)); })(),
-      {
-        skip: c => i += Number(c),
-        len: 26n
-      }
+      _ => {
+        let i = 97;
+        return [
+          (function*() {
+            while(i < 97 + 26)
+              yield new Atom(String.fromCharCode(i++));
+          })(),
+          c => i += Number(c)
+        ];
+      },
+      26n
     );
   },
   help: {
@@ -305,13 +310,18 @@ R.register(['upabc', 'uabc'], {
   reqSource: false,
   numArg: 0,
   eval() {
-    let i = 65;
     return new Stream(this,
-      (function*() { while(i < 65 + 26) yield new Atom(String.fromCharCode(i++)); })(),
-      {
-        skip: c => i += Number(c),
-        len: 26n
-      }
+      _ => {
+        let i = 65;
+        return [
+          (function*() {
+            while(i < 65 + 26)
+              yield new Atom(String.fromCharCode(i++));
+          })(),
+          c => i += Number(c)
+        ];
+      },
+      26n
     );
   },
   help: {
@@ -328,7 +338,7 @@ R.register(['upabc', 'uabc'], {
 R.register(['isstring', 'isstr'], {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const c = this.src.eval();
     return new Atom(c.type === types.S);
   },
@@ -344,7 +354,7 @@ R.register(['isstring', 'isstr'], {
 R.register('isdigit', {
   reqSource: true,
   numArg: 0,
-  preeval() {
+  eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
@@ -363,7 +373,7 @@ R.register('isdigit', {
 R.register('isletter', {
   reqSource: true,
   maxArg: 1,
-  preeval() {
+  eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
@@ -389,7 +399,7 @@ R.register('isletter', {
 R.register(['isupper', 'isucase', 'isuc'], {
   reqSource: true,
   maxArg: 1,
-  preeval() {
+  eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
@@ -415,7 +425,7 @@ R.register(['isupper', 'isucase', 'isuc'], {
 R.register(['islower', 'islcase', 'islc'], {
   reqSource: true,
   maxArg: 1,
-  preeval() {
+  eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
       return new Atom(false);
@@ -441,10 +451,10 @@ R.register(['islower', 'islcase', 'islc'], {
 R.register('prefix', {
   reqSource: true,
   numArg: 1,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S);
-    const len = this.args[0].evalNum();
-    return new Atom(str.slice(0, Number(len))); // works for ≥ 0 as well as < 0
+    const length = this.args[0].evalNum();
+    return new Atom(str.slice(0, Number(length))); // works for ≥ 0 as well as < 0
   },
   help: {
     en: ['Returns `_count` first characters of `_string`. If `_string` is shorter than `_count`, returns all of it.',
@@ -463,10 +473,10 @@ R.register('prefix', {
 R.register('postfix', {
   reqSource: true,
   numArg: 1,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S);
-    const len = this.args[0].evalNum();
-    return len === 0n ? new Atom("") : new Atom(str.slice(Number(-len)));
+    const length = this.args[0].evalNum();
+    return length === 0n ? new Atom("") : new Atom(str.slice(Number(-length)));
   },
   help: {
     en: ['Returns `_count` last characters of `_string`. If `_string` is shorter than `_count`, returns all of it.',
@@ -485,7 +495,7 @@ R.register('postfix', {
 R.register('starts', {
   reqSource: true,
   numArg: 1,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S).toLowerCase();
     const pfx = this.args[0].evalAtom(types.S).toLowerCase();
     return new Atom(str.startsWith(pfx));
@@ -506,7 +516,7 @@ R.register('starts', {
 R.register('ends', {
   reqSource: true,
   numArg: 1,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S).toLowerCase();
     const pfx = this.args[0].evalAtom(types.S).toLowerCase();
     return new Atom(str.endsWith(pfx));
@@ -527,7 +537,7 @@ R.register('ends', {
 R.register('contains', {
   reqSource: true,
   numArg: 1,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S).toLowerCase();
     const pfx = this.args[0].evalAtom(types.S).toLowerCase();
     return new Atom(str.includes(pfx));
@@ -548,7 +558,7 @@ R.register('contains', {
 R.register('shift', {
   reqSource: true,
   numArg: 2,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S);
     let shift = this.args[0].evalNum();
     const abc = this.args[1].evalAlphabet(true);
@@ -581,7 +591,7 @@ R.register('tr', {
   reqSource: true,
   minArg: 2,
   maxArg: 3,
-  preeval() {
+  eval() {
     const str = this.src.evalAtom(types.S);
     const from = this.args[0].evalAtom(types.S).toLowerCase();
     const to = this.args[1].evalAtom(types.S);
