@@ -186,7 +186,7 @@ R.register(['min', 'max'], {
       let best = null;
       const body = this.args[0].checkType([types.symbol, types.expr]);
       for(const r of src.read()) {
-        const curr = body.prepare({src: r}).evalNum();
+        const curr = body.applySrc(r).evalNum();
         if(best === null || func(best, curr)) {
           best = curr;
           res = r;
@@ -717,7 +717,7 @@ R.register(['every', 'each', 'all'], {
     const src = this.src.evalStream({finite: true});
     const cond = this.args[0];
     for(const value of src.read())
-      if(!(cond ? cond.prepare({src: value}) : value).evalAtom('boolean'))
+      if(!(cond ? cond.applySrc(value) : value).evalAtom('boolean'))
         return new Atom(false);
     return new Atom(true);
   },
@@ -743,7 +743,7 @@ R.register(['some', 'any'], {
     const src = this.src.evalStream({finite: true});
     const cond = this.args[0];
     for(const value of src.read())
-      if((cond ? cond.prepare({src: value}) : value).evalAtom('boolean'))
+      if((cond ? cond.applySrc(value) : value).evalAtom('boolean'))
         return new Atom(true);
     return new Atom(false);
   },

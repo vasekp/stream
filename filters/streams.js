@@ -754,7 +754,7 @@ R.register('nest', {
       function*() {
         for(;;) {
           yield curr;
-          curr = body.prepare({src: curr}).eval();
+          curr = body.applySrc(curr);
         }
       },
       INF
@@ -786,12 +786,12 @@ R.register('fold', {
       : bodyMem;
     let curr;
     if(this.args.length > 1)
-      curr = this.args[this.args.length - 1].prepare({src}).eval();
+      curr = this.args[this.args.length - 1].applySrc(src);
     return new Stream(this,
       function*() {
         for(const next of src.read()) {
-          const val = curr ? bodyOut.apply([curr, next]).eval() : next;
-          curr = bodyMem === bodyOut ? val : bodyMem.apply([curr, next]).eval();
+          const val = curr ? bodyOut.applyArgsAuto([curr, next]) : next;
+          curr = bodyMem === bodyOut ? val : bodyMem.applyArgsAuto([curr, next]);
           yield val;
         }
       },
@@ -827,9 +827,9 @@ R.register('reduce', {
     const body = this.args[0].checkType([types.symbol, types.expr]);;
     let curr;
     if(this.args.length > 1)
-      curr = this.args[this.args.length - 1].prepare({src}).eval();
+      curr = this.args[this.args.length - 1].applySrc(src);
     for(const next of src.read())
-      curr = curr ? body.apply([curr, next]).eval() : next;
+      curr = curr ? body.applyArgsAuto([curr, next]) : next;
     if(!curr)
       throw new StreamError('empty stream');
     return curr;
@@ -861,7 +861,7 @@ R.register('recur', {
         yield* prev;
         prev.reverse();
         for(;;) {
-          const next = body.apply(prev).eval();
+          const next = body.applyArgsAuto(prev);
           yield next;
           prev = prev.slice(0, -1);
           prev.unshift(next);
@@ -901,7 +901,7 @@ R.register('map2', {
             prev = curr;
             continue;
           }
-          const val = body.apply([prev, curr]).eval();
+          const val = body.applyArgsAuto([prev, curr]);
           prev = curr;
           yield val;
         }
@@ -953,7 +953,7 @@ R.register(['select', 'sel', 'filter', 'where'], {
     return new Stream(this,
       function*() {
         for(const value of src.read()) {
-          if(cond.prepare({src: value}).evalAtom('boolean'))
+          if(cond.applySrc(value).evalAtom('boolean'))
             yield value;
         }
       }
@@ -982,7 +982,7 @@ R.register(['iwhere', 'ixwhere'], {
       function*() {
         let i = 1;
         for(const value of src.read()) {
-          if(cond.prepare({src: value}).evalAtom('boolean'))
+          if(cond.applySrc(value).evalAtom('boolean'))
             yield new Atom(i);
           ++i;
         }
@@ -1009,7 +1009,7 @@ R.register('while', {
     return new Stream(this,
       function*() {
         for(const value of src.read()) {
-          if(cond.prepare({src: value}).evalAtom('boolean'))
+          if(cond.applySrc(value).evalAtom('boolean'))
             yield value;
           else
             return;
@@ -1038,8 +1038,8 @@ R.register(['groupby', 'gby'], {
       function*() {
         let prev = null;
         const arr = [];
-        for(const val of src.read()) {
-          const curr = body.prepare({src: val}).eval();
+        for(const value of src.read()) {
+          const curr = body.applySrc(value);
           if(prev === null)
             prev = curr;
           else if(!compareStreams(prev, curr)) {
@@ -1047,7 +1047,7 @@ R.register(['groupby', 'gby'], {
             arr.splice(0);
             prev = curr;
           }
-          arr.push(val);
+          arr.push(value);
         }
         if(arr.length > 0)
           yield Stream.fromArray(arr);
@@ -1079,7 +1079,7 @@ R.register(['selmax', 'selmin'], {
     let prev = null;
     const ret = [];
     for(const value of src.read()) {
-      const curr = func.prepare({src: value}).evalNum();
+      const curr = func.applySrc(value).evalNum();
       if(curr === prev)
         ret.push(value);
       else if(prev === null || (max ? curr > prev : curr < prev)) {
@@ -1183,7 +1183,7 @@ R.register(['sort', 'rsort'], {
   eval() {
     const src = this.src.evalStream({finite: true});
     if(this.args[0]) {
-      const temp = [...src.read()].map(s => [s, this.args[0].prepare({src: s}).eval()]);
+      const temp = [...src.read()].map(s => [s, this.args[0].applySrc(s)]);
       usort(temp, x => x[1]);
       const vals = temp.map(x => x[0]);
       if(this.ident === 'rsort')
@@ -1673,7 +1673,7 @@ R.register(['allequal', 'alleq', 'same', 'allsame'], {
       const body = this.args[0].checkType([types.symbol, types.expr]);
       let prev = null;
       for(const r of src.read()) {
-        const curr = body.prepare({src: r}).eval();
+        const curr = body.applySrc(r);
         if(prev === null)
           prev = curr;
         else if(!compareStreams(prev, curr))

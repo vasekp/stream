@@ -27,20 +27,20 @@ R.register('foreach', {
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
   eval() {
-    const in0 = this.src.evalStream();
+    const src = this.src.evalStream();
     const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
       _ => {
-        const gen = in0.read();
+        const gen = src.read();
         return [
           (function*() {
             for(const r of gen)
-              yield body.prepare({src: r}).eval();
+              yield body.applySrc(r);
           })(),
           c => gen.skip(c)
         ];
       },
-      in0.length
+      src.length
     );
   },
   inputForm() {
@@ -355,7 +355,7 @@ R.register('over', {
               const vals = ins.map(inp => inp.next().value);
               if(vals.some(val => !val))
                 break;
-              yield body.applyOver(vals).eval();
+              yield body.applyArgs(vals);
             }
           })(),
           c => ins.forEach(inp => inp.skip(c))

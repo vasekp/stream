@@ -205,18 +205,6 @@ export class Node extends Base {
     );
   }
 
-  apply(args) {
-    if(debug)
-      console.log(`apply ${this.toString()} (bare = ${this.bare}) [${args.map(arg => arg.toString()).join(',')}]`);
-    return this.bare ? this.modify({args}).prepare({}) : this.prepare({outer: {args}});
-  }
-
-  applyOver(args) {
-    if(this.args.length)
-      throw new StreamError(`already has arguments`);
-    return this.modify({args}).prepare({});
-  }
-
   check(skipCheck = false) {
     if(skipCheck)
       return this;
@@ -263,6 +251,22 @@ export class Node extends Base {
 
   evalNum(opts = {}) {
     return checkBounds(this.evalAtom(types.N), opts);
+  }
+
+  applySrc(src) {
+    return this.prepare({src}).eval();
+  }
+
+  applyArgs(args) {
+    if(this.args.length)
+      throw new StreamError(`already has arguments`);
+    return this.modify({args}).prepare({}).eval();
+  }
+
+  applyArgsAuto(args) {
+    if(debug)
+      console.log(`apply ${this.toString()} (bare = ${this.bare}) [${args.map(arg => arg.toString()).join(',')}]`);
+    return this.bare ? this.modify({args}).prepare({}).eval() : this.prepare({outer: {args}}).eval();
   }
 
   toString() {
