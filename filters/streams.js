@@ -862,36 +862,39 @@ R.register('reduce', {
 });
 
 R.register('recur', {
-  reqSource: true,
-  numArg: 1,
+  reqSource: false,
+  minArg: 2,
   prepare: Node.prototype.prepareFold,
+  checkArgs(srcPromise) {
+    this.args.forEach((arg, ix, arr) => {
+      if(ix < arr.length - 1)
+        arg.check(this.src || srcPromise);
+      else
+        arg.check(false, arg.bare ? arr.length - 1 : 0);
+    });
+  },
   eval() {
-    const src = this.src.evalStream({finite: true});
-    const body = this.args[0].checkType([types.symbol, types.expr]);
+    const body = this.args[this.args.length - 1].checkType([types.symbol, types.expr]);
     return new Stream(this,
       function*() {
-        let prev = [...src.read()];
+        const prev = this.args.slice(0, -1).map(arg => arg.eval());
         yield* prev;
-        prev.reverse();
         for(;;) {
-          const next = body.applyArgsAuto(prev);
+          const next = body.applyArgsAuto(prev.slice());
           yield next;
-          prev = prev.slice(0, -1);
-          prev.unshift(next);
+          prev.shift();
+          prev.push(next);
         }
       },
       INF
     );
   },
   help: {
-    en: ['Keeping n last entries, iteratively applies `_body` on them.',
-      'Back-references are indexed in reverse: `#1` refers to the most recent entry.'],
-    cs: ['Udržuje n posledních prvků a iterativně na ně aplikuje `_body`.',
-      '`#1` odkazuje na aktuálně nejnovější prvek, `#2` jemu předchozí atd.'],
+    en: ['Keeping n last entries, iteratively applies `_body` on them.'],
+    cs: ['Udržuje n posledních prvků a iterativně na ně aplikuje `_body`.'],
     cat: catg.streams,
-    src: '[a1,a2,...,an]',
-    args: 'body',
-    ex: [['[1,1].recur(plus)', '[1,1,2,3,5,8,13,21,...]', {en: 'Fibonacci', cs: 'Fibonacci'}]]
+    args: 'a1,...,an,body',
+    ex: [['recur(1,1,plus)', '[1,1,2,3,5,8,13,21,...]', {en: 'Fibonacci', cs: 'Fibonacci'}]]
   }
 });
 
