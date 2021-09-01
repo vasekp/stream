@@ -26,6 +26,9 @@ R.register('foreach', {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     const src = this.src.evalStream();
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -338,6 +341,11 @@ R.register('over', {
   minArg: 1,
   prepare(scope) {
     return this.prepareBase(scope, {partial: true}, {src: scope.src});
+  },
+  check(srcPromise = false, argsPromise = 0) {
+    this.checkThis(srcPromise, argsPromise);
+    this.src.check(false, this.args.length);
+    this.checkArgs(srcPromise);
   },
   eval() {
     const body = this.src.checkType([types.symbol, types.expr]);

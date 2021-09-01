@@ -94,8 +94,6 @@ export class Node extends Base {
     if(rec) {
       this.prepare = this.prepareDefault;
       Object.assign(this, rec);
-      if(this.sourceOrArgs !== undefined)
-        this.reqSource = this.args.length < this.sourceOrArgs;
     }
     for(const fn of ['eval', 'prepare']) {
       const pFn = this[fn];
@@ -137,7 +135,7 @@ export class Node extends Base {
     }
   }
 
-  modify(what, allowAddSource = this.reqSource) {
+  modify(what, allowAddSource = this.reqSource || this.args.length < this.sourceOrArgs) {
     if(anyChanged(this, what))
       return new Node(this.ident, coal(what.token, this.token),
         (this.src || allowAddSource) ? coal(what.src, this.src) : null,
@@ -186,9 +184,7 @@ export class Node extends Base {
     for(const key in metaAdd)
       if(metaAdd[key] !== undefined)
         meta[key] = metaAdd[key];
-    return this
-      .modify({src, args, meta})
-      .check(scope.partial);
+    return this.modify({src, args, meta});
   }
 
   prepareDefault(scope) {
@@ -205,23 +201,35 @@ export class Node extends Base {
     );
   }
 
-  check(skipCheck = false) {
-    if(skipCheck)
-      return this;
-    if(this.reqSource && !this.src)
-      throw new StreamError(`requires source`);
-    if(this.numArg === 0 && this.args.length > 0)
-      throw new StreamError(`does not allow arguments`);
+  checkThis(srcPromise, argsPromise) {
+    const hasSource = this.src || srcPromise;
+    const numArgs = this.args.length || argsPromise;
+    if(this.reqSource && !hasSource)
+      throw new StreamError(`requires source`, this);
+    if(this.sourceOrArgs && numArgs < this.sourceOrArgs && !hasSource)
+      throw new StreamError(`requires source`, this);
+    if(this.numArg === 0 && numArgs > 0)
+      throw new StreamError(`does not allow arguments`, this);
     if(this.numArg instanceof Array) {
-      if(!this.numArg.includes(this.args.length))
-        throw new StreamError(`${this.numArg.join(' or ')} arguments required`);
-    } else if(this.numArg !== undefined && this.args.length !== this.numArg)
-      throw new StreamError(`exactly ${this.numArg} argument(s) required`);
-    if(this.minArg !== undefined && this.args.length < this.minArg)
-      throw new StreamError(`at least ${this.minArg} argument(s) required`);
-    if(this.maxArg !== undefined && this.args.length > this.maxArg)
-      throw new StreamError(`at most ${this.maxArg} argument(s) required`);
-    return this;
+      if(!this.numArg.includes(numArgs))
+        throw new StreamError(`${this.numArg.join(' or ')} arguments required`, this);
+    } else if(this.numArg !== undefined && numArgs !== this.numArg)
+      throw new StreamError(`exactly ${this.numArg} argument(s) required`, this);
+    if(this.minArg !== undefined && numArgs < this.minArg)
+      throw new StreamError(`at least ${this.minArg} argument(s) required`, this);
+    if(this.maxArg !== undefined && numArgs > this.maxArg)
+      throw new StreamError(`at most ${this.maxArg} argument(s) required`, this);
+  }
+
+  check(srcPromise = false, argsPromise = 0) {
+    this.checkThis(srcPromise, argsPromise);
+    this.src?.check(srcPromise);
+    this.checkArgs(srcPromise);
+  }
+
+  checkArgs(srcPromise) {
+    for(const arg of this.args)
+      arg.check(this.src || srcPromise);
   }
 
   eval() {
@@ -308,7 +316,7 @@ export class Block extends Node {
     this.body = body;
   }
 
-  modify(what, allowAddSource = this.reqSource) {
+  modify(what, allowAddSource = this.reqSource || this.args.length < this.sourceOrArgs) {
     if(anyChanged(this, what))
       return new Block(this.ident, coal(what.token, this.token), coal(what.body, this.body),
         (this.src || allowAddSource) ? coal(what.src, this.src) : null,
@@ -349,7 +357,7 @@ export class CustomNode extends Block {
     super(ident, token, body.deepModify({token}), src, args, meta);
   }
 
-  modify(what, allowAddSource = this.reqSource) {
+  modify(what, allowAddSource = this.reqSource || this.args.length < this.sourceOrArgs) {
     if(anyChanged(this, what))
       return new CustomNode(this.ident, coal(what.token, this.token), coal(what.body, this.body),
         (this.src || allowAddSource) ? coal(what.src, this.src) : null,

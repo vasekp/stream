@@ -93,6 +93,7 @@ export default class StreamSession {
       let node = parse(input);
       if(node.ident === 'equal' && node.token.value === '=' && !node.src && node.args[0] && node.args[0].type === 'symbol' && !opts.browse)
         node = node.toAssign();
+      node.check();
       return watchdog.timed(_ => {
         const result = node.prepare({
             history: this.history,

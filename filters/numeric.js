@@ -171,6 +171,12 @@ R.register(['min', 'max'], {
       ? this.prepareForeach(scope)
       : this.prepareDefault(scope);
   },
+  checkArgs(srcPromise) {
+    if(this.args.length === 1)
+      this.args[0].check(true);
+    else
+      Node.prototype.checkArgs.call(this, srcPromise);
+  },
   eval() {
     const func = this.ident === 'max' ? (a, b) => b > a : (a, b) => b < a;
     // multi-argument
@@ -713,6 +719,9 @@ R.register(['every', 'each', 'all'], {
   reqSource: true,
   maxArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0]?.check(true);
+  },
   eval() {
     const src = this.src.evalStream({finite: true});
     const cond = this.args[0];
@@ -739,6 +748,9 @@ R.register(['some', 'any'], {
   reqSource: true,
   maxArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0]?.check(true);
+  },
   eval() {
     const src = this.src.evalStream({finite: true});
     const cond = this.args[0];

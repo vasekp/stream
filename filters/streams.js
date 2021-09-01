@@ -747,6 +747,9 @@ R.register('nest', {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     let curr = this.src.eval();
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -777,6 +780,11 @@ R.register('fold', {
   maxArg: 3,
   prepare(scope) {
     return this.prepareFold(scope, this.args.length > 1);
+  },
+  checkArgs(srcPromise) {
+    const numArgs = this.args.length;
+    this.args.forEach((arg, ix) => arg.check(false,
+      (ix < numArgs - 1 || numArgs === 1) && arg.bare ? 2 : 0));
   },
   eval() {
     const src = this.src.evalStream();
@@ -821,6 +829,11 @@ R.register('reduce', {
   maxArg: 2,
   prepare(scope) {
     return this.prepareFold(scope, this.args.length === 2);
+  },
+  checkArgs(srcPromise) {
+    const numArgs = this.args.length;
+    this.args.forEach((arg, ix) => arg.check(false,
+      ix === 0 && arg.bare ? 2 : 0));
   },
   eval() {
     const src = this.src.evalStream({finite: true});
@@ -886,6 +899,9 @@ R.register('map2', {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareFold,
+  checkArgs(srcPromise) {
+    this.args[0].check(false, this.args[0].bare ? 2 : 0);
+  },
   eval() {
     const src = this.src.evalStream();
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -947,6 +963,9 @@ R.register(['select', 'sel', 'filter', 'where'], {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     const src = this.src.evalStream();
     const cond = this.args[0];
@@ -975,6 +994,9 @@ R.register(['iwhere', 'ixwhere'], {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     const src = this.src.evalStream();
     const cond = this.args[0];
@@ -1003,6 +1025,9 @@ R.register('while', {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     const src = this.src.evalStream();
     const cond = this.args[0];
@@ -1031,6 +1056,9 @@ R.register(['groupby', 'gby'], {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     const src = this.src.evalStream();
     const body = this.args[0].checkType([types.symbol, types.expr]);
@@ -1072,6 +1100,9 @@ R.register(['selmax', 'selmin'], {
   reqSource: true,
   numArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     const src = this.src.evalStream({finite: true});
     const func = this.args[0];
@@ -1180,6 +1211,9 @@ R.register(['sort', 'rsort'], {
   reqSource: true,
   maxArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0]?.check(true);
+  },
   eval() {
     const src = this.src.evalStream({finite: true});
     if(this.args[0]) {
@@ -1667,6 +1701,9 @@ R.register(['allequal', 'alleq', 'same', 'allsame'], {
   reqSource: true,
   maxArg: 1,
   prepare: Node.prototype.prepareForeach,
+  checkArgs(srcPromise) {
+    this.args[0].check(true);
+  },
   eval() {
     const src = this.src.evalStream();
     if(this.args[0]) {
