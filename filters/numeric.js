@@ -308,7 +308,7 @@ R.register('lcm', {
 
 R.register('bitand', {
   sourceOrArgs: 2,
-  eval: reduceOp((a, b) => a & b, {min: 1n}),
+  eval: reduceOp((a, b) => a & b, {min: 0n}),
   help: {
     en: ['Form with several arguments: calculates the bitwise logical AND of them.',
       'Form without arguments: calculates the same operation the input stream.',
@@ -328,7 +328,7 @@ R.register('bitand', {
 
 R.register('bitor', {
   sourceOrArgs: 2,
-  eval: reduceOp((a, b) => a | b, {min: 1n}),
+  eval: reduceOp((a, b) => a | b, {min: 0n}),
   help: {
     en: ['Form with several arguments: calculates the bitwise logical OR of them.',
       'Form without arguments: calculates the same operation the input stream.',
@@ -348,7 +348,7 @@ R.register('bitor', {
 
 R.register('bitxor', {
   sourceOrArgs: 2,
-  eval: reduceOp((a, b) => a ^ b, {min: 1n}),
+  eval: reduceOp((a, b) => a ^ b, {min: 0n}),
   help: {
     en: ['Form with several arguments: calculates the bitwise logical XOR of them.',
       'Form without arguments: calculates the same operation the input stream.',
