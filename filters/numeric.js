@@ -91,7 +91,7 @@ R.register('minus', {
     if(this.args.length === 2 && this.args[0].isAtom && this.args[0].value === 0n)
       return '(-' + this.args[1].toString() + ')';
     else
-      return Node.operatorForm('-');
+      return Node.operatorForm('-').call(this);
   },
   help: {
     en: ['Subtracts second and higher arguments from first. Long form of `x-y-...`.',
