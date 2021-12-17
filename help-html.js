@@ -58,14 +58,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.head.append(link);
   /*** Load intro and filter documentation ***/
   document.getElementById('intro').innerHTML = await fetch(`./help-intro-${lang}.html`).then(r => r.text());
-  await Promise.all([
-    import('./filters/lang.js'),
-    import('./filters/iface.js'),
-    import('./filters/streams.js'),
-    import('./filters/string.js'),
-    import('./filters/combi.js'),
-    import('./filters/numeric.js'),
-  ]);
+  await import('./filters/all.js');
   const nav = document.getElementById('abc');
   const list = document.getElementById('filter-list');
   let lastLett = '';

@@ -1,10 +1,4 @@
-import './filters/lang.js';
-import './filters/streams.js';
-import './filters/numeric.js';
-import './filters/string.js';
-import './filters/combi.js';
-import './filters/iface.js';
-
+import './filters/all.js';
 import mainReg from './register.js';
 import History from './history.js';
 import parse from './parser.js';
