@@ -1758,10 +1758,10 @@ R.register('trans', {
     const sFirst = this.src.evalStream().read().next().value;
     if(!sFirst)
       return Stream.fromArray([]);
-    const stm = sFirst.read();
     const self = this;
     return new Stream(this,
       _ => {
+        const stm = sFirst.evalStream().read();
         let i = 1n;
         return [
           (function*() {
@@ -1774,7 +1774,7 @@ R.register('trans', {
           }
         ];
       },
-      stm.length
+      sFirst.length
     );
   },
   help: {
