@@ -226,7 +226,7 @@ R.register(['min', 'max'], {
     src: 'stream?',
     ex: [['range(3,5).min', '3', {en: 'input stream', cs: 'vstupní proud'}],
       ['min(6,2,7)', '2', {en: 'arguments', cs: 'argumenty'}],
-      ['["xyz",".","abcde"].max(#.length)', '"abcde"', {en: '1 argument', cs: '1 argument'}]],
+      ['["xyz",".","abcde"].max(length)', '"abcde"', {en: '1 argument', cs: '1 argument'}]],
     see: ['selmin', 'selmax']
   }
 });
@@ -636,7 +636,7 @@ R.register(['odd', 'isodd'], {
     cat: catg.numbers,
     src: 'n',
     ex: [['range(10).select(odd)', '[1,3,5,7,9]'],
-      ['10.nest(if(odd,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]', {en: 'Collatz sequence', cs: 'Collatzova posloupnost'}]],
+      ['10.nest(if(#.odd,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]', {en: 'Collatz sequence', cs: 'Collatzova posloupnost'}]],
     see: 'even'
   }
 });
@@ -710,7 +710,7 @@ R.register('not', {
       'Může být použito ve formě `_value.not` i `not(_value)`.'],
     cat: catg.numbers,
     args: 'value?',
-    ex: [['range(10).select(not(isprime))', '[1,4,6,8,9,10]']],
+    ex: [['range(10).select(not(#.isprime))', '[1,4,6,8,9,10]']],
     see: ['and', 'or']
   }
 });
@@ -1179,7 +1179,7 @@ R.register('pi', {
     cs: ['Číslice čísla π v desítkové soustavě.'],
     cat: [catg.numbers, catg.sources],
     ex: [['pi', '[3,1,4,1,5,9,2,6,...]'],
-      ['pi.drop(1)[range(100,110)]', '[9,8,2,1,4,8,0,8,6,5,1]']]
+      ['(pi.drop(1))[range(100,110)]', '[9,8,2,1,4,8,0,8,6,5,1]']]
   }
 });
 

@@ -768,7 +768,7 @@ R.register('nest', {
     en: ['Returns the results of iterative applications of `_body` on `_init`.'],
     cs: ['Vrátí výsledky iterovaného použití `_body` na `_init`.'],
     cat: catg.streams,
-    ex: [['10.nest(if(odd,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]', {en: 'Collatz sequence', cs: 'Collatzova posloupnost'}],
+    ex: [['10.nest(if(#.odd,3*#+1,#/2))', '[10,5,16,8,4,2,1,...]', {en: 'Collatz sequence', cs: 'Collatzova posloupnost'}],
       ['"caesar".nest(shift(1,abc))', '["caesar","dbftbs","ecguct",...]']],
     src: 'init',
     args: 'body'
@@ -959,7 +959,7 @@ R.register('if', {
       '-Nepoužitý argument nemusí dávat validní proud.'],
     cat: catg.base,
     args: 'test,iftrue,iffalse',
-    ex: [['[3,"a"]:if(isnumber,range(#),#.ord)', '[[1,2,3],97]']]
+    ex: [['[3,"a"]:if(#.isnumber,range(#),#.ord)', '[[1,2,3],97]']]
   }
 });
 

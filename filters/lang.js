@@ -63,15 +63,16 @@ R.register('foreach', {
 });
 
 R.register('#id', {
-  reqSource: true,
+  reqSource: false,
   numArg: 0,
   prepare(scope) {
-    if(this.src)
-      return this.src.prepare(scope);
-    else if(scope.src)
-      return scope.src;
+    if(scope.argSrc)
+      return scope.argSrc;
     else
       return this;
+  },
+  eval() {
+    throw new StreamError('out of scope');
   },
   bodyForm() {
     return '#';

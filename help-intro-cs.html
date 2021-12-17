@@ -53,7 +53,7 @@
 <h2>Speciální znaky</h2>
 <p>Ještě následující znaky mají ve <em>Stream</em> zvláštní význam:</p>
 <ul>
-  <li><i-pre>#</i-pre> – reprezentuje zdroj. Při řetězení je prázdnou operací, tj. <i-pre>[1,1].#.length = [1,1].length = 2</i-pre>. Je užitečné v argumentech nebo složených operacích.<br/>
+  <li><i-pre>#</i-pre> – v argumentu filtru reprezentuje zdroj tohoto filtru.<br/>
     <span class="example">Příklady:</span> <i-pre>iota:(#^2) = [1,4,9,16,...]</i-pre>; <i-pre>[3,0,2].range(#.min,#.max) = range([3,0,2].min,[3,0,2].max) = range(0,3) = [0,1,2,3]</i-pre>.</li>
   <li><i-pre>##</i-pre>, <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ... – reprezentují zdroj a argumenty aktuálního <a href="#sec-block">bloku</a>.</li>
   <li><i-pre>$</i-pre>, <i-pre>$1</i-pre>, <i-pre>$2</i-pre>, ...</i-pre> – zastupují výsledky dříve provedených příkazů. <i-pre>$</i-pre> je předchozí výsledek.</li>

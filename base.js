@@ -135,23 +135,22 @@ export class Node extends Base {
     }
   }
 
-  modify(what, allowAddSource = this.reqSource || this.args.length < this.sourceOrArgs) {
+  modify(what) {
     if(anyChanged(this, what))
       return new Node(this.ident, coal(what.token, this.token),
-        (this.src || allowAddSource) ? coal(what.src, this.src) : null,
-        coal(what.args, this.args), coal(what.meta, this.meta));
+        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
   }
 
   prepend(src) {
-    return this.modify({src: this.src ? this.src.prepend(src) : src}, true);
+    return this.modify({src: this.src ? this.src.prepend(src) : src});
   }
 
-  deepModify(what, ...opt) {
-    const src = this.src?.deepModify(what, ...opt);
-    const args = this.args.map(arg => arg.deepModify(what, ...opt));
-    return this.modify({...what, src, args}, ...opt);
+  deepModify(what) {
+    const src = this.src?.deepModify(what);
+    const args = this.args.map(arg => arg.deepModify(what));
+    return this.modify({...what, src, args});
   }
 
   // overwritten in constructor for known symbols
@@ -174,7 +173,7 @@ export class Node extends Base {
     const args = this.args.map((arg, ...aa) => {
       const argsAdd = argOptsFn(arg, ...aa);
       if(argsAdd !== null)
-        return arg.prepare({...scope, src, ...argsAdd});
+        return arg.prepare({argSrc: src, ...scope, ...argsAdd});
       else
         return arg;
     });
@@ -192,12 +191,12 @@ export class Node extends Base {
   }
 
   prepareForeach(scope) {
-    return this.prepareBase(scope, {}, {src: undefined, partial: true});
+    return this.prepareBase(scope, {}, {argSrc: undefined, partial: true});
   }
 
   prepareFold(scope, evalLast = false) {
     return this.prepareBase(scope, {}, (arg, ix, arr) =>
-      evalLast && ix === arr.length - 1 ? {} : {src: undefined, outer: undefined, partial: true}
+      evalLast && ix === arr.length - 1 ? {} : {argSrc: undefined, outer: undefined, partial: true}
     );
   }
 
@@ -223,13 +222,13 @@ export class Node extends Base {
 
   check(srcPromise = false, argsPromise = 0) {
     this.checkThis(srcPromise, argsPromise);
-    this.src?.check(srcPromise);
-    this.checkArgs(srcPromise);
+    this.src?.check();
+    this.checkArgs();
   }
 
-  checkArgs(srcPromise) {
+  checkArgs() {
     for(const arg of this.args)
-      arg.check(this.src || srcPromise);
+      arg.check(false);
   }
 
   eval() {
@@ -262,7 +261,7 @@ export class Node extends Base {
   }
 
   applySrc(src) {
-    return this.prepare({src}).eval();
+    return this.src ? this.prepare({argSrc: src}).eval() : this.modify({src}).prepare({}).eval();
   }
 
   applyArgs(args) {
@@ -316,11 +315,10 @@ export class Block extends Node {
     this.body = body;
   }
 
-  modify(what, allowAddSource = this.reqSource || this.args.length < this.sourceOrArgs) {
+  modify(what) {
     if(anyChanged(this, what))
       return new Block(this.ident, coal(what.token, this.token), coal(what.body, this.body),
-        (this.src || allowAddSource) ? coal(what.src, this.src) : null,
-        coal(what.args, this.args), coal(what.meta, this.meta));
+        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
   }
@@ -357,11 +355,10 @@ export class CustomNode extends Block {
     super(ident, token, body.deepModify({token}), src, args, meta);
   }
 
-  modify(what, allowAddSource = this.reqSource || this.args.length < this.sourceOrArgs) {
+  modify(what) {
     if(anyChanged(this, what))
       return new CustomNode(this.ident, coal(what.token, this.token), coal(what.body, this.body),
-        (this.src || allowAddSource) ? coal(what.src, this.src) : null,
-        coal(what.args, this.args), coal(what.meta, this.meta));
+        coal(what.src, this.src), coal(what.args, this.args), coal(what.meta, this.meta));
     else
       return this;
   }

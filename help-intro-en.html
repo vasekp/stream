@@ -54,7 +54,7 @@ The <i-pre class="skiplink">filter</i-pre> is then applied sequentially on each 
 <h2>Special characters</h2>
 <p>In addition to the above, the following special characters are recognized:</p>
 <ul>
-  <li><i-pre>#</i-pre> – represents the source. In chaining it is a no-operation, e.g., <i-pre>[1,1].#.length = [1,1].length = 2</i-pre>. It is useful in arguments or in compound operations.<br/>
+  <li><i-pre>#</i-pre> – used in an argument of a filter, represents the source of that filter.<br/>
     <span class="example">Examples:</span> <i-pre>iota:(#^2) = [1,4,9,16,...]</i-pre>; <i-pre>[3,0,2].range(#.min,#.max) = range([3,0,2].min,[3,0,2].max) = range(0,3) = [0,1,2,3]</i-pre>.</li>
   <li><i-pre>##</i-pre>, <i-pre>#1</i-pre>, <i-pre>#2</i-pre>, ... – represents the source and the arguments of the current <a href="#sec-block">block</a>.</li>
   <li><i-pre>$</i-pre>, <i-pre>$1</i-pre>, <i-pre>$2</i-pre>, ...</i-pre> – represents the results of prior commands. <i-pre>$</i-pre> is the most recent output.</li>
