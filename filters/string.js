@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, INF, types} from '../base.js';
+import {Node, Imm, Block, Stream, INF, types} from '../base.js';
 import R from '../register.js';
 import {catg} from '../help.js';
 
@@ -47,7 +47,7 @@ R.register(['split', 'chars'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const str = this.src.evalAtom(types.S);
+    const str = this.src.evalImm(types.S);
     if(this.args[0]) {
       const ev = this.args[0].eval().checkType([types.N, types.S, types.stream]);
       if(ev.type === types.S) {
@@ -56,7 +56,7 @@ R.register(['split', 'chars'], {
         return new Stream(this,
           function*() {
             for(const c of split)
-              yield new Atom(c);
+              yield new Imm(c);
           },
           BigInt(split.length)
         );
@@ -67,7 +67,7 @@ R.register(['split', 'chars'], {
         return new Stream(this,
           function*() {
             for(const c of split)
-              yield new Atom(c);
+              yield new Imm(c);
           },
           BigInt(split.length)
         );
@@ -76,7 +76,7 @@ R.register(['split', 'chars'], {
         return new Stream(this,
           function*() {
             for(const [ch, _] of splitABC(str, abc))
-              yield new Atom(ch);
+              yield new Imm(ch);
           }
         );
       }
@@ -85,7 +85,7 @@ R.register(['split', 'chars'], {
       return new Stream(this,
         function*() {
           for(const c of chars)
-            yield new Atom(c);
+            yield new Imm(c);
         },
         BigInt(chars.length)
       );
@@ -116,9 +116,9 @@ R.register('cat', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const strs = [...this.src.evalStream({finite: true}).read()].map(a => a.evalAtom(types.S));
-    const sep = this.args[0] ? this.args[0].evalAtom(types.S) : '';
-    return new Atom(strs.join(sep));
+    const strs = [...this.src.evalStream({finite: true}).read()].map(a => a.evalImm(types.S));
+    const sep = this.args[0] ? this.args[0].evalImm(types.S) : '';
+    return new Imm(strs.join(sep));
   },
   help: {
     en: ['Concatenates a stream of strings into one string.',
@@ -137,16 +137,16 @@ R.register('ord', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const c = this.src.evalAtom(types.S);
+    const c = this.src.evalImm(types.S);
     if(this.args[0]) {
       const abc = this.args[0].evalAlphabet(true);
       const ix = abc.indexOf(c.toLowerCase());
       if(ix < 0)
         throw new StreamError(`character "${c}" not in alphabet`);
       else
-        return new Atom(ix + 1);
+        return new Imm(ix + 1);
     } else
-      return new Atom(ord(c));
+      return new Imm(ord(c));
   },
   help: {
     en: ['Returns the ordinal number of a character.',
@@ -172,10 +172,10 @@ R.register('chr', {
       if(ix > abc.length)
         throw new StreamError(`index ${ix} beyond end`);
       else
-        return new Atom(abc[Number(ix) - 1]);
+        return new Imm(abc[Number(ix) - 1]);
     } else {
       const cp = this.src.evalNum({min: 0n});
-      return new Atom(String.fromCodePoint(Number(cp)));
+      return new Imm(String.fromCodePoint(Number(cp)));
     }
   },
   help: {
@@ -200,7 +200,7 @@ R.register('chrm', {
     const abc = this.args[0].evalAlphabet();
     ix = Number(ix % BigInt(abc.length));
     if(ix < 0) ix += abc.length;
-    return new Atom(abc[ix]);
+    return new Imm(abc[ix]);
   },
   help: {
     en: ['Returns the character with a given ordinal number in an alphabet, wrapping over its length.',
@@ -220,12 +220,12 @@ R.register('ords', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(types.S);
+    const str = this.src.evalImm(types.S);
     const abc = this.args[0].evalAlphabet(true);
     return new Stream(this,
       function*() {
         for(const [_, ix] of splitABC(str, abc, true))
-          yield new Atom(ix + 1);
+          yield new Imm(ix + 1);
       }
     );
   },
@@ -246,8 +246,8 @@ R.register(['lcase', 'lc'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const str = this.src.evalAtom(types.S);
-    return new Atom(str.toLowerCase());
+    const str = this.src.evalImm(types.S);
+    return new Imm(str.toLowerCase());
   },
   help: {
     en: ['Converts `_string` to lowercase.'],
@@ -263,8 +263,8 @@ R.register(['ucase', 'uc'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const str = this.src.evalAtom(types.S);
-    return new Atom(str.toUpperCase());
+    const str = this.src.evalImm(types.S);
+    return new Imm(str.toUpperCase());
   },
   help: {
     en: ['Converts `_string` to uppercase.'],
@@ -286,7 +286,7 @@ R.register('abc', {
         return [
           (function*() {
             while(i < 97 + 26)
-              yield new Atom(String.fromCharCode(i++));
+              yield new Imm(String.fromCharCode(i++));
           })(),
           c => i += Number(c)
         ];
@@ -316,7 +316,7 @@ R.register(['upabc', 'uabc'], {
         return [
           (function*() {
             while(i < 65 + 26)
-              yield new Atom(String.fromCharCode(i++));
+              yield new Imm(String.fromCharCode(i++));
           })(),
           c => i += Number(c)
         ];
@@ -340,7 +340,7 @@ R.register(['isstring', 'isstr'], {
   numArg: 0,
   eval() {
     const c = this.src.eval();
-    return new Atom(c.type === types.S);
+    return new Imm(c.type === types.S);
   },
   help: {
     en: ['Tests if `_input` is a string. Returns `true` or `false`.'],
@@ -357,9 +357,9 @@ R.register('isdigit', {
   eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
-      return new Atom(false);
+      return new Imm(false);
     const c = r.value;
-    return new Atom(isSingleChar(c) && c >= '0' && c <= '9');
+    return new Imm(isSingleChar(c) && c >= '0' && c <= '9');
   },
   help: {
     en: ['Tests if `_input` is a digit (`"0"` through `"9"`). Returns `true` or `false`.'],
@@ -376,13 +376,13 @@ R.register('isletter', {
   eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
-      return new Atom(false);
+      return new Imm(false);
     const c = r.value;
     if(this.args[0]) {
       const abc = this.args[0].evalAlphabet(true);
-      return new Atom(abc.includes(c.toLowerCase()));
+      return new Imm(abc.includes(c.toLowerCase()));
     } else
-      return new Atom(isSingleChar(c) && (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'));
+      return new Imm(isSingleChar(c) && (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'));
   },
   help: {
     en: ['Tests if `_input` is a letter. Returns `true` or `false`.',
@@ -402,13 +402,13 @@ R.register(['isupper', 'isucase', 'isuc'], {
   eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
-      return new Atom(false);
+      return new Imm(false);
     const c = r.value;
     if(this.args[0]) {
       const abc = this.args[0].evalAlphabet().map(a => a.toUpperCase());
-      return new Atom(abc.includes(c));
+      return new Imm(abc.includes(c));
     } else
-      return new Atom(isSingleChar(c) && c >= 'A' && c <= 'Z');
+      return new Imm(isSingleChar(c) && c >= 'A' && c <= 'Z');
   },
   help: {
     en: ['Tests if `_input` is an uppercase letter. Returns `true` or `false`.',
@@ -428,13 +428,13 @@ R.register(['islower', 'islcase', 'islc'], {
   eval() {
     const r = this.src.eval();
     if(r.type !== types.S)
-      return new Atom(false);
+      return new Imm(false);
     const c = r.value;
     if(this.args[0]) {
       const abc = this.args[0].evalAlphabet(true);
-      return new Atom(abc.includes(c));
+      return new Imm(abc.includes(c));
     } else
-      return new Atom(isSingleChar(c) && c >= 'a' && c <= 'z');
+      return new Imm(isSingleChar(c) && c >= 'a' && c <= 'z');
   },
   help: {
     en: ['Tests if `_input` is an lowercase letter. Returns `true` or `false`.',
@@ -452,9 +452,9 @@ R.register('prefix', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(types.S);
+    const str = this.src.evalImm(types.S);
     const length = this.args[0].evalNum();
-    return new Atom(str.slice(0, Number(length))); // works for ≥ 0 as well as < 0
+    return new Imm(str.slice(0, Number(length))); // works for ≥ 0 as well as < 0
   },
   help: {
     en: ['Returns `_count` first characters of `_string`. If `_string` is shorter than `_count`, returns all of it.',
@@ -474,9 +474,9 @@ R.register('postfix', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(types.S);
+    const str = this.src.evalImm(types.S);
     const length = this.args[0].evalNum();
-    return length === 0n ? new Atom("") : new Atom(str.slice(Number(-length)));
+    return length === 0n ? new Imm("") : new Imm(str.slice(Number(-length)));
   },
   help: {
     en: ['Returns `_count` last characters of `_string`. If `_string` is shorter than `_count`, returns all of it.',
@@ -496,9 +496,9 @@ R.register('starts', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(types.S).toLowerCase();
-    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
-    return new Atom(str.startsWith(pfx));
+    const str = this.src.evalImm(types.S).toLowerCase();
+    const pfx = this.args[0].evalImm(types.S).toLowerCase();
+    return new Imm(str.startsWith(pfx));
   },
   help: {
     en: ['Tests if `_string` begins with `_prefix`. Returns `true` or `false`.',
@@ -517,9 +517,9 @@ R.register('ends', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(types.S).toLowerCase();
-    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
-    return new Atom(str.endsWith(pfx));
+    const str = this.src.evalImm(types.S).toLowerCase();
+    const pfx = this.args[0].evalImm(types.S).toLowerCase();
+    return new Imm(str.endsWith(pfx));
   },
   help: {
     en: ['Tests if `_string` ends with `_postfix`. Returns `true` or `false`.',
@@ -538,9 +538,9 @@ R.register('contains', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalAtom(types.S).toLowerCase();
-    const pfx = this.args[0].evalAtom(types.S).toLowerCase();
-    return new Atom(str.includes(pfx));
+    const str = this.src.evalImm(types.S).toLowerCase();
+    const pfx = this.args[0].evalImm(types.S).toLowerCase();
+    return new Imm(str.includes(pfx));
   },
   help: {
     en: ['Tests if `_string` contains `_substr`. Returns `true` or `false`.',
@@ -559,7 +559,7 @@ R.register('shift', {
   reqSource: true,
   numArg: 2,
   eval() {
-    const str = this.src.evalAtom(types.S);
+    const str = this.src.evalImm(types.S);
     let shift = this.args[0].evalNum();
     const abc = this.args[1].evalAlphabet(true);
     shift = Number(shift % BigInt(abc.length));
@@ -572,7 +572,7 @@ R.register('shift', {
       else
         ret += ch;
     }
-    return new Atom(ret);
+    return new Imm(ret);
   },
   help: {
     en: ['Shifts `_string` by `_count` characters forward in the given `_alphabet`.',
@@ -592,9 +592,9 @@ R.register('tr', {
   minArg: 2,
   maxArg: 3,
   eval() {
-    const str = this.src.evalAtom(types.S);
-    const from = this.args[0].evalAtom(types.S).toLowerCase();
-    const to = this.args[1].evalAtom(types.S);
+    const str = this.src.evalImm(types.S);
+    const from = this.args[0].evalImm(types.S).toLowerCase();
+    const to = this.args[1].evalImm(types.S);
     if(this.args[2]) {
       const abc = this.args[2].evalAlphabet(true);
       const fArr = [...splitABC(from, abc)].map(([ch, _]) => ch);
@@ -606,7 +606,7 @@ R.register('tr', {
         const ix = fArr.indexOf(ch);
         ret += ix >= 0 ? tArr[ix] : ch;
       }
-      return new Atom(ret);
+      return new Imm(ret);
     } else {
       if(from.length !== to.length)
         throw new StreamError('pattern and replacement strings of different lengths');
@@ -619,7 +619,7 @@ R.register('tr', {
         const ix = from.indexOf(lch);
         ret += ix >= 0 ? to[ix] : ch;
       }
-      return new Atom(ret);
+      return new Imm(ret);
     }
   },
   help: {

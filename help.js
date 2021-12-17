@@ -10,7 +10,7 @@ export const seeAlso = {
 
 export function formatText(obj) {
   if(!obj.help.en && obj.help.see)
-    return formatText(mainReg.find(obj.help.see));
+    return formatText(mainReg.get(obj.help.see));
   let out = '';
   for(const n of obj.aliases) {
     let ln = '';

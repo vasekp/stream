@@ -35,9 +35,9 @@ class Register extends EventTarget {
     }
   }
 
-  find(ident) {
+  get(ident) {
     ident = ident?.toLowerCase();
-    return this.map.get(ident) || this.parent?.find(ident);
+    return this.map.get(ident) || this.parent?.get(ident);
   }
 
   includes(ident) {
@@ -73,7 +73,7 @@ class Register extends EventTarget {
     const keys = [...set.keys()].sort();
     const ret = [];
     for(const key of keys)
-      ret.push([key, this.find(key).body.toString()]);
+      ret.push([key, this.get(key).body.toString()]);
     return ret;
   }
 

@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, INF, MAXMEM, types, debug, compareStreams} from '../base.js';
+import {Node, Imm, Stream, INF, MAXMEM, types, debug, compareStreams} from '../base.js';
 import watchdog from '../watchdog.js';
 import R from '../register.js';
 import {catg} from '../help.js';
@@ -18,7 +18,7 @@ R.register(['factorial', 'fact', 'fac'], {
   reqSource: true,
   eval() {
     const inp = this.src.evalNum({min: 0n});
-    return new Atom(fact(inp));
+    return new Imm(fact(inp));
   },
   help: {
     en: ['Factorial of `_n`.'],
@@ -42,7 +42,7 @@ R.register(['dfactorial', 'dfact', 'dfac'], {
   reqSource: true,
   eval() {
     const inp = this.src.evalNum({min: -1n});
-    return new Atom(dfact(inp));
+    return new Imm(dfact(inp));
   },
   help: {
     en: ['Double factorial of `_n`, i.e., `n*(n-2)*...`.'],
@@ -81,13 +81,13 @@ R.register('binom', {
     if(this.args.length === 2) {
       const n = this.args[0].evalNum({min: 0n});
       const k = this.args[1].evalNum({min: 0n});
-      return new Atom(binom(n, k));
+      return new Imm(binom(n, k));
     } else {
       const n = this.args[0].evalNum({min: 0n});
       return new Stream(this,
         function*() {
           for(const r of binomRow(n))
-            yield new Atom(r);
+            yield new Imm(r);
         },
         n
       );
@@ -136,7 +136,7 @@ R.register('comb', {
   minArg: 1,
   eval() {
     const ks = this.args.map(arg => arg.evalNum({min: 0n}));
-    return new Atom(comb(ks));
+    return new Imm(comb(ks));
   },
   help: {
     en: ['Multinomial coefficient `_k1+_k2+...` choose `_k1`, `_k2`, ...'],
@@ -153,7 +153,7 @@ R.register('rcomb', {
   minArg: 1,
   eval() {
     const ks = this.args.map(arg => arg.evalNum({min: 0n}));
-    return new Atom(comb(ks, true));
+    return new Imm(comb(ks, true));
   },
   help: {
     en: ['Similar as `comb(k1,k2,...)` but further divided by factorials of numbers of repetitions between the `_k` values.',

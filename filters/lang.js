@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, compareStreams, INF, MAXMEM} from '../base.js';
+import {Node, Imm, Stream, types, compareStreams, INF, MAXMEM} from '../base.js';
 import R from '../register.js';
 import {catg} from '../help.js';
 
@@ -83,13 +83,13 @@ R.register('join', {
   reqSource: false,
   eval() {
     const args = this.args.map(arg => arg.eval());
-    const lens = args.map(arg => arg.isAtom ? 1n : arg.length);
+    const lens = args.map(arg => arg.isImm ? 1n : arg.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.some(len => len === INF) ? INF
       : lens.reduce((a,b) => a+b);
     const gen = function*() {
       for(const arg of args) {
-        if(arg.isAtom)
+        if(arg.isImm)
           yield arg;
         else
           yield* arg.read();
@@ -234,7 +234,7 @@ R.register('part', {
   eval() {
     const args = this.args.map(arg => arg.eval());
     const src = this.src.evalStream();
-    if(args.every(i => i.isAtom)) {
+    if(args.every(i => i.isImm)) {
       if(args.length === 1) {
         const ix = args[0].numValue();
         if(ix > 0n) {
@@ -396,7 +396,7 @@ R.register('equal', {
   reqSource: false,
   minArg: 2,
   eval() {
-    return new Atom(compareStreams(...this.args.map(arg => arg.eval())));
+    return new Imm(compareStreams(...this.args.map(arg => arg.eval())));
   },
   bodyForm() {
     if(this.args.length > 1)
@@ -426,7 +426,7 @@ R.register('ineq', {
   reqSource: false,
   numArg: 2,
   eval() {
-    return new Atom(!compareStreams(...this.args.map(arg => arg.eval())));
+    return new Imm(!compareStreams(...this.args.map(arg => arg.eval())));
   },
   bodyForm() {
     if(this.args.length > 1)
@@ -468,7 +468,7 @@ R.register('assign', {
     const ret = [];
     for(const ident of idents) {
       reg.register(ident, {body});
-      ret.push(new Atom(ident));
+      ret.push(new Imm(ident));
     }
     return Stream.fromArray(ret);
   },

@@ -1,7 +1,13 @@
-export class StreamError extends Error {
-  constructor(msg, node) {
+export class BaseError extends Error {
+  constructor(msg) {
     super();
     this.msg = msg;
+  }
+}
+
+export class StreamError extends BaseError {
+  constructor(msg, node) {
+    super(msg);
     if(node)
       this.withNode(node);
   }
@@ -17,19 +23,17 @@ export class StreamError extends Error {
   }
 }
 
-export class TimeoutError extends Error {
+export class TimeoutError extends BaseError {
   constructor(count) {
-    super();
+    super('Timed out');
     this.count = count;
-    this.msg = 'Timed out';
   }
 }
 
-export class ParseError extends Error {
+export class ParseError extends BaseError {
   constructor(msg, a1, a2) {
-    super();
+    super(msg);
     this.name = 'ParseError';
-    this.msg = msg;
     this.pos = typeof a1 === 'object' ? a1.pos : a1;
     this.len = typeof a2 === 'object' ? a2.pos + a2.value.length - this.pos
       : typeof a2 === 'number' ? a2 - this.pos

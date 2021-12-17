@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, types, debug, compareStreams} from '../base.js';
+import {Node, Imm, Block, Stream, types, debug, compareStreams} from '../base.js';
 import R from '../register.js';
 import parse from '../parser.js';
 import {catg} from '../help.js';
@@ -20,7 +20,7 @@ R.register('clear', {
     const ret = [];
     for(const ident of idents)
       if(reg.clear(ident, true))
-        ret.push(new Atom(ident));
+        ret.push(new Imm(ident));
     return Stream.fromArray(ret);
   },
   help: {
@@ -48,7 +48,7 @@ R.register('vars', {
     if(!reg)
       throw new Error('register not set');
     const ret = reg.dump().map(([key, node]) =>
-      Stream.fromArray([new Atom(key), new Atom(node.toString())]));
+      Stream.fromArray([new Imm(key), new Imm(node.toString())]));
     return Stream.fromArray(ret);
   },
   help: {
@@ -63,7 +63,7 @@ R.register('desc', {
   reqSource: true,
   numArg: 0,
   eval() {
-    return new Atom(this.src.eval().toString());
+    return new Imm(this.src.eval().toString());
   },
   help: {
     en: ['Provides a valid input-form description of the input stream.'],
@@ -101,11 +101,11 @@ R.register('save', {
     const ret = [];
     this.args.forEach(arg => {
       if(arg.type === types.symbol) {
-        const rec = innerReg.find(arg.ident);
+        const rec = innerReg.get(arg.ident);
         if(rec?.body) {
           outerReg.register(arg.ident, rec);
           innerReg.clear(arg.ident);
-          ret.push(new Atom(arg.ident));
+          ret.push(new Imm(arg.ident));
         }
       } else {
         ret.push(...arg.prepare({register: outerReg, referrer: arg}).evalStream().read());
@@ -146,7 +146,7 @@ R.register(['restore', 'revert'], {
     const ret = [];
     this.args.forEach(arg => {
       if(innerReg.clear(arg.checkType(types.symbol).ident))
-        ret.push(new Atom(arg.ident));
+        ret.push(new Imm(arg.ident));
     });
     return Stream.fromArray(ret);
   },

@@ -156,7 +156,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       let html = `${seeAlso[lang][obj.stub ? 0 : 1]} `;
       const seeList = obj.help.see instanceof Array ? obj.help.see : [obj.help.see];
       html += seeList.map(ident => {
-        const rec = mainReg.find(ident);
+        const rec = mainReg.get(ident);
         if(!rec?.help)
           console.warn(`Broken help link ${obj.aliases[0]} => ${ident}`);
         return `<i-pre><a href="#id-${rec?.aliases[0]}">${ident}</a></i-pre>`
@@ -234,7 +234,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', linkClick));
   /*** Open at an entry if specified ***/
-  const entry = mainReg.find(params.get('entry'))?.aliases[0];
+  const entry = mainReg.get(params.get('entry'))?.aliases[0];
   if(entry) {
     document.getElementById('cat-all').checked = true;
     document.getElementById(`id-${entry}`)?.scrollIntoView();

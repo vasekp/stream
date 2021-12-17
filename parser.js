@@ -1,4 +1,4 @@
-import {Node, Atom, Block} from './base.js';
+import {Node, Imm, Block} from './base.js';
 import {ParseError} from './errors.js';
 import Enum from './enum.js';
 
@@ -281,7 +281,7 @@ function parse0(iter, open, close, array) {
       case tc.number:
       case tc.string:
         if(state === ss.base || state === ss.oper)
-          term = new Atom(s.cls === tc.number ? BigInt(s.value) : s.value);
+          term = new Imm(s.cls === tc.number ? BigInt(s.value) : s.value);
         else
           throw new ParseError(`"${s.value}" can't appear here`, s);
         state = ss.term;
@@ -289,7 +289,7 @@ function parse0(iter, open, close, array) {
       case tc.ident:
         if(state === ss.base || state === ss.oper) {
           if(s.value === 'true' || s.value === 'false') {
-            term = new Atom(s.value === 'true');
+            term = new Imm(s.value === 'true');
             state = ss.term;
           } else {
             term = new Node(s.value, s);
@@ -311,7 +311,7 @@ function parse0(iter, open, close, array) {
             if(Number.isNaN(ix) || ix === 0)
               throw new ParseError(`malformed identifier "${s.value}"`, s);
             else
-              term = new Node(s.value[0] === '#' ? '#in' : '#history', s, null, [new Atom(ix)]);
+              term = new Node(s.value[0] === '#' ? '#in' : '#history', s, null, [new Imm(ix)]);
           }
           state = ss.term;
         } else
@@ -383,7 +383,7 @@ function parse0(iter, open, close, array) {
           stack.addOper(s, term);
         else if(state === ss.base && s.value === '-')
           // Unary minus
-          stack.addOper(s, new Atom(0));
+          stack.addOper(s, new Imm(0));
         else
           throw new ParseError(`"${s.value}" can't appear here`, s);
         term = null;

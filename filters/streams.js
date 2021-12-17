@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Block, Stream, INF, types, debug, compareStreams} from '../base.js';
+import {Node, Imm, Block, Stream, INF, types, debug, compareStreams} from '../base.js';
 import {ord} from './string.js';
 import R from '../register.js';
 import {catg} from '../help.js';
@@ -16,7 +16,7 @@ R.register(['iota', 'seq'], {
         return [
           (function*() {
             for(;;) {
-              yield new Atom(i);
+              yield new Imm(i);
               i += step;
             }
           })(),
@@ -41,11 +41,11 @@ R.register(['range', 'ran', 'rng', 'r'], {
   maxArg: 3,
   eval() {
     const [min, max] = this.args[0] && this.args[1]
-      ? [this.args[0].evalAtom([types.N, types.S]), this.args[1].evalAtom([types.N, types.S])]
+      ? [this.args[0].evalImm([types.N, types.S]), this.args[1].evalImm([types.N, types.S])]
       : [1n, this.args[0].evalNum()];
     const step = this.args[2] ? this.args[2].evalNum() : 1n;
     if(typeof min !== typeof max)
-      throw new StreamError(`min ${Atom.format(min)}, max ${Atom.format(max)} of different types`);
+      throw new StreamError(`min ${Imm.format(min)}, max ${Imm.format(max)} of different types`);
     if(typeof min === 'bigint') {
       const length = step === 0n ? INF
         : (x => x >= 0n ? x : 0n)((max - min) / step + 1n);
@@ -55,7 +55,7 @@ R.register(['range', 'ran', 'rng', 'r'], {
           return [
             (function*() {
               while(step >= 0n ? i <= max : i >= max) {
-                yield new Atom(i);
+                yield new Imm(i);
                 i += step;
               }
             })(),
@@ -75,7 +75,7 @@ R.register(['range', 'ran', 'rng', 'r'], {
           return [
             (function*() {
               while(step >= 0n ? i <= maxCP : i >= maxCP) {
-                yield new Atom(String.fromCodePoint(Number(i)));
+                yield new Imm(String.fromCodePoint(Number(i)));
                 i += step;
               }
             })(),
@@ -115,9 +115,9 @@ R.register(['length', 'len'], {
         for(const i of src.read())
           length++;
       }
-      return new Atom(length);
+      return new Imm(length);
     } else if(src.type === types.S) {
-      return new Atom(src.value.length);
+      return new Imm(src.value.length);
     }
   },
   help: {
@@ -271,7 +271,7 @@ R.register(['take', 'takedrop', 'td'], {
   eval() {
     const src = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
-    if(ins.every(i => i.isAtom))
+    if(ins.every(i => i.isImm))
       return new Stream(this,
         _ => takedrop(src, ins.map(i => i.numValue({min: 0n}))));
     else if(this.args.length === 1)
@@ -300,7 +300,7 @@ R.register(['drop', 'droptake', 'dt'], {
   eval() {
     const src = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
-    if(ins.every(i => i.isAtom))
+    if(ins.every(i => i.isImm))
       return new Stream(this,
         _ => takedrop(src, [0n, ...ins.map(i => i.numValue({min: 0n}))]));
     else if(this.args.length === 1)
@@ -386,7 +386,7 @@ R.register(['reverse', 'rev'], {
       const vals = [...src.read()].reverse();
       return Stream.fromArray(vals);
     } else if(src.type === types.S) {
-      return new Atom([...src.value].reverse().join(''));
+      return new Imm([...src.value].reverse().join(''));
     }
   },
   help: {
@@ -504,7 +504,7 @@ R.register(['group', 'g'], {
   eval() {
     const src = this.src.evalStream();
     const ins = this.args.map(arg => arg.eval());
-    if(ins.every(i => i.isAtom)) {
+    if(ins.every(i => i.isImm)) {
       if(this.args.length === 1) {
         const size = ins[0].numValue({min: 1n});
         const length = src.length === INF ? INF
@@ -550,7 +550,7 @@ R.register(['group', 'g'], {
 
 function* flatten(src, depth = INF) {
   for(const val of src.read()) {
-    if(val.isAtom)
+    if(val.isImm)
       yield val;
     else if(depth === INF)
       yield* flatten(val, INF);
@@ -620,8 +620,8 @@ R.register(['padleft', 'pl'], {
         );
       }
     } else {
-      const fill = this.args[1].evalAtom(types.S);
-      return new Atom(src.value.padStart(Number(length), fill));
+      const fill = this.args[1].evalImm(types.S);
+      return new Imm(src.value.padStart(Number(length), fill));
     }
   },
   help: {
@@ -668,8 +668,8 @@ R.register(['padright', 'pr'], {
         );
       }
     } else {
-      const fillStr = this.args[1].evalAtom(types.S);
-      return new Atom(src.value.padEnd(Number(length), fillStr));
+      const fillStr = this.args[1].evalImm(types.S);
+      return new Imm(src.value.padEnd(Number(length), fillStr));
     }
   },
   help: {
@@ -688,14 +688,14 @@ R.register(['prepend', 'prep'], {
   eval() {
     const args = this.args.map(arg => arg.eval());
     args.push(this.src.eval());
-    const lens = args.map(arg => arg.isAtom ? 1n : arg.length);
+    const lens = args.map(arg => arg.isImm ? 1n : arg.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.some(len => len === INF) ? INF
       : lens.reduce((a, b) => a + b);
     return new Stream(this,
       function*() {
         for(const arg of args) {
-          if(arg.isAtom)
+          if(arg.isImm)
             yield arg;
           else
             yield* arg.read();
@@ -719,14 +719,14 @@ R.register(['append', 'app'], {
   eval() {
     const args = this.args.map(arg => arg.eval());
     args.unshift(this.src.eval());
-    const lens = args.map(arg => arg.isAtom ? 1n : arg.length);
+    const lens = args.map(arg => arg.isImm ? 1n : arg.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.some(len => len === INF) ? INF
       : lens.reduce((a,b) => a+b);
     return new Stream(this,
       function*() {
         for(const arg of args) {
-          if(arg.isAtom)
+          if(arg.isImm)
             yield arg;
           else
             yield* arg.read();
@@ -949,7 +949,7 @@ R.register('if', {
     return this.prepareBase(scope, {}, {partial: true});
   },
   eval() {
-    const val = this.args[0].prepare({}).evalAtom('boolean');
+    const val = this.args[0].prepare({}).evalImm('boolean');
     return this.args[val ? 1 : 2].prepare({}).eval();
   },
   help: {
@@ -976,7 +976,7 @@ R.register(['select', 'sel', 'filter', 'where'], {
     return new Stream(this,
       function*() {
         for(const value of src.read()) {
-          if(cond.applySrc(value).evalAtom('boolean'))
+          if(cond.applySrc(value).evalImm('boolean'))
             yield value;
         }
       }
@@ -1008,8 +1008,8 @@ R.register(['iwhere', 'ixwhere'], {
       function*() {
         let i = 1;
         for(const value of src.read()) {
-          if(cond.applySrc(value).evalAtom('boolean'))
-            yield new Atom(i);
+          if(cond.applySrc(value).evalImm('boolean'))
+            yield new Imm(i);
           ++i;
         }
       }
@@ -1038,7 +1038,7 @@ R.register('while', {
     return new Stream(this,
       function*() {
         for(const value of src.read()) {
-          if(cond.applySrc(value).evalAtom('boolean'))
+          if(cond.applySrc(value).evalImm('boolean'))
             yield value;
           else
             return;
@@ -1160,7 +1160,7 @@ R.register('splitat', {
             arr.splice(0);
             lastDiv = ix;
             if(++ctr === count) {
-              yield (new Node('droptake', self.token, self.src, [new Atom(lastDiv + 1n)])).eval();
+              yield (new Node('droptake', self.token, self.src, [new Imm(lastDiv + 1n)])).eval();
               return;
             }
           } else
@@ -1311,14 +1311,14 @@ R.register('index', {
       for(const val of src.read()) {
         i++;
         if(compareStreams(val, ref))
-          return new Atom(i);
+          return new Imm(i);
       }
       // not found
-      return new Atom(0);
+      return new Imm(0);
     } else {
       const haystack = src.value.toLowerCase();
-      const needle = this.args[0].evalAtom(types.S).toLowerCase();
-      return new Atom(haystack.indexOf(needle) + 1);
+      const needle = this.args[0].evalImm(types.S).toLowerCase();
+      return new Imm(haystack.indexOf(needle) + 1);
     }
   },
   help: {
@@ -1348,13 +1348,13 @@ R.register(['indexes', 'indices'], {
           for(const r of src.read()) {
             i++;
             if(compareStreams(r, ref))
-              yield new Atom(i);
+              yield new Imm(i);
           }
         }
       );
     } else {
       const haystack = src.value.toLowerCase();
-      const needle = this.args[0].evalAtom(types.S).toLowerCase();
+      const needle = this.args[0].evalImm(types.S).toLowerCase();
       return new Stream(this,
         function*() {
           let start = 0;
@@ -1363,7 +1363,7 @@ R.register(['indexes', 'indices'], {
             if(curr < 0)
               break;
             // else
-            yield new Atom(curr + 1);
+            yield new Imm(curr + 1);
             start = curr + 1;
           }
         }
@@ -1392,9 +1392,9 @@ R.register('includes', {
     const ref = this.args[0];
     for(const r of sArr.read())
       if(compareStreams(r, ref))
-        return new Atom(true);
+        return new Imm(true);
     // not found
-    return new Atom(false);
+    return new Imm(false);
   },
   help: {
     en: ['Returns `true` if `_source` contains `_value`, `false` otherwise.'],
@@ -1415,9 +1415,9 @@ R.register('element', {
     const sArr = this.args[0].evalStream();
     for(const r of sArr.read())
       if(compareStreams(r, ref))
-        return new Atom(true);
+        return new Imm(true);
     // not found
-    return new Atom(false);
+    return new Imm(false);
   },
   help: {
     en: ['Returns `true` if `_value` is found in `_stream`, `false` otherwise.'],
@@ -1441,7 +1441,7 @@ R.register('count', {
       if(compareStreams(r, ref))
         count++;
     }
-    return new Atom(count);
+    return new Imm(count);
   },
   help: {
     en: ['Returns the count of occurrences of `_value` in `_source`.',
@@ -1476,7 +1476,7 @@ R.register(['counts', 'tally', 'freq'], {
         cnts.push(1n);
       }
     }
-    return Stream.fromArray([...vals.keys()].map(ix => Stream.fromArray([vals[ix], new Atom(cnts[ix])])));
+    return Stream.fromArray([...vals.keys()].map(ix => Stream.fromArray([vals[ix], new Imm(cnts[ix])])));
   },
   help: {
     en: ['Counts occurrences of distinct elements in `_source`. Returns in the format `[[_value,_count],...]`.',
@@ -1537,12 +1537,12 @@ R.register('rle', {
           if(compareStreams(curr, prev))
             count++;
           else {
-            yield Stream.fromArray([prev, new Atom(count)]);
+            yield Stream.fromArray([prev, new Imm(count)]);
             count = 1;
           }
           prev = curr;
         }
-        yield Stream.fromArray([prev, new Atom(count)]);
+        yield Stream.fromArray([prev, new Imm(count)]);
       }
     );
   },
@@ -1589,7 +1589,7 @@ R.register('isstream', {
   reqSource: true,
   numArg: 0,
   eval() {
-    return new Atom(this.src.eval().type === types.stream);
+    return new Imm(this.src.eval().type === types.stream);
   },
   help: {
     en: ['Tests if `_input` is a stream. Returns `true` or `false`.'],
@@ -1718,10 +1718,10 @@ R.register(['allequal', 'alleq', 'same', 'allsame'], {
         if(prev === null)
           prev = curr;
         else if(!compareStreams(prev, curr))
-          return new Atom(false);
+          return new Imm(false);
       }
       if(prev !== null)
-        return new Atom(true);
+        return new Imm(true);
       else
         throw new StreamError('empty stream');
     } else {
@@ -1730,10 +1730,10 @@ R.register(['allequal', 'alleq', 'same', 'allsame'], {
         if(prev === null)
           prev = r;
         else if(!compareStreams(prev, r))
-          return new Atom(false);
+          return new Imm(false);
       }
       if(prev !== null)
-        return new Atom(true);
+        return new Imm(true);
       else
         throw new StreamError('empty stream');
     }
@@ -1767,7 +1767,7 @@ R.register('trans', {
         return [
           (function*() {
             for(const _ of stm)
-              yield (new Node('transpart', self.token, self.src, [new Atom(i++)])).evalStream();
+              yield (new Node('transpart', self.token, self.src, [new Imm(i++)])).evalStream();
           })(),
           c => {
             stm.skip(c);

@@ -51,38 +51,8 @@ function checkBounds(value, opts = {}) {
   return value;
 }
 
-class Base {
-  desc() {
-    return this.type ? `${this.type} ${this.toString()}` : this.toString();
-  }
-
-  checkType(type) {
-    if(type instanceof Array) {
-      if(!type.includes(this.type))
-        throw new StreamError(`expected ${type.join(' or ')}, got ${this.desc()}`);
-    } else
-      if(this.type !== type)
-        throw new StreamError(`expected ${type}, got ${this.desc()}`);
-    // else
-    return this;
-  }
-
-  writeout(maxLen = DEFLEN) {
-    let d = '';
-    for(const s of this.writeout_gen()) {
-      d += s;
-      if(d.length > maxLen) {
-        d = d.substring(0, maxLen - 3) + '...';
-        break;
-      }
-    }
-    return d;
-  }
-}
-
-export class Node extends Base {
+export class Node {
   constructor(ident, token, src = null, args = [], meta = {}) {
-    super();
     this.ident = ident;
     this.token = token;
     this.src = src;
@@ -90,7 +60,7 @@ export class Node extends Base {
     this.meta = meta;
     this.bare = this.src === null && this.args.length === 0;
     this.type = this.bare ? types.symbol : types.expr;
-    const rec = ident ? mainReg.find(this.ident) : null;
+    const rec = ident ? mainReg.get(this.ident) : null;
     if(rec) {
       this.prepare = this.prepareDefault;
       Object.assign(this, rec);
@@ -100,7 +70,7 @@ export class Node extends Base {
       this[fn] = function(...args) {
         try {
           watchdog.tick();
-          if(debug && !(this instanceof Atom)) {
+          if(debug && !(this instanceof Imm)) {
             const detail = fn === 'prepare' ? `{${Object.keys(args[0]).join(',')}}` : '';
             console.log(`${fn} ${this.toString()} ${detail}`);
           }
@@ -156,7 +126,7 @@ export class Node extends Base {
   // overwritten in constructor for known symbols
   prepare(scope) {
     if(scope.register) {
-      const rec = scope.register.find(this.ident);
+      const rec = scope.register.get(this.ident);
       if(rec)
         return new CustomNode(this.ident, this.token, rec.body,
           this.src, this.args, this.meta).prepare(scope);
@@ -237,7 +207,7 @@ export class Node extends Base {
 
   evalAlphabet(lcase = false) {
     if(!this._cache) {
-      this._cache = [...this.evalStream({finite: true}).read()].map(s => s.evalAtom(types.S));
+      this._cache = [...this.evalStream({finite: true}).read()].map(s => s.evalImm(types.S));
       this._cacheL = this._cache.map(c => c.toLowerCase());
     }
     if(!this._cache.length)
@@ -252,12 +222,12 @@ export class Node extends Base {
     return r;
   }
 
-  evalAtom(type) {
+  evalImm(type) {
     return this.eval().checkType(type).value;
   }
 
   evalNum(opts = {}) {
-    return checkBounds(this.evalAtom(types.N), opts);
+    return checkBounds(this.evalImm(types.N), opts);
   }
 
   applySrc(src) {
@@ -302,6 +272,33 @@ export class Node extends Base {
       else
         return null;
     }
+  }
+
+  desc() {
+    return this.type ? `${this.type} ${this.toString()}` : this.toString();
+  }
+
+  checkType(type) {
+    if(type instanceof Array) {
+      if(!type.includes(this.type))
+        throw new StreamError(`expected ${type.join(' or ')}, got ${this.desc()}`);
+    } else
+      if(this.type !== type)
+        throw new StreamError(`expected ${type}, got ${this.desc()}`);
+    // else
+    return this;
+  }
+
+  writeout(maxLen = DEFLEN) {
+    let d = '';
+    for(const s of this.writeout_gen()) {
+      d += s;
+      if(d.length > maxLen) {
+        d = d.substring(0, maxLen - 3) + '...';
+        break;
+      }
+    }
+    return d;
   }
 
   *writeout_gen() {
@@ -375,10 +372,10 @@ export class CustomNode extends Block {
   }
 }
 
-export class Atom extends Node {
+export class Imm extends Node {
   constructor(val, meta = {}) {
     super(null, null, null, [], meta);
-    this.isAtom = true;
+    this.isImm = true;
     this.value = val = typeof val === 'number' ? BigInt(val) : val;
     this.type = typeof val === 'bigint' ? 'number' : typeof val; // displayed to user
   }
@@ -403,7 +400,7 @@ export class Atom extends Node {
       case types.S:
         return `"${this.value.replace(/"|"|\\/g, '\\$&')}"`; // " included once confuses Vim
       default:
-        throw new Error(`unknown atom type ${typeof this.value}`);
+        throw new Error(`unknown imm type ${typeof this.value}`);
     }
   }
 
@@ -416,7 +413,7 @@ export class Atom extends Node {
   }
 
   static format(v) {
-    return (new Atom(v)).toString();
+    return (new Imm(v)).toString();
   }
 }
 
@@ -428,7 +425,7 @@ function defaultSkip(c) {
 export class Stream extends Node {
   constructor(node, readFun, length) {
     super(node.ident, node.token, node.src, node.args, node.meta);
-    this.isAtom = false;
+    this.isImm = false;
     this.type = types.stream;
     this.readFun = readFun;
     this.length = length;
@@ -522,10 +519,10 @@ export class Stream extends Node {
 }
 
 export function compareStreams(...args) {
-  if(args.every(arg => arg.isAtom)) {
+  if(args.every(arg => arg.isImm)) {
     const vals = args.map(arg => arg.value);
     return vals.every(val => val === vals[0]);
-  } else if(args.some(arg => arg.isAtom))
+  } else if(args.some(arg => arg.isImm))
     return false;
   // else
   /* all args confirmed streams now */

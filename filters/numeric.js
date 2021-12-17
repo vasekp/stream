@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Atom, Stream, types, INF, MAXMEM} from '../base.js';
+import {Node, Imm, Stream, types, INF, MAXMEM} from '../base.js';
 import watchdog from '../watchdog.js';
 import R from '../register.js';
 import RNG from '../random.js';
@@ -9,41 +9,41 @@ function mathOp(func, type = types.N) {
   return function() {
     // source + 1 arg
     if(this.args.length === 1) {
-      const a = this.src.evalAtom(type);
-      const b = this.args[0].evalAtom(type);
-      return new Atom(func(a, b));
+      const a = this.src.evalImm(type);
+      const b = this.args[0].evalImm(type);
+      return new Imm(func(a, b));
     }
-    // all atoms
+    // all immediate
     const args = this.args.map(arg => arg.eval());
-    if(args.every(i => i.isAtom))
-      return new Atom(args.map(a => a.checkType(type).value).reduce(func));
+    if(args.every(i => i.isImm))
+      return new Imm(args.map(a => a.checkType(type).value).reduce(func));
     // one or more streams
-    const lens = args.filter(i => !i.isAtom).map(i => i.length);
+    const lens = args.filter(i => !i.isImm).map(i => i.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.every(len => len === INF) ? INF
       : lens.filter(len => len !== INF).reduce((a,b) => a < b ? a : b);
     return new Stream(this,
       _ => {
-        const is = args.map(arg => arg.isAtom ? arg : arg.read());
+        const is = args.map(arg => arg.isImm ? arg : arg.read());
         return [
           (function*() {
             for(;;) {
               const vs = [];
               for(const i of is)
-                if(i.isAtom)
+                if(i.isImm)
                   vs.push(i.value);
                 else {
                   const r = i.next().value;
                   if(!r)
                     return;
-                  vs.push(r.evalAtom(type));
+                  vs.push(r.evalImm(type));
                 }
-              yield new Atom(vs.reduce(func));
+              yield new Imm(vs.reduce(func));
             }
           }()),
           c => {
             for(const i of is)
-              if(!i.isAtom)
+              if(!i.isImm)
                 i.skip(c);
           }
         ];
@@ -58,7 +58,7 @@ R.register(['plus', 'add'], {
   sourceOrArgs: 2,
   eval: mathOp((a, b) => {
       if(typeof a !== typeof b)
-        throw new StreamError(`${Atom.format(a)} and ${Atom.format(b)} have different types`);
+        throw new StreamError(`${Imm.format(a)} and ${Imm.format(b)} have different types`);
       else
         return a + b;
     }, [types.N, types.S]),
@@ -88,7 +88,7 @@ R.register('minus', {
   sourceOrArgs: 2,
   eval: mathOp((a, b) => a - b),
   bodyForm() {
-    if(this.args.length === 2 && this.args[0].isAtom && this.args[0].value === 0n)
+    if(this.args.length === 2 && this.args[0].isImm && this.args[0].value === 0n)
       return '(-' + this.args[1].toString() + ')';
     else
       return Node.operatorForm('-').call(this);
@@ -183,7 +183,7 @@ R.register(['min', 'max'], {
     if(this.args.length >= 2) {
       const ins = this.args.map(arg => arg.evalNum());
       const res = ins.reduce((a, b) => func(a, b) ? b : a);
-      return new Atom(res);
+      return new Imm(res);
     }
     const src = this.src.evalStream({finite: true});
     if(this.args[0]) {
@@ -236,11 +236,11 @@ function reduceOp(func, numOpts) {
     if(this.args.length >= 2) {
       const ins = this.args.map(arg => arg.evalNum());
       const res = ins.reduce(func);
-      return new Atom(res);
+      return new Imm(res);
     } else if(this.args.length === 1) {
       const inp = this.src.evalNum(numOpts);
       const arg = this.args[0].evalNum(numOpts);
-      return new Atom(func(inp, arg));
+      return new Imm(func(inp, arg));
     } else {
       const src = this.src.evalStream({finite: true});
       let res = null;
@@ -250,7 +250,7 @@ function reduceOp(func, numOpts) {
       }
       if(res === null)
         throw new StreamError('empty stream');
-      return new Atom(res);
+      return new Imm(res);
     }
   };
 }
@@ -376,7 +376,7 @@ R.register(['accum', 'acc', 'ac'], {
         let sum = 0n;
         for(const next of src.read()) {
           sum += next.evalNum();
-          yield new Atom(sum);
+          yield new Imm(sum);
         }
       },
       src.length
@@ -398,7 +398,7 @@ R.register(['total', 'tot', 'sum'], {
     let tot = 0n;
     for(const r of src.read())
       tot += r.evalNum();
-    return new Atom(tot);
+    return new Imm(tot);
   },
   help: {
     en: ['Calculates the total of the input stream.'],
@@ -430,7 +430,7 @@ R.register('diff', {
               const curr = next.evalNum();
               const res = curr - prev;
               prev = curr;
-              yield new Atom(res);
+              yield new Imm(res);
             }
           })(),
           c => {
@@ -463,7 +463,7 @@ R.register(['product', 'prod'], {
       if(prod === 0n)
         break;
     }
-    return new Atom(prod);
+    return new Imm(prod);
   },
   help: {
     en: ['Calculates the produce of all elements of the input stream.'],
@@ -481,11 +481,11 @@ R.register(['power', 'pow'], {
     if(this.args.length === 1) {
       const base = this.src.evalNum();
       const pow = this.args[0].evalNum({min: 0n});
-      return new Atom(base ** pow);
+      return new Imm(base ** pow);
     } else {
       const base = this.args[0].evalNum();
       const pow = this.args[1].evalNum({min: 0n});
-      return new Atom(base ** pow);
+      return new Imm(base ** pow);
     }
   },
   bodyForm() {
@@ -519,7 +519,7 @@ R.register('clamp', {
     if(max < min)
       throw new StreamError(`maximum ${max} smaller than minimum ${min}`);
     const res = inp < min ? min : inp > max ? max : inp;
-    return new Atom(res);
+    return new Imm(res);
   },
   help: {
     en: ['Clamps `_n` to bounds given by `_min` and `_max`.'],
@@ -541,7 +541,7 @@ R.register('mod', {
     const base = this.args[1] ? this.args[1].evalNum() : 0n;
     let rem = (inp - base) % mod;
     rem = (rem >= 0n ? rem : rem + mod) + base;
-    return new Atom(rem);
+    return new Imm(rem);
   },
   help: {
     en: ['Calculates `_n` modulo `_modulus`.',
@@ -569,7 +569,7 @@ R.register('modinv', {
     for(;;) {
       if(y === 1n) {
         c %= mod;
-        return new Atom(c >= 0n ? c : c + mod);
+        return new Imm(c >= 0n ? c : c + mod);
       } else if(y === 0n)
         throw new StreamError(`${val} and ${mod} are not coprime`);
       let [q, r] = [x / y, x % y]; // Working with BigInt, no need for floor
@@ -595,7 +595,7 @@ R.register('abs', {
   reqSource: true,
   eval() {
     const inp = this.src.evalNum();
-    return new Atom(inp >= 0n ? inp : -inp);
+    return new Imm(inp >= 0n ? inp : -inp);
   },
   help: {
     en: ['Absolute value of `_n`.'],
@@ -610,7 +610,7 @@ R.register(['sign', 'sgn'], {
   reqSource: true,
   eval() {
     const inp = this.src.evalNum();
-    return new Atom(inp > 0n ? 1 : inp < 0n ? -1 : 0);
+    return new Imm(inp > 0n ? 1 : inp < 0n ? -1 : 0);
   },
   help: {
     en: ['Sign of `_n`: -1, 0, or 1.'],
@@ -626,7 +626,7 @@ R.register(['odd', 'isodd'], {
   numArg: 0,
   eval() {
     const val = this.src.evalNum();
-    return new Atom((val & 1n) === 1n);
+    return new Imm((val & 1n) === 1n);
   },
   help: {
     en: ['Checks if `_n` is odd, returns `true` or `false`.',
@@ -646,7 +646,7 @@ R.register(['even', 'iseven'], {
   numArg: 0,
   eval() {
     const val = this.src.evalNum();
-    return new Atom((val & 1n) === 0n);
+    return new Imm((val & 1n) === 0n);
   },
   help: {
     en: ['Checks if `_n` is even, returns `true` or `false`.',
@@ -664,7 +664,7 @@ R.register('and', {
   reqSource: false,
   minArg: 2,
   eval() {
-    return new Atom(this.args.map(arg => arg.evalAtom(types.B)).reduce((a, b) => a && b));
+    return new Imm(this.args.map(arg => arg.evalImm(types.B)).reduce((a, b) => a && b));
   },
   bodyForm: Node.operatorForm('&'),
   help: {
@@ -682,7 +682,7 @@ R.register('or', {
   reqSource: false,
   minArg: 2,
   eval() {
-    return new Atom(this.args.map(arg => arg.evalAtom(types.B)).reduce((a, b) => a || b));
+    return new Imm(this.args.map(arg => arg.evalImm(types.B)).reduce((a, b) => a || b));
   },
   bodyForm: Node.operatorForm('|'),
   help: {
@@ -700,8 +700,8 @@ R.register('not', {
   maxArg: 1,
   sourceOrArgs: 1,
   eval() {
-    const val = (this.args[0] || this.src).evalAtom(types.B);
-    return new Atom(!val);
+    const val = (this.args[0] || this.src).evalImm(types.B);
+    return new Imm(!val);
   },
   help: {
     en: ['Negates a logical value.',
@@ -726,9 +726,9 @@ R.register(['every', 'each', 'all'], {
     const src = this.src.evalStream({finite: true});
     const cond = this.args[0];
     for(const value of src.read())
-      if(!(cond ? cond.applySrc(value) : value).evalAtom('boolean'))
-        return new Atom(false);
-    return new Atom(true);
+      if(!(cond ? cond.applySrc(value) : value).evalImm('boolean'))
+        return new Imm(false);
+    return new Imm(true);
   },
   help: {
     en: ['Returns `true` only if evaluating `_condition` on every element of `_source` gives `true`, `false` otherwise.',
@@ -755,9 +755,9 @@ R.register(['some', 'any'], {
     const src = this.src.evalStream({finite: true});
     const cond = this.args[0];
     for(const value of src.read())
-      if((cond ? cond.applySrc(value) : value).evalAtom('boolean'))
-        return new Atom(true);
-    return new Atom(false);
+      if((cond ? cond.applySrc(value) : value).evalImm('boolean'))
+        return new Imm(true);
+    return new Imm(false);
   },
   help: {
     en: ['Returns `true` if evaluating `_condition` on some element of `_source` gives `true`, `false` otherwise.',
@@ -782,7 +782,7 @@ function compareRecord(sign, func, help) {
       let res = true;
       for(let i = 1; i < vals.length; i++)
         res = res && func(vals[i-1], vals[i]);
-      return new Atom(res);
+      return new Imm(res);
     },
     bodyForm: Node.operatorForm(sign),
     help
@@ -838,7 +838,7 @@ R.register(['tobase', 'tbase', 'tb', 'str'], {
       val /= base;
     }
     ret += digits.reverse().map(d => digit(Number(d))).join('');
-    return new Atom(ret.padStart(minl, '0'));
+    return new Imm(ret.padStart(minl, '0'));
   },
   help: {
     en: ['Converts number `_n` to a string in base `_base`. Digits `0`, ..., `9`, `_a`, ..., `_z` are used.',
@@ -862,7 +862,7 @@ R.register(['frombase', 'fbase', 'fb', 'num'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const str = this.src.evalAtom('string');
+    const str = this.src.evalImm('string');
     const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
       throw new StreamError(`invalid input "${str}"`);
@@ -878,7 +878,7 @@ R.register(['frombase', 'fbase', 'fb', 'num'], {
     const val = str[0] === '-'
       ? -[...str.substring(1)].map(digit).reduce((v, d) => v * base + BigInt(d), 0n)
       : [...str].map(digit).reduce((v, d) => v * base + BigInt(d), 0n);
-    return new Atom(val);
+    return new Imm(val);
   },
   help: {
     en: ['Parses `_string` as a number in base `_base`. Digits `0`, ..., `9`, `_a`, ..., `_z` are accepted, as well as uppercase.',
@@ -909,7 +909,7 @@ R.register(['todigits', 'tdig'], {
     }
     while(digits.length < minl)
       digits.push(0);
-    return Stream.fromArray(digits.reverse().map(d => new Atom(d)));
+    return Stream.fromArray(digits.reverse().map(d => new Imm(d)));
   },
   help: {
     en: ['Converts number `_n` to a base `_base` and outputs its digits as a stream.',
@@ -938,7 +938,7 @@ R.register(['fromdigits', 'fdig'], {
       const digit = r.evalNum({min: 0n, max: base - 1n});
       val = val * base + digit;
     }
-    return new Atom(val);
+    return new Imm(val);
   },
   help: {
     en: ['Reads numbers from `_source` and interprets them as digits in base `_base`. Returns the composed number.',
@@ -982,7 +982,7 @@ R.register('primes', {
     return new Stream(this,
       function*() {
         for(const p of primes())
-          yield new Atom(p);
+          yield new Imm(p);
       },
       INF
     );
@@ -1002,14 +1002,14 @@ R.register('isprime', {
   eval() {
     const val = this.src.evalNum();
     if(val <= 1n)
-      return new Atom(false);
+      return new Imm(false);
     for(const p of primes()) {
       if(p === val)
-        return new Atom(true);
+        return new Imm(true);
       else if(p * p < val && (val % p) === 0n)
-        return new Atom(false);
+        return new Imm(false);
       else if(p > val)
-        return new Atom(false);
+        return new Imm(false);
     }
   },
   help: {
@@ -1034,7 +1034,7 @@ R.register('factor', {
       if(val === 1n)
         break;
       while((val % p) === 0n) {
-        ret.push(new Atom(p));
+        ret.push(new Imm(p));
         val /= p;
       }
     }
@@ -1086,7 +1086,7 @@ R.register('divisors', {
                 res *= prime ** p;
                 x /= (pow + 1n);
               }
-              yield new Atom(res);
+              yield new Imm(res);
               i++;
             }
           })(),
@@ -1112,7 +1112,7 @@ R.register(['isnumber', 'isnum'], {
   numArg: 0,
   eval() {
     const c = this.src.eval();
-    return new Atom(c.type === types.N);
+    return new Imm(c.type === types.N);
   },
   help: {
     en: ['Tests if `_input` is a number. Returns `true` or `false`.'],
@@ -1159,10 +1159,10 @@ R.register('pi', {
             const pre = Math.floor(v[0] / 10);
             v[0] %= 10;
             if(pre < 9) {
-              yield* wait.map(x => new Atom(x));
+              yield* wait.map(x => new Imm(x));
               wait = [pre];
             } else if(pre === 10) {
-              yield* wait.map(x => new Atom(x + 1));
+              yield* wait.map(x => new Imm(x + 1));
               wait = [0];
             } else {
               // pre === 9
@@ -1209,7 +1209,7 @@ R.register(['random', 'rnd', 'sample'], {
       /*** 2-arg: min, max ***/
       const min = this.args[0].evalNum();
       const max = this.args[1].evalNum();
-      return new Atom(rnd1(this.meta._seed, min, max));
+      return new Imm(rnd1(this.meta._seed, min, max));
     } else if(this.args.length === 3) {
       /*** 3-arg: min, max, count ***/
       const min = this.args[0].evalNum();
@@ -1219,7 +1219,7 @@ R.register(['random', 'rnd', 'sample'], {
       return new Stream(this,
         function*() {
           for(let i = 0n; i < count; i++)
-            yield new Atom(gen.next().value);
+            yield new Imm(gen.next().value);
         },
         count
       );
@@ -1310,7 +1310,7 @@ R.register(['rndstream', 'rnds'], {
       return new Stream(this,
         function*() {
           for(const ix of gen)
-            yield new Atom(ix);
+            yield new Imm(ix);
         },
         INF
       );
@@ -1383,7 +1383,7 @@ R.register(['divmod', 'quotrem'], {
     let rem = (inp - base) % mod;
     rem = (rem >= 0n ? rem : rem + mod) + base;
     const div = (inp - rem) / mod;
-    return Stream.fromArray([new Atom(div), new Atom(rem)]);
+    return Stream.fromArray([new Imm(div), new Imm(rem)]);
   },
   help: {
     en: ['Returns a pair comprising the quotient and remainder of dividing `_n` by `_k`.',
@@ -1410,7 +1410,7 @@ R.register(['mantexp', 'manexp'], {
       rem /= base;
       exp++;
     }
-    return Stream.fromArray([new Atom(rem), new Atom(exp)]);
+    return Stream.fromArray([new Imm(rem), new Imm(exp)]);
   },
   help: {
     en: ['Returns a pair comprising the mantissa and exponent of `_n` in base `_base`, such that `_n = _mantissa * _base^_exponent` and `_mantissa.mod(_base) <> 0`.'],
@@ -1430,7 +1430,7 @@ R.register('dlog', {
     const base = this.args[0]?.evalNum({min: 2n}) || 10n;
     for(let x = inp, exp = 0; ; x /= base, exp++)
       if(x === 0n)
-        return new Atom(exp);
+        return new Imm(exp);
   },
   help: {
     en: ['Discrete logarithm: digit length of `_n` in base `_base` (default 10).'],
@@ -1461,7 +1461,7 @@ R.register('sqrt', {
   numArg: 0,
   eval() {
     const inp = this.src.evalNum({min: 0n});
-    return new Atom(sqrt(inp));
+    return new Imm(sqrt(inp));
   },
   help: {
     en: ['Returns the square root of `_n` rounded below.'],
@@ -1479,7 +1479,7 @@ R.register('sqrem', {
   eval() {
     const inp = this.src.evalNum({min: 0n});
     const sqr = sqrt(inp);
-    return Stream.fromArray([new Atom(sqr), new Atom(inp - sqr * sqr)]);
+    return Stream.fromArray([new Imm(sqr), new Imm(inp - sqr * sqr)]);
   },
   help: {
     en: ['Returns a pair comprising the integer square root of `_n` and the remaining difference.'],
@@ -1498,7 +1498,7 @@ R.register('trirem', {
   eval() {
     const inp = this.src.evalNum({min: 0n});
     const row = (sqrt(1n + 8n * inp) - 1n) / 2n;
-    return Stream.fromArray([new Atom(row), new Atom(inp - row * (row + 1n) / 2n)]);
+    return Stream.fromArray([new Imm(row), new Imm(inp - row * (row + 1n) / 2n)]);
   },
   help: {
     en: ['Returns a pair `[_k,_l]` such that `_n = _k*(_k-1) + _l` and `_k <= _n`.'],

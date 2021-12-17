@@ -11,7 +11,7 @@ import parse from './parser.js';
 import RNG from './random.js';
 import watchdog from './watchdog.js';
 import {formatText} from './help.js';
-import {StreamError, TimeoutError, ParseError} from './errors.js';
+import {BaseError} from './errors.js';
 
 const helpRegex = /^\?\s*(\w+)?\s*$/d;
 
@@ -34,7 +34,7 @@ export default class StreamSession {
       parse(input);
       return {result: 'ok'};
     } catch(e) {
-      if(e instanceof ParseError || e instanceof StreamError || e instanceof TimeoutError)
+      if(e instanceof BaseError)
         return {
           result: 'error',
           input,
@@ -69,7 +69,7 @@ export default class StreamSession {
         if(!helpMatch[1])
           return {result: 'help'};
         const ident = helpMatch[1];
-        const record = mainReg.find(ident);
+        const record = mainReg.get(ident);
         if(record)
           return {
             result: 'help',
@@ -117,12 +117,12 @@ export default class StreamSession {
             histRecord: result.toString(),
             regEvents,
             type: result.type,
-            outRaw: result.isAtom ? result.value.toString() : null
+            outRaw: result.isImm ? result.value.toString() : null
           };
         }
       }, opts.time);
     } catch(e) {
-      if(e instanceof ParseError || e instanceof StreamError || e instanceof TimeoutError)
+      if(e instanceof BaseError)
         return {
           result: 'error',
           input,
@@ -166,10 +166,10 @@ class StreamHandle {
           input: n.toString(),
           output: watchdog.timed(_ => n.writeout(opts.length), opts.time),
           type: n.type,
-          outRaw: n.isAtom ? n.value.toString() : null
+          outRaw: n.isImm ? n.value.toString() : null
         };
     } catch(e) {
-      if(e instanceof ParseError || e instanceof StreamError || e instanceof TimeoutError)
+      if(e instanceof BaseError)
         return {
           result: 'error',
           input: this.stm.toString(),
