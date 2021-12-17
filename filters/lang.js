@@ -6,10 +6,7 @@ import {catg} from '../help.js';
 R.register('array', {
   reqSource: false,
   eval() {
-    return new Stream(this,
-      _ => this.args.map(arg => arg.eval()).values(),
-      BigInt(this.args.length)
-    );
+    return Stream.fromArray(this.args.map(arg => arg.eval()));
   },
   bodyForm() {
     return '[' + this.args.map(n => n.toString()).join(',') + ']';
@@ -89,17 +86,18 @@ R.register('join', {
     const length = lens.some(len => len === undefined) ? undefined
       : lens.some(len => len === INF) ? INF
       : lens.reduce((a,b) => a+b);
-    return new Stream(this,
-      function*() {
-        for(const arg of args) {
-          if(arg.isAtom)
-            yield arg;
-          else
-            yield* arg.read();
-        }
-      },
-      length
-    );
+    const gen = function*() {
+      for(const arg of args) {
+        if(arg.isAtom)
+          yield arg;
+        else
+          yield* arg.read();
+      }
+    };
+    if(length !== undefined && length !== INF && length < MAXMEM)
+      return Stream.fromArray([...gen()]);
+    else
+      return new Stream(this, gen, length);
   },
   bodyForm() {
     if(this.args.length > 1)
