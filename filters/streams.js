@@ -565,9 +565,10 @@ R.register(['flatten', 'fl'], {
   reqSource: true,
   maxArg: 1,
   eval() {
+    const src = this.src.evalStream();
     const depth = this.args[0] ? this.args[0].evalNum() : INF;
     return new Stream(this,
-      _ => flatten(this.src.evalStream(), depth));
+      _ => flatten(src, depth));
   },
   help: {
     en: ['Flattens all stream elements of `_source`.',
