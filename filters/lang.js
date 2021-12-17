@@ -346,7 +346,7 @@ R.register('over', {
   check(srcPromise = false, argsPromise = 0) {
     this.checkThis(srcPromise, argsPromise);
     this.src.check(false, this.args.length);
-    this.checkArgs(srcPromise);
+    this.checkArgs();
   },
   eval() {
     const body = this.src.checkType([types.symbol, types.expr]);

@@ -175,7 +175,7 @@ R.register(['min', 'max'], {
     if(this.args.length === 1)
       this.args[0].check(true);
     else
-      Node.prototype.checkArgs.call(this, srcPromise);
+      Node.prototype.checkArgs.call(this);
   },
   eval() {
     const func = this.ident === 'max' ? (a, b) => b > a : (a, b) => b < a;

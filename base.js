@@ -228,7 +228,7 @@ export class Node extends Base {
 
   checkArgs() {
     for(const arg of this.args)
-      arg.check(false);
+      arg.check();
   }
 
   eval() {

@@ -869,7 +869,7 @@ R.register('recur', {
   checkArgs(srcPromise) {
     this.args.forEach((arg, ix, arr) => {
       if(ix < arr.length - 1)
-        arg.check(this.src || srcPromise);
+        arg.check();
       else
         arg.check(false, arg.bare ? arr.length - 1 : 0);
     });
