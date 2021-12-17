@@ -1,4 +1,4 @@
-import StreamSession from './interface.js';
+import StreamSession from './stream.js';
 import mainReg from './register.js';
 
 import * as fs from 'fs/promises';
