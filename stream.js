@@ -13,6 +13,8 @@ import watchdog from './watchdog.js';
 import {formatText} from './help.js';
 import {BaseError} from './errors.js';
 
+export {types} from './base.js';
+
 const helpRegex = /^\?\s*(\w+)?\s*$/d;
 
 export default class StreamSession {
@@ -105,7 +107,7 @@ export default class StreamSession {
           return {
             result: 'ok',
             input,
-            handle: new StreamHandle(result)
+            handle: new StreamHandle(result.read())
           };
         } else {
           const output = result.writeout(opts.length);
