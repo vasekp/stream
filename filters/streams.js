@@ -751,10 +751,10 @@ R.register('nest', {
     this.args[0].check(true);
   },
   eval() {
-    let curr = this.src.eval();
     const body = this.args[0].checkType([types.symbol, types.expr]);
     return new Stream(this,
       function*() {
+        let curr = this.src.eval();
         for(;;) {
           yield curr;
           curr = body.applySrc(curr);
@@ -792,11 +792,11 @@ R.register('fold', {
     const bodyOut = this.args.length === 3
       ? this.args[1].checkType([types.symbol, types.expr])
       : bodyMem;
-    let curr;
-    if(this.args.length > 1)
-      curr = this.args[this.args.length - 1].applySrc(src);
     return new Stream(this,
       function*() {
+        let curr;
+        if(this.args.length > 1)
+          curr = this.args[this.args.length - 1].applySrc(src);
         for(const next of src.read()) {
           const val = curr ? bodyOut.applyArgsAuto([curr, next]) : next;
           curr = bodyMem === bodyOut ? val : bodyMem.applyArgsAuto([curr, next]);
