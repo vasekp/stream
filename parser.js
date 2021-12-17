@@ -351,7 +351,7 @@ function parse0(iter, open, close, array) {
           state = ss.sym;
         } else if(s.value === '[' && (state === ss.sym || state === ss.term)) {
           const args = parse0(iter, s, ']', true);
-          term = new Node('part', s, null, [term, ...args]);
+          term = new Node('part', s, term, args);
           state = ss.term;
         } else
           throw new ParseError(`"${s.value}" can't appear here`, s);

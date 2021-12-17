@@ -230,11 +230,10 @@ function* part(src, gen) {
 }
 
 R.register('part', {
-  reqSource: false,
-  minArg: 1,
+  reqSource: true,
   eval() {
-    const args = this.args.slice(1).map(arg => arg.eval());
-    const src = this.args[0].evalStream();
+    const args = this.args.map(arg => arg.eval());
+    const src = this.src.evalStream();
     if(args.every(i => i.isAtom)) {
       if(args.length === 1) {
         const ix = args[0].numValue();
@@ -288,19 +287,21 @@ R.register('part', {
     } else
       throw new StreamError('required list of values or a single stream');
   },
-  bodyForm() {
-    let ret = '';
-    ret += `(${this.args[0].toString()})`;
-    ret += '[' + this.args.slice(1).map(a => a.toString()).join(',') + ']';
-    return ret;
+  inputForm() {
+    if(this.src) {
+      let ret = this.src.toString();
+      ret += '[' + this.args.map(a => a.toString()).join(',') + ']';
+      return ret;
+    } else
+      return Node.prototype.inputForm.call(this);
   },
   help: {
     en: [
-      'Returns one or more parts of `_source`. Long form of `_source[...]`.',
+      'Returns one or more parts of `_source`. Long form of `_source[_parts]`.',
       'One or more parts may be given, or a stream.',
       '-Part specifications may be negative, in that case they are counted from the end.'],
     cs: [
-      'Vrátí jeden nebo více prvků `_source`. Alternativní zápis `_source[...]`.',
+      'Vrátí jeden nebo více prvků `_source`. Alternativní zápis `_source[_parts]`.',
       'Specifikace může zahrnovat jeden nebo několik indexů, nebo sama být proudem.',
       '-Požadované indexy mohou být i záporné, v takovém případě se počítají od konce proudu.'],
     cat: catg.base,
@@ -308,7 +309,8 @@ R.register('part', {
       ['abc[3,1]', '["c","a"]', {en: 'returns a stream', cs: 'vrací proud'}],
       ['abc[range(1,5,2)]', '["a","c","e"]'],
       ['abc[-3]', '"x"']],
-    args: 'source,...'
+    src: 'source',
+    args: 'parts...'
   }
 });
 
