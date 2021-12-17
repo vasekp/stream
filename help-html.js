@@ -26,7 +26,7 @@ const entities = {
   '>': '&gt;',
   '&': '&amp;'};
 
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', async _ => {
   const params = new URLSearchParams(window.location.search);
   const lang = params.get('lang') === 'cs' ? 'cs' : 'en';
   if(document.body.id !== 'help')
