@@ -137,12 +137,14 @@ R.register('times', {
 R.register(['divide', 'div'], {
   minArg: 1,
   sourceOrArgs: 2,
-  eval: mathOp((a, b) => {
+  eval() {
+    return mathOp((a, b) => {
     if(b === 0n)
       throw new StreamError('division by zero', this);
     else
       return a / b;
-  }),
+    }).call(this);
+  },
   bodyForm: Node.operatorForm('/'),
   help: {
     en: ['Divides its first argument by all the others. Long form of `x/y/...`.',

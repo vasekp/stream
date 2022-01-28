@@ -57,19 +57,12 @@ export class Node {
     for(const fn of ['eval', 'prepare']) {
       const pFn = this[fn];
       this[fn] = function(...args) {
-        try {
-          watchdog.tick();
-          if(debug && !(this instanceof Imm)) {
-            const detail = fn === 'prepare' ? `{${Object.keys(args[0]).join(',')}}` : '';
-            console.log(`${fn} ${this.toString()} ${detail}`);
-          }
-          return pFn.call(this, ...args);
-        } catch(e) {
-          if(e instanceof StreamError)
-            throw e.withNode(this);
-          else
-            throw e;
+        watchdog.tick();
+        if(debug && !(this instanceof Imm)) {
+          const detail = fn === 'prepare' ? `{${Object.keys(args[0]).join(',')}}` : '';
+          console.log(`${fn} ${this.toString()} ${detail}`);
         }
+        return pFn.call(this, ...args);
       };
     }
     if(debug) {
@@ -478,14 +471,7 @@ export class Stream extends Node {
 
       next() {
         watchdog.tick();
-        try {
-          return bareGen.next();
-        } catch(e) {
-          if(e instanceof StreamError)
-            throw e.withNode(self);
-          else
-            throw e;
-        }
+        return bareGen.next();
       }
     }
     generator.skip = skip;

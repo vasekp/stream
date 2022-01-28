@@ -8,18 +8,12 @@ export class BaseError extends Error {
 export class StreamError extends BaseError {
   constructor(msg, node) {
     super(msg);
-    if(node)
-      this.withNode(node);
-  }
-
-  withNode(node) {
-    if(this.node)
-      return this;
+    if(!node)
+      throw new Error('StreamError created without node');
     this.node = node;
     this.pos = node.token.pos;
     this.len = node.token.value.length;
     this.desc = node.toString();
-    return this;
   }
 }
 
