@@ -51,33 +51,32 @@ export class Node {
     this.type = this.bare ? types.symbol : types.expr;
     const rec = ident ? mainReg.get(this.ident) : null;
     if(rec) {
-      this.prepare = this.prepareDefault;
       Object.assign(this, rec);
-    }
-    for(const fn of ['eval', 'prepare']) {
-      const pFn = this[fn];
-      this[fn] = function(...args) {
-        watchdog.tick();
-        if(debug && !(this instanceof Imm)) {
-          const detail = fn === 'prepare' ? `{${Object.keys(args[0]).join(',')}}` : '';
-          console.log(`${fn} ${this.toString()} ${detail}`);
-        }
-        return pFn.call(this, ...args);
-      };
+      this.evalIn = rec.eval;
+      this.prepareIn = rec.prepare || this.prepareDefault;
+      delete this.eval;
+      delete this.prepare;
     }
     if(debug) {
-      for(const fn of ['prepare', 'modify']) {
-        const pFn = this[fn];
-        this[fn] = (...args) => {
-          const nnode = pFn.call(this, ...args);
-          if(nnode !== this)
-            console.log(`${fn} ${this.toString()} {${Object.keys(args[0]).filter(x => x).join(',')}} => ${nnode.toString()}`);
-          return nnode;
-        };
-      }
+      const pModify = this.modify;
+      this.modify = what => {
+        const nnode = pModify.call(this, what);
+        if(nnode !== this)
+          console.log(`modify ${this.toString()} {${Object.keys(what).filter(x => x).join(',')}} => ${nnode.toString()}`);
+        return nnode;
+      };
+      const pPrepare = this.prepare;
+      this.prepare = scope => {
+        console.log(`prepare ${this.toString()} {${Object.keys(scope).join(',')}}`);
+        const nnode = pPrepare.call(this, scope);
+        if(nnode !== this)
+          console.log(`prepare ${this.toString()} {${Object.keys(scope).filter(x => x).join(',')}} => ${nnode.toString()}`);
+        return nnode;
+      };
       const pEval = this.eval;
       if(pEval) {
         this.eval = _ => {
+          console.log(`eval ${this.toString()}`);
           const nnode = pEval.call(this);
           if(nnode !== this)
             console.log(`eval ${this.toString()} => ${nnode.desc()}`);
@@ -105,8 +104,13 @@ export class Node {
     return this.modify({...what, src, args});
   }
 
-  // overwritten in constructor for known symbols
   prepare(scope) {
+    watchdog.tick();
+    return this.prepareIn(scope);
+  }
+
+  // overwritten in constructor for known symbols
+  prepareIn(scope) {
     if(scope.register) {
       const rec = scope.register.get(this.ident);
       if(rec)
@@ -184,7 +188,8 @@ export class Node {
   }
 
   eval() {
-    return this;
+    watchdog.tick();
+    return this.evalIn();
   }
 
   evalAlphabet(lcase = false) {
@@ -345,7 +350,7 @@ export class Block extends Node {
     return this.modify({...what, src, args, body});
   }
 
-  prepare(scope) {
+  prepareIn(scope) {
     const pnode = this.prepareDefault(scope);
     const pbody = this.body.prepare({...scope, outer: {
       src: pnode.src || scope.src,
@@ -443,12 +448,19 @@ export class Stream extends Node {
     this.type = types.stream;
     this.readFun = readFun;
     this.length = length;
-    this.eval = _ => this;//{ console.trace(); return this };
   }
 
   static fromArray(arr) {
     return new Stream(new Node('array', null, null, arr),
       arr.values.bind(arr), BigInt(arr.length));
+  }
+
+  eval() {
+    return this;
+  }
+
+  prepare() {
+    return this;
   }
 
   read() {
