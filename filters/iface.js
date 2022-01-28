@@ -16,7 +16,7 @@ R.register('clear', {
     const reg = this.meta._register;
     if(!reg)
       throw new Error('register not set');
-    const idents = this.args.map(arg => arg.checkType(types.symbol).ident);
+    const idents = this.args.map(arg => this.cast0(arg, types.symbol).ident);
     const ret = [];
     for(const ident of idents)
       if(reg.clear(ident, true))
@@ -79,7 +79,7 @@ R.register('save', {
     if(!scope.partial && scope.referrer !== this)
       throw new StreamError('cannot appear here');
     const args = this.args.map(arg => {
-      arg.checkType([types.symbol, types.expr]);
+      this.cast0(arg, [types.symbol, types.expr]);
       if(arg.type === types.symbol)
         return arg;
       else if(arg.token.value === '=')
@@ -108,7 +108,7 @@ R.register('save', {
           ret.push(new Imm(arg.ident));
         }
       } else {
-        ret.push(...arg.prepare({register: outerReg, referrer: arg}).evalStream().read());
+        ret.push(...arg.prepare({register: outerReg, referrer: arg}).eval().read());
         arg.args.forEach((anode, ix, arr) => {
           if(ix < arr.length - 1)
             innerReg.clear(anode.ident);
@@ -145,7 +145,7 @@ R.register(['restore', 'revert'], {
       throw new Error('register mismatch');
     const ret = [];
     this.args.forEach(arg => {
-      if(innerReg.clear(arg.checkType(types.symbol).ident))
+      if(innerReg.clear(this.cast0(arg, types.symbol).ident))
         ret.push(new Imm(arg.ident));
     });
     return Stream.fromArray(ret);

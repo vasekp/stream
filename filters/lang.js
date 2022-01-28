@@ -27,8 +27,8 @@ R.register('foreach', {
     this.args[0].check(true);
   },
   eval() {
-    const src = this.src.evalStream();
-    const body = this.args[0].checkType([types.symbol, types.expr]);
+    const src = this.cast0(this.src.eval(), types.stream);
+    const body = this.cast0(this.args[0], [types.symbol, types.expr]);
     return new Stream(this,
       _ => {
         const gen = src.read();
@@ -121,7 +121,7 @@ R.register('join', {
 R.register('zip', {
   reqSource: false,
   eval() {
-    const args = this.args.map(arg => arg.evalStream());
+    const args = this.args.map(arg => this.cast0(arg.eval(), types.stream));
     const lens = args.map(arg => arg.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.every(len => len === INF) ? INF
@@ -174,7 +174,7 @@ function* part(src, gen) {
     if(ix === 0n)
       throw new StreamError(`requested part 0`);
     else if(ix < 0n) {
-      src.checkFinite();
+      //src.checkFinite();
       const nix = -ix;
       if(sLen === undefined) {
         stSkip = src.read();
@@ -233,10 +233,10 @@ R.register('part', {
   reqSource: true,
   eval() {
     const args = this.args.map(arg => arg.eval());
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     if(args.every(i => i.isImm)) {
       if(args.length === 1) {
-        const ix = args[0].numValue();
+        const ix = this.cast(args[0], types.N);
         if(ix > 0n) {
           const stm = src.read();
           stm.skip(ix - 1n);
@@ -246,7 +246,7 @@ R.register('part', {
           else
             throw new StreamError(`requested part ${ix} beyond end`);
         } else if(ix < 0n) {
-          src.checkFinite();
+          this.cast0(src, types.stream, {finite: true});
           const nix = -ix;
           const stm = src.read();
           if(src.length === undefined) {
@@ -271,12 +271,12 @@ R.register('part', {
         } else
           throw new StreamError(`requested part 0`);
       } else
-        return Stream.fromArray([...part(src, args.map(i => i.numValue()))]);
+        return Stream.fromArray([...part(src, args.map(arg => this.cast(arg, types.N)))]);
     } else if(args.length === 1) {
       const sParts = args[0];
       return new Stream(this,
         _ => {
-          const rParts = sParts.adapt(val => val.evalNum());
+          const rParts = sParts.adapt(val => this.cast(val, types.N));
           return [
             part(src, rParts),
             c => rParts.skip(c)
@@ -319,7 +319,7 @@ R.register('#in', {
   prepare(scope) {
     if(scope.outer && !scope.outer.partial) {
       if(this.args[0]) {
-        const ix = this.args[0].evalNum({min: 1n, max: scope.outer.args.length});
+        const ix = this.cast(this.args[0].eval(), types.N, {min: 1n, max: scope.outer.args.length});
         return ix <= scope.outer.args.length ? scope.outer.args[Number(ix) - 1] : this;
       } else
         return scope.outer.src || this;
@@ -349,8 +349,8 @@ R.register('over', {
     this.checkArgs();
   },
   eval() {
-    const body = this.src.checkType([types.symbol, types.expr]);
-    const args = this.args.map(arg => arg.evalStream());
+    const body = this.cast0(this.src, [types.symbol, types.expr]);
+    const args = this.args.map(arg => this.cast0(arg.eval(), types.stream));
     const lens = args.map(arg => arg.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.every(len => len === INF) ? INF
@@ -461,7 +461,7 @@ R.register('assign', {
   eval() {
     const args = this.args.slice();
     const body = args.pop();
-    const idents = args.map(arg => arg.checkType(types.symbol).ident);
+    const idents = args.map(arg => this.cast0(arg, types.symbol).ident);
     const reg = this.meta._register;
     if(!reg)
       throw new Error('register not set');
@@ -512,7 +512,7 @@ R.register('#history', {
   prepare(scope) {
     if(scope.history) {
       if(this.args[0]) {
-        const ix = this.args[0].evalNum({min: 1n});
+        const ix = this.cast(this.args[0].eval(), types.N, {min: 1n});
         const ret = scope.history.at(Number(ix));
         if(!ret)
           throw new StreamError(`history element ${ix} not found`);

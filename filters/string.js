@@ -47,9 +47,9 @@ R.register(['split', 'chars'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const str = this.src.evalImm(types.S);
+    const str = this.cast(this.src.eval(), types.S);
     if(this.args[0]) {
-      const ev = this.args[0].eval().checkType([types.N, types.S, types.stream]);
+      const ev = this.cast0(this.args[0].eval(), [types.N, types.S, types.stream]);
       if(ev.type === types.S) {
         const sep = ev.value;
         const split = str.split(sep);
@@ -116,8 +116,8 @@ R.register('cat', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const strs = [...this.src.evalStream({finite: true}).read()].map(a => a.evalImm(types.S));
-    const sep = this.args[0] ? this.args[0].evalImm(types.S) : '';
+    const strs = [...this.cast0(this.src.eval(), types.stream, {finite: true}).read()].map(a => this.cast(a.eval(), types.S));
+    const sep = this.args[0] ? this.cast(this.args[0].eval(), types.S) : '';
     return new Imm(strs.join(sep));
   },
   help: {
@@ -137,7 +137,7 @@ R.register('ord', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const c = this.src.evalImm(types.S);
+    const c = this.cast(this.src.eval(), types.S);
     if(this.args[0]) {
       const abc = this.args[0].evalAlphabet(true);
       const ix = abc.indexOf(c.toLowerCase());
@@ -167,14 +167,14 @@ R.register('chr', {
   maxArg: 1,
   eval() {
     if(this.args[0]) {
-      const ix = this.src.evalNum({min: 1n});
+      const ix = this.cast(this.src.eval(), types.N, {min: 1n});
       const abc = this.args[0].evalAlphabet();
       if(ix > abc.length)
         throw new StreamError(`index ${ix} beyond end`);
       else
         return new Imm(abc[Number(ix) - 1]);
     } else {
-      const cp = this.src.evalNum({min: 0n});
+      const cp = this.cast(this.src.eval(), types.N, {min: 0n});
       return new Imm(String.fromCodePoint(Number(cp)));
     }
   },
@@ -196,7 +196,7 @@ R.register('chrm', {
   reqSource: true,
   numArg: 1,
   eval() {
-    let ix = this.src.evalNum() - 1n;
+    let ix = this.cast(this.src.eval(), types.N) - 1n;
     const abc = this.args[0].evalAlphabet();
     ix = Number(ix % BigInt(abc.length));
     if(ix < 0) ix += abc.length;
@@ -220,7 +220,7 @@ R.register('ords', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalImm(types.S);
+    const str = this.cast(this.src.eval(), types.S);
     const abc = this.args[0].evalAlphabet(true);
     return new Stream(this,
       function*() {
@@ -246,7 +246,7 @@ R.register(['lcase', 'lc'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const str = this.src.evalImm(types.S);
+    const str = this.cast(this.src.eval(), types.S);
     return new Imm(str.toLowerCase());
   },
   help: {
@@ -263,7 +263,7 @@ R.register(['ucase', 'uc'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const str = this.src.evalImm(types.S);
+    const str = this.cast(this.src.eval(), types.S);
     return new Imm(str.toUpperCase());
   },
   help: {
@@ -452,8 +452,8 @@ R.register('prefix', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalImm(types.S);
-    const length = this.args[0].evalNum();
+    const str = this.cast(this.src.eval(), types.S);
+    const length = this.cast(this.args[0].eval(), types.N);
     return new Imm(str.slice(0, Number(length))); // works for ≥ 0 as well as < 0
   },
   help: {
@@ -474,8 +474,8 @@ R.register('postfix', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalImm(types.S);
-    const length = this.args[0].evalNum();
+    const str = this.cast(this.src.eval(), types.S);
+    const length = this.cast(this.args[0].eval(), types.N);
     return length === 0n ? new Imm("") : new Imm(str.slice(Number(-length)));
   },
   help: {
@@ -496,8 +496,8 @@ R.register('starts', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalImm(types.S).toLowerCase();
-    const pfx = this.args[0].evalImm(types.S).toLowerCase();
+    const str = this.cast(this.src.eval(), types.S).toLowerCase();
+    const pfx = this.cast(this.args[0].eval(), types.S).toLowerCase();
     return new Imm(str.startsWith(pfx));
   },
   help: {
@@ -517,8 +517,8 @@ R.register('ends', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalImm(types.S).toLowerCase();
-    const pfx = this.args[0].evalImm(types.S).toLowerCase();
+    const str = this.cast(this.src.eval(), types.S).toLowerCase();
+    const pfx = this.cast(this.args[0].eval(), types.S).toLowerCase();
     return new Imm(str.endsWith(pfx));
   },
   help: {
@@ -538,8 +538,8 @@ R.register('contains', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const str = this.src.evalImm(types.S).toLowerCase();
-    const pfx = this.args[0].evalImm(types.S).toLowerCase();
+    const str = this.cast(this.src.eval(), types.S).toLowerCase();
+    const pfx = this.cast(this.args[0].eval(), types.S).toLowerCase();
     return new Imm(str.includes(pfx));
   },
   help: {
@@ -559,8 +559,8 @@ R.register('shift', {
   reqSource: true,
   numArg: 2,
   eval() {
-    const str = this.src.evalImm(types.S);
-    let shift = this.args[0].evalNum();
+    const str = this.cast(this.src.eval(), types.S);
+    let shift = this.cast(this.args[0].eval(), types.N);
     const abc = this.args[1].evalAlphabet(true);
     shift = Number(shift % BigInt(abc.length));
     if(shift < 0)
@@ -592,9 +592,9 @@ R.register('tr', {
   minArg: 2,
   maxArg: 3,
   eval() {
-    const str = this.src.evalImm(types.S);
-    const from = this.args[0].evalImm(types.S).toLowerCase();
-    const to = this.args[1].evalImm(types.S);
+    const str = this.cast(this.src.eval(), types.S);
+    const from = this.cast(this.args[0].eval(), types.S).toLowerCase();
+    const to = this.cast(this.args[1].eval(), types.S);
     if(this.args[2]) {
       const abc = this.args[2].evalAlphabet(true);
       const fArr = [...splitABC(from, abc)].map(([ch, _]) => ch);

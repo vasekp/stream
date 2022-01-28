@@ -8,8 +8,8 @@ R.register(['iota', 'seq'], {
   reqSource: false,
   maxArg: 2,
   eval() {
-    const start = this.args[0] ? this.args[0].evalNum() : 1n;
-    const step = this.args[1] ? this.args[1].evalNum() : 1n;
+    const start = this.args[0] ? this.cast(this.args[0].eval(), types.N) : 1n;
+    const step = this.args[1] ? this.cast(this.args[1].eval(), types.N) : 1n;
     return new Stream(this,
       _ => {
         let i = start;
@@ -41,9 +41,9 @@ R.register(['range', 'ran', 'rng', 'r'], {
   maxArg: 3,
   eval() {
     const [min, max] = this.args[0] && this.args[1]
-      ? [this.args[0].evalImm([types.N, types.S]), this.args[1].evalImm([types.N, types.S])]
-      : [1n, this.args[0].evalNum()];
-    const step = this.args[2] ? this.args[2].evalNum() : 1n;
+      ? [this.cast(this.args[0].eval(), [types.N, types.S]), this.cast(this.args[1].eval(), [types.N, types.S])]
+      : [1n, this.cast(this.args[0].eval(), types.N)];
+    const step = this.args[2] ? this.cast(this.args[2].eval(), types.N) : 1n;
     if(typeof min !== typeof max)
       throw new StreamError(`min ${Imm.format(min)}, max ${Imm.format(max)} of different types`);
     if(typeof min === 'bigint') {
@@ -105,9 +105,9 @@ R.register(['length', 'len'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.eval().checkType([types.stream, types.S]);
+    const src = this.cast0(this.src.eval(), [types.stream, types.S]);
     if(src.type === types.stream) {
-      src.checkFinite();
+      this.cast0(src, types.stream, {finite: true});
       let length = 0n;
       if(typeof src.length === 'bigint')
         length = src.length;
@@ -137,9 +137,9 @@ R.register('first', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     if(this.args[0]) {
-      const count = this.args[0].evalNum({min: 1n});
+      const count = this.cast(this.args[0].eval(), types.N, {min: 1n});
       const length = src.length === undefined ? undefined
         : src.length === INF ? count
         : src.length >= count ? count
@@ -191,9 +191,9 @@ R.register('last', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     if(this.args[0]) {
-      const count = this.args[0].evalNum({min: 1n});
+      const count = this.cast(this.args[0].eval(), types.N, {min: 1n});
       const length = src.length === undefined ? undefined
         : src.length === INF ? count
         : src.length >= count ? count
@@ -269,14 +269,14 @@ R.register(['take', 'takedrop', 'td'], {
   reqSource: true,
   minArg: 1,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isImm))
       return new Stream(this,
-        _ => takedrop(src, ins.map(i => i.numValue({min: 0n}))));
+        _ => takedrop(src, ins.map(i => this.cast(i, types.N, {min: 0n}))));
     else if(this.args.length === 1)
       return new Stream(this,
-        _ => takedrop(src, ins[0].adapt(r => r.evalNum({min: 0n}))));
+        _ => takedrop(src, ins[0].adapt(r => this.cast(r, types.N, {min: 0n}))));
     else
       throw new StreamError('required list of values or a single stream');
   },
@@ -298,17 +298,17 @@ R.register(['drop', 'droptake', 'dt'], {
   reqSource: true,
   minArg: 1,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isImm))
       return new Stream(this,
-        _ => takedrop(src, [0n, ...ins.map(i => i.numValue({min: 0n}))]));
+        _ => takedrop(src, [0n, ...ins.map(i => this.cast(i, types.N, {min: 0n}))]));
     else if(this.args.length === 1)
       return new Stream(this,
-        _ => takedrop(src, (function*() {
+        _ => takedrop(src, (function*(self) {
           yield 0n;
-          yield* ins[0].adapt(r => r.evalNum({min: 0n}));
-        })())
+          yield* ins[0].adapt(r => self.cast(r, types.N, {min: 0n}));
+        })(this))
       );
     else
       throw new StreamError('required list of values or a single stream');
@@ -331,8 +331,8 @@ R.register(['droplast', 'dl'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream({finite: true});
-    const count = this.args[0] ? this.args[0].evalNum({min: 1n}) : 1n;
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
+    const count = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 1n}) : 1n;
     if(src.length === undefined) {
       return new Stream(this,
         function*() {
@@ -380,9 +380,9 @@ R.register(['reverse', 'rev'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.eval().checkType([types.stream, types.S]);
+    const src = this.cast0(this.src.eval(), [types.stream, types.S]);
     if(src.type === types.stream) {
-      src.checkFinite();
+      this.cast0(src, types.stream, {finite: true});
       const vals = [...src.read()].reverse();
       return Stream.fromArray(vals);
     } else if(src.type === types.S) {
@@ -403,7 +403,7 @@ R.register(['repeat', 'rep'], {
   eval() {
     const src = this.src.eval();
     if(this.args[0]) {
-      const count = this.args[0].evalNum({min: 0n});
+      const count = this.cast(this.args[0].eval(), types.N, {min: 0n});
       return new Stream(this,
         _ => {
           let i = 0n;
@@ -440,9 +440,9 @@ R.register(['cycle', 'cc'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     if(this.args[0]) {
-      const count = this.args[0].evalNum({min: 0n});
+      const count = this.cast(this.args[0].eval(), types.N, {min: 0n});
       const length = src.length === undefined ? undefined
         : src.length * count;
       return new Stream(this,
@@ -502,11 +502,11 @@ R.register(['group', 'g'], {
   reqSource: true,
   minArg: 1,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const ins = this.args.map(arg => arg.eval());
     if(ins.every(i => i.isImm)) {
       if(this.args.length === 1) {
-        const size = ins[0].numValue({min: 1n});
+        const size = this.cast(ins[0], types.N, {min: 1n});
         const length = src.length === INF ? INF
           : src.length === undefined ? undefined
           : (src.length + size - 1n) / size;
@@ -517,14 +517,14 @@ R.register(['group', 'g'], {
       } else {
         const length = src.length === INF ? BigInt(ins.length) : undefined;
         return new Stream(this,
-          _ => group(src, ins.map(i => i.numValue({min: 0n}))),
+          _ => group(src, ins.map(i => this.cast(i, types.N, {min: 0n}))),
           length
         );
       }
     } else if(this.args.length === 1) {
       const length = src.length === INF ? ins[0].length : undefined;
       return new Stream(this,
-        _ => group(src, ins[0].adapt(r => r.evalNum({min: 0n}))),
+        _ => group(src, ins[0].adapt(r => this.cast(r, types.N, {min: 0n}))),
         length
       );
     } else
@@ -565,8 +565,8 @@ R.register(['flatten', 'fl'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream();
-    const depth = this.args[0] ? this.args[0].evalNum() : INF;
+    const src = this.cast0(this.src.eval(), types.stream);
+    const depth = this.args[0] ? this.cast(this.args[0].eval(), types.N) : INF;
     return new Stream(this,
       _ => flatten(src, depth));
   },
@@ -587,8 +587,8 @@ R.register(['padleft', 'pl'], {
   reqSource: true,
   numArg: 2,
   eval() {
-    const src = this.src.eval().checkType([types.stream, types.S]);
-    const length = this.args[0].evalNum({min: 0n});
+    const src = this.cast0(this.src.eval(), [types.stream, types.S]);
+    const length = this.cast(this.args[0].eval(), types.N, {min: 0n});
     if(src.type === types.stream) {
       if(src.length === INF || src.length >= length)
         return src;
@@ -620,7 +620,7 @@ R.register(['padleft', 'pl'], {
         );
       }
     } else {
-      const fill = this.args[1].evalImm(types.S);
+      const fill = this.cast(this.args[1].eval(), types.S);
       return new Imm(src.value.padStart(Number(length), fill));
     }
   },
@@ -638,8 +638,8 @@ R.register(['padright', 'pr'], {
   reqSource: true,
   numArg: 2,
   eval() {
-    const src = this.src.eval().checkType([types.stream, types.S]);
-    const length = this.args[0].evalNum({min: 0n});
+    const src = this.cast0(this.src.eval(), [types.stream, types.S]);
+    const length = this.cast(this.args[0].eval(), types.N, {min: 0n});
     if(src.type === types.stream) {
       if(src.length === INF || src.length >= length)
         return src;
@@ -668,7 +668,7 @@ R.register(['padright', 'pr'], {
         );
       }
     } else {
-      const fillStr = this.args[1].evalImm(types.S);
+      const fillStr = this.cast(this.args[1].eval(), types.S);
       return new Imm(src.value.padEnd(Number(length), fillStr));
     }
   },
@@ -752,7 +752,7 @@ R.register('nest', {
     this.args[0].check(true);
   },
   eval() {
-    const body = this.args[0].checkType([types.symbol, types.expr]);
+    const body = this.cast0(this.args[0], [types.symbol, types.expr]);
     return new Stream(this,
       function*() {
         let curr = this.src.eval();
@@ -788,10 +788,10 @@ R.register('fold', {
       (ix < numArgs - 1 || numArgs === 1) && arg.bare ? 2 : 0));
   },
   eval() {
-    const src = this.src.evalStream();
-    const bodyMem = this.args[0].checkType([types.symbol, types.expr]);;
+    const src = this.cast0(this.src.eval(), types.stream);
+    const bodyMem = this.cast0(this.args[0], [types.symbol, types.expr]);;
     const bodyOut = this.args.length === 3
-      ? this.args[1].checkType([types.symbol, types.expr])
+      ? this.cast0(this.args[1], [types.symbol, types.expr])
       : bodyMem;
     return new Stream(this,
       function*() {
@@ -837,8 +837,8 @@ R.register('reduce', {
       ix === 0 && arg.bare ? 2 : 0));
   },
   eval() {
-    const src = this.src.evalStream({finite: true});
-    const body = this.args[0].checkType([types.symbol, types.expr]);;
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
+    const body = this.cast0(this.args[0], [types.symbol, types.expr]);;
     let curr;
     if(this.args.length > 1)
       curr = this.args[this.args.length - 1].applySrc(src);
@@ -875,7 +875,7 @@ R.register('recur', {
     });
   },
   eval() {
-    const body = this.args[this.args.length - 1].checkType([types.symbol, types.expr]);
+    const body = this.cast0(this.args[this.args.length - 1], [types.symbol, types.expr]);
     return new Stream(this,
       function*() {
         const prev = this.args.slice(0, -1).map(arg => arg.eval());
@@ -907,8 +907,8 @@ R.register('map2', {
     this.args[0].check(false, this.args[0].bare ? 2 : 0);
   },
   eval() {
-    const src = this.src.evalStream();
-    const body = this.args[0].checkType([types.symbol, types.expr]);
+    const src = this.cast0(this.src.eval(), types.stream);
+    const body = this.cast0(this.args[0], [types.symbol, types.expr]);
     const length = src.length === undefined ? undefined
       : src.length === INF ? INF
       : src.length > 0n ? src.length - 1n
@@ -949,7 +949,7 @@ R.register('if', {
     return this.prepareBase(scope, {}, {partial: true});
   },
   eval() {
-    const val = this.args[0].prepare({}).evalImm('boolean');
+    const val = this.cast(this.args[0].prepare({}).eval(), types.B);
     return this.args[val ? 1 : 2].prepare({}).eval();
   },
   help: {
@@ -971,12 +971,12 @@ R.register(['select', 'sel', 'filter', 'where'], {
     this.args[0].check(true);
   },
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const cond = this.args[0];
     return new Stream(this,
       function*() {
         for(const value of src.read()) {
-          if(cond.applySrc(value).evalImm('boolean'))
+          if(this.cast(cond.applySrc(value), types.B))
             yield value;
         }
       }
@@ -1002,13 +1002,13 @@ R.register(['iwhere', 'ixwhere'], {
     this.args[0].check(true);
   },
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const cond = this.args[0];
     return new Stream(this,
       function*() {
         let i = 1;
         for(const value of src.read()) {
-          if(cond.applySrc(value).evalImm('boolean'))
+          if(this.cast(cond.applySrc(value), types.B))
             yield new Imm(i);
           ++i;
         }
@@ -1033,12 +1033,12 @@ R.register('while', {
     this.args[0].check(true);
   },
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const cond = this.args[0];
     return new Stream(this,
       function*() {
         for(const value of src.read()) {
-          if(cond.applySrc(value).evalImm('boolean'))
+          if(this.cast(cond.applySrc(value), types.B))
             yield value;
           else
             return;
@@ -1064,8 +1064,8 @@ R.register(['groupby', 'gby'], {
     this.args[0].check(true);
   },
   eval() {
-    const src = this.src.evalStream();
-    const body = this.args[0].checkType([types.symbol, types.expr]);
+    const src = this.cast0(this.src.eval(), types.stream);
+    const body = this.cast0(this.args[0], [types.symbol, types.expr]);
     return new Stream(this,
       function*() {
         let prev = null;
@@ -1108,13 +1108,13 @@ R.register(['selmax', 'selmin'], {
     this.args[0].check(true);
   },
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     const func = this.args[0];
     const max = this.ident === 'selmax';
     let prev = null;
     const ret = [];
     for(const value of src.read()) {
-      const curr = func.applySrc(value).evalNum();
+      const curr = this.cast(func.applySrc(value), types.N);
       if(curr === prev)
         ret.push(value);
       else if(prev === null || (max ? curr > prev : curr < prev)) {
@@ -1144,9 +1144,9 @@ R.register('splitat', {
   minArg: 1,
   maxArg: 2,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const div = this.args[0];
-    const count = this.args[1]?.evalNum({min: 1n});
+    const count = this.args[1] ? this.cast(this.args[1].eval(), types.N, {min: 1n}) : 0n;
     const self = this;
     return new Stream(this,
       function*() {
@@ -1198,19 +1198,6 @@ function numCompare(a, b) {
 
 const strCompare = Intl.Collator().compare;
 
-function usort(arr, fn = x => x) {
-  if(arr.length === 0)
-    return arr;
-  const first = fn(arr[0]).checkType([types.N, types.S]);
-  if(first.type === types.N) {
-    arr.forEach(a => fn(a).checkType(types.N));
-    arr.sort((a, b) => numCompare(fn(a).value, fn(b).value));
-  } else if(first.type === types.S) {
-    arr.forEach(a => fn(a).checkType(types.S));
-    arr.sort((a, b) => strCompare(fn(a).value, fn(b).value));
-  }
-}
-
 R.register(['sort', 'rsort'], {
   reqSource: true,
   maxArg: 1,
@@ -1219,20 +1206,32 @@ R.register(['sort', 'rsort'], {
     this.args[0]?.check(true);
   },
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     if(this.args[0]) {
       const temp = [...src.read()].map(s => [s, this.args[0].applySrc(s)]);
-      usort(temp, x => x[1]);
+      this.usort(temp, x => x[1]);
       const vals = temp.map(x => x[0]);
       if(this.ident === 'rsort')
         vals.reverse();
       return Stream.fromArray(vals);
     } else {
       const vals = [...src.read()].map(s => s.eval());
-      usort(vals);
+      this.usort(vals, x => x);
       if(this.ident === 'rsort')
         vals.reverse();
       return Stream.fromArray(vals);
+    }
+  },
+  usort(arr, fn = x => x) {
+    if(arr.length === 0)
+      return arr;
+    const first = this.cast0(fn(arr[0]), [types.N, types.S]);
+    if(first.type === types.N) {
+      arr.forEach(a => this.cast0(fn(a), types.N));
+      arr.sort((a, b) => numCompare(fn(a).value, fn(b).value));
+    } else if(first.type === types.S) {
+      arr.forEach(a => this.cast0(fn(a), types.S));
+      arr.sort((a, b) => strCompare(fn(a).value, fn(b).value));
     }
   },
   help: {
@@ -1256,7 +1255,7 @@ R.register(['ddup', 'drep', 'dd'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     return new Stream(this,
       function*() {
         let prev;
@@ -1281,7 +1280,7 @@ R.register('fixed', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     let prev;
     for(const curr of src.read()) {
       if(prev && compareStreams(curr, prev))
@@ -1304,7 +1303,7 @@ R.register('index', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const src = this.src.eval().checkType([types.stream, types.S]);
+    const src = this.cast0(this.src.eval(), [types.stream, types.S]);
     if(src.type === types.stream) {
       const ref = this.args[0];
       let i = 0;
@@ -1317,7 +1316,7 @@ R.register('index', {
       return new Imm(0);
     } else {
       const haystack = src.value.toLowerCase();
-      const needle = this.args[0].evalImm(types.S).toLowerCase();
+      const needle = this.cast(this.args[0].eval(), types.S).toLowerCase();
       return new Imm(haystack.indexOf(needle) + 1);
     }
   },
@@ -1339,7 +1338,7 @@ R.register(['indexes', 'indices'], {
   reqSource: true,
   numArg: 1,
   eval() {
-    const src = this.src.eval().checkType([types.stream, types.S]);
+    const src = this.cast0(this.src.eval(), [types.stream, types.S]);
     if(src.type === types.stream) {
       const ref = this.args[0];
       return new Stream(this,
@@ -1354,7 +1353,7 @@ R.register(['indexes', 'indices'], {
       );
     } else {
       const haystack = src.value.toLowerCase();
-      const needle = this.args[0].evalImm(types.S).toLowerCase();
+      const needle = this.cast(this.args[0].eval(), types.S).toLowerCase();
       return new Stream(this,
         function*() {
           let start = 0;
@@ -1388,7 +1387,7 @@ R.register('includes', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const sArr = this.src.evalStream();
+    const sArr = this.cast0(this.src.eval(), types.stream);
     const ref = this.args[0];
     for(const r of sArr.read())
       if(compareStreams(r, ref))
@@ -1412,7 +1411,7 @@ R.register('element', {
   numArg: 1,
   eval() {
     const ref = this.src;
-    const sArr = this.args[0].evalStream();
+    const sArr = this.cast0(this.args[0].eval(), types.stream, );
     for(const r of sArr.read())
       if(compareStreams(r, ref))
         return new Imm(true);
@@ -1434,7 +1433,7 @@ R.register('count', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     const ref = this.args[0];
     let count = 0;
     for(const r of src.read()) {
@@ -1459,10 +1458,10 @@ R.register(['counts', 'tally', 'freq'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     const map = new Map();
     const fixed = (this.args.length !== 0);
-    const vals = fixed ? [...this.args[0].evalStream({finite: true}).read()] : [];
+    const vals = fixed ? [...this.cast0(this.args[0].eval(), types.stream, {finite: true}).read()] : [];
     const cnts = vals.map(_ => 0n);
     A: for(const r of src.read()) {
       for(const ix of vals.keys())
@@ -1496,7 +1495,7 @@ R.register('uniq', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     const set = new Set();
     return new Stream(this,
       function*() {
@@ -1525,7 +1524,7 @@ R.register('rle', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     return new Stream(this,
       function*() {
         const stm = src.read();
@@ -1560,13 +1559,13 @@ R.register(['unrle', 'unfreq', 'untally'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     return new Stream(this,
       function*() {
         for(const r of src.read()) {
-          const tmp = r.evalStream().read();
+          const tmp = this.cast0(r, types.stream).read();
           const elm = tmp.next().value;
-          const count = tmp.next().value.evalNum({min: 0n});
+          const count = this.cast(tmp.next().value, types.N, {min: 0n});
           const test = tmp.next().done;
           if(!test || !elm || count === undefined)
             throw new StreamError(`${r.toString}: not in RLE format`);
@@ -1654,11 +1653,11 @@ R.register(['subs', 'subst', 'replace', 'repl'], {
   reqSource: true,
   numArg: 1,
   eval() {
-    const src = this.src.evalStream();
-    const sSubs = this.args[0].evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream);
+    const sSubs = this.cast0(this.args[0].eval(), types.stream, {finite: true});
     const map = new Map();
     for(const r of sSubs.read()) {
-      const sTemp = r.evalStream().read();
+      const sTemp = this.cast0(r, types.stream).read();
       const key = sTemp.next().value;
       const val = sTemp.next().value;
       if(!key || !val || !(sTemp.next().done))
@@ -1709,9 +1708,9 @@ R.register(['allequal', 'alleq', 'same', 'allsame'], {
     this.args[0].check(true);
   },
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     if(this.args[0]) {
-      const body = this.args[0].checkType([types.symbol, types.expr]);
+      const body = this.cast0(this.args[0], [types.symbol, types.expr]);
       let prev = null;
       for(const r of src.read()) {
         const curr = body.applySrc(r);
@@ -1756,18 +1755,18 @@ R.register('trans', {
   numArg: 0,
   eval() {
     let i = 0n;
-    const sFirst = this.src.evalStream().read().next().value;
+    const sFirst = this.cast0(this.src.eval(), types.stream).read().next().value;
     if(!sFirst)
       return Stream.fromArray([]);
     const self = this;
     return new Stream(this,
       _ => {
-        const stm = sFirst.evalStream().read();
+        const stm = this.cast0(sFirst, types.stream).read();
         let i = 1n;
         return [
           (function*() {
             for(const _ of stm)
-              yield (new Node('transpart', self.token, self.src, [new Imm(i++)])).evalStream();
+              yield (new Node('transpart', self.token, self.src, [new Imm(i++)])).eval();
           })(),
           c => {
             stm.skip(c);
@@ -1796,12 +1795,12 @@ R.register('transpart', {
   reqSource: true,
   numArg: 1,
   eval() {
-    const src = this.src.evalStream();
-    const part = this.args[0].evalNum({min: 1n});
+    const src = this.cast0(this.src.eval(), types.stream);
+    const part = this.cast(this.args[0].eval(), types.N, {min: 1n});
     return new Stream(this,
       function*() {
         for(const r of src.read()) {
-          const sIn = r.evalStream().read();
+          const sIn = this.cast0(r, types.stream).read();
           sIn.skip(part - 1n);
           const rr = sIn.next().value;
           if(!rr)

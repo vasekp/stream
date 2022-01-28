@@ -40,17 +40,6 @@ function coal(a, b) {
   return a !== undefined ? a : b;
 }
 
-function checkBounds(value, opts = {}) {
-  if(opts.min !== undefined && value < opts.min)
-    throw new StreamError(`expected ${
-      opts.min === 0n ? 'nonnegative'
-      : opts.min === 1n ? 'positive'
-      : `≥ ${opts.min}`}, got ${value}`);
-  if(opts.max !== undefined && value > opts.max)
-    throw new StreamError(`value ${value} exceeds maximum ${opts.max}`);
-  return value;
-}
-
 export class Node {
   constructor(ident, token, src = null, args = [], meta = {}) {
     this.ident = ident;
@@ -207,7 +196,7 @@ export class Node {
 
   evalAlphabet(lcase = false) {
     if(!this._cache) {
-      this._cache = [...this.evalStream({finite: true}).read()].map(s => s.evalImm(types.S));
+      this._cache = [...this.cast0(this.eval(), types.stream, {finite: true}).read()].map(s => this.cast(s, types.S));
       this._cacheL = this._cache.map(c => c.toLowerCase());
     }
     if(!this._cache.length)
@@ -215,19 +204,41 @@ export class Node {
     return lcase ? this._cache : this._cacheL;
   }
 
-  evalStream(opts = {}) {
-    const r = this.eval().checkType(types.stream);
-    if(opts.finite)
-      r.checkFinite();
-    return r;
+  cast0(obj, type, opts = {}) {
+    if(type instanceof Array) {
+      if(!type.includes(obj.type))
+        throw new StreamError(`expected ${type.join(' or ')}, got ${obj.desc()}`, this);
+      else
+        return obj;
+    } else {
+      if(obj.type !== type)
+        throw new StreamError(`expected ${type}, got ${obj.desc()}`, this);
+      switch(type) {
+        case types.stream:
+          if(opts.finite && obj.length === INF)
+            throw new StreamError('infinite stream', this);
+          return obj;
+        case types.N:
+          this.checkBounds(obj.value, opts);
+          return obj;
+        default:
+          return obj;
+      }
+    }
   }
 
-  evalImm(type) {
-    return this.eval().checkType(type).value;
+  cast(obj, type, opts = {}) {
+    return this.cast0(obj, type, opts).value;
   }
 
-  evalNum(opts = {}) {
-    return checkBounds(this.evalImm(types.N), opts);
+  checkBounds(value, opts = {}) {
+    if(opts.min !== undefined && value < opts.min)
+      throw new StreamError(`expected ${
+        opts.min === 0n ? 'nonnegative'
+        : opts.min === 1n ? 'positive'
+        : `≥ ${opts.min}`}, got ${value}`, this);
+    if(opts.max !== undefined && value > opts.max)
+      throw new StreamError(`value ${value} exceeds maximum ${opts.max}`, this);
   }
 
   applySrc(src) {
@@ -276,17 +287,6 @@ export class Node {
 
   desc() {
     return this.type ? `${this.type} ${this.toString()}` : this.toString();
-  }
-
-  checkType(type) {
-    if(type instanceof Array) {
-      if(!type.includes(this.type))
-        throw new StreamError(`expected ${type.join(' or ')}, got ${this.desc()}`);
-    } else
-      if(this.type !== type)
-        throw new StreamError(`expected ${type}, got ${this.desc()}`);
-    // else
-    return this;
   }
 
   writeout(maxLen = DEFLEN) {
@@ -404,10 +404,6 @@ export class Imm extends Node {
     }
   }
 
-  numValue(opts = {}) {
-    return checkBounds(this.checkType(types.N).value, opts);
-  }
-
   *writeout_gen() {
     yield this.toString();
   }
@@ -429,7 +425,7 @@ export class Stream extends Node {
     this.type = types.stream;
     this.readFun = readFun;
     this.length = length;
-    this.eval = _ => this;
+    this.eval = _ => this;//{ console.trace(); return this };
   }
 
   static fromArray(arr) {
@@ -489,12 +485,6 @@ export class Stream extends Node {
       return `stream *${this.toString()}`; // writeout would produce extra output
     else
       return `stream ${this.writeout(DESCLEN)}`;
-  }
-
-  checkFinite() {
-    if(this.length === INF)
-      throw new StreamError('infinite stream');
-    return this;
   }
 
   *writeout_gen() {

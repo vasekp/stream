@@ -9,24 +9,24 @@ function mathOp(func, type = types.N) {
   return function() {
     // source + 1 arg
     if(this.args.length === 1) {
-      const a = this.src.evalImm(type);
-      const b = this.args[0].evalImm(type);
+      const a = this.cast(this.src.eval(), type);
+      const b = this.cast(this.args[0].eval(), type);
       return new Imm(func(a, b));
     }
     // all immediate
-    const args = this.args.map(arg => arg.eval());
-    if(args.every(i => i.isImm))
-      return new Imm(args.map(a => a.checkType(type).value).reduce(func));
+    const ins = this.args.map(arg => arg.eval());
+    if(ins.every(i => i.isImm))
+      return new Imm(ins.map(i => this.cast(i, type)).reduce(func));
     // one or more streams
-    const lens = args.filter(i => !i.isImm).map(i => i.length);
+    const lens = ins.filter(i => !i.isImm).map(i => i.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.every(len => len === INF) ? INF
       : lens.filter(len => len !== INF).reduce((a,b) => a < b ? a : b);
     return new Stream(this,
       _ => {
-        const is = args.map(arg => arg.isImm ? arg : arg.read());
+        const is = ins.map(i => i.isImm ? i : i.read());
         return [
-          (function*() {
+          (function*(self) {
             for(;;) {
               const vs = [];
               for(const i of is)
@@ -36,11 +36,11 @@ function mathOp(func, type = types.N) {
                   const r = i.next().value;
                   if(!r)
                     return;
-                  vs.push(r.evalImm(type));
+                  vs.push(self.cast(r.eval(), type));
                 }
               yield new Imm(vs.reduce(func));
             }
-          }()),
+          }(this)),
           c => {
             for(const i of is)
               if(!i.isImm)
@@ -181,18 +181,18 @@ R.register(['min', 'max'], {
     const func = this.ident === 'max' ? (a, b) => b > a : (a, b) => b < a;
     // multi-argument
     if(this.args.length >= 2) {
-      const ins = this.args.map(arg => arg.evalNum());
+      const ins = this.args.map(arg => this.cast(arg.eval(), types.N));
       const res = ins.reduce((a, b) => func(a, b) ? b : a);
       return new Imm(res);
     }
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     if(this.args[0]) {
       // stream with transformer
       let res = null;
       let best = null;
-      const body = this.args[0].checkType([types.symbol, types.expr]);
+      const body = this.cast0(this.args[0], [types.symbol, types.expr]);
       for(const r of src.read()) {
-        const curr = body.applySrc(r).evalNum();
+        const curr = this.cast(body.applySrc(r), types.N);
         if(best === null || func(best, curr)) {
           best = curr;
           res = r;
@@ -206,7 +206,7 @@ R.register(['min', 'max'], {
       // numeric stream
       let best = null;
       for(const curr of src.read()) {
-        curr.checkType(types.N);
+        this.cast0(curr, types.N);
         if(best === null || func(best.value, curr.value))
           best = curr;
       }
@@ -234,18 +234,18 @@ R.register(['min', 'max'], {
 function reduceOp(func, numOpts) {
   return function() {
     if(this.args.length >= 2) {
-      const ins = this.args.map(arg => arg.evalNum());
+      const ins = this.args.map(arg => this.cast(arg.eval(), types.N));
       const res = ins.reduce(func);
       return new Imm(res);
     } else if(this.args.length === 1) {
-      const inp = this.src.evalNum(numOpts);
-      const arg = this.args[0].evalNum(numOpts);
+      const inp = this.cast(this.src.eval(), types.N, numOpts);
+      const arg = this.cast(this.args[0].eval(), types.N, numOpts);
       return new Imm(func(inp, arg));
     } else {
-      const src = this.src.evalStream({finite: true});
+      const src = this.cast0(this.src.eval(), types.stream, {finite: true});
       let res = null;
       for(const r of src.read()) {
-        const curr = r.evalNum(numOpts);
+        const curr = this.cast(r, types.N, numOpts);
         res = res === null ? curr : func(res, curr);
       }
       if(res === null)
@@ -370,12 +370,12 @@ R.register(['accum', 'acc', 'ac'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     return new Stream(this,
       function*() {
         let sum = 0n;
         for(const next of src.read()) {
-          sum += next.evalNum();
+          sum += this.cast(next, types.N);
           yield new Imm(sum);
         }
       },
@@ -394,10 +394,10 @@ R.register(['total', 'tot', 'sum'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     let tot = 0n;
     for(const r of src.read())
-      tot += r.evalNum();
+      tot += this.cast(r, types.N);
     return new Imm(tot);
   },
   help: {
@@ -412,7 +412,7 @@ R.register('diff', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const length = src.length === undefined ? undefined
           : src.length === INF ? INF
           : src.length === 0n ? 0n
@@ -423,21 +423,21 @@ R.register('diff', {
         const first = stm.next().value;
         if(!first)
           return [].values();
-        let prev = first.evalNum();
+        let prev = this.cast(first, types.N);
         return [
-          (function*() {
+          (function*(self) {
             for(const next of stm) {
-              const curr = next.evalNum();
+              const curr = self.cast(next, types.N);
               const res = curr - prev;
               prev = curr;
               yield new Imm(res);
             }
-          })(),
+          })(this),
           c => {
             if(c === 0n)
               return;
             stm.skip(c - 1n);
-            prev = stm.next().value.evalNum();
+            prev = this.cast(stm.next().value, types.N);
           }
         ];
       },
@@ -456,10 +456,10 @@ R.register(['product', 'prod'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     let prod = 1n;
     for(const s of src.read()) {
-      prod *= s.evalNum();
+      prod *= this.cast(s, types.N);
       if(prod === 0n)
         break;
     }
@@ -479,12 +479,12 @@ R.register(['power', 'pow'], {
   sourceOrArgs: 2,
   eval() {
     if(this.args.length === 1) {
-      const base = this.src.evalNum();
-      const pow = this.args[0].evalNum({min: 0n});
+      const base = this.cast(this.src.eval(), types.N);
+      const pow = this.cast(this.args[0].eval(), types.N, {min: 0n});
       return new Imm(base ** pow);
     } else {
-      const base = this.args[0].evalNum();
-      const pow = this.args[1].evalNum({min: 0n});
+      const base = this.cast(this.args[0].eval(), types.N);
+      const pow = this.cast(this.args[1].eval(), types.N, {min: 0n});
       return new Imm(base ** pow);
     }
   },
@@ -513,9 +513,9 @@ R.register('clamp', {
   reqSource: true,
   numArg: 2,
   eval() {
-    const inp = this.src.evalNum();
-    const min = this.args[0].evalNum();
-    const max = this.args[1].evalNum();
+    const inp = this.cast(this.src.eval(), types.N);
+    const min = this.cast(this.args[0].eval(), types.N);
+    const max = this.cast(this.args[1].eval(), types.N);
     if(max < min)
       throw new StreamError(`maximum ${max} smaller than minimum ${min}`);
     const res = inp < min ? min : inp > max ? max : inp;
@@ -536,9 +536,9 @@ R.register('mod', {
   minArg: 1,
   maxArg: 2,
   eval() {
-    const inp = this.src.evalNum();
-    const mod = this.args[0].evalNum({min: 1n});
-    const base = this.args[1] ? this.args[1].evalNum() : 0n;
+    const inp = this.cast(this.src.eval(), types.N);
+    const mod = this.cast(this.args[0].eval(), types.N, {min: 1n});
+    const base = this.args[1] ? this.cast(this.args[1]?.eval(), types.N) : 0n;
     let rem = (inp - base) % mod;
     rem = (rem >= 0n ? rem : rem + mod) + base;
     return new Imm(rem);
@@ -563,7 +563,7 @@ R.register('modinv', {
   sourceOrArgs: 2,
   eval() {
     const [val, mod] = (this.args[1] ? [this.args[0], this.args[1]] : [this.src, this.args[0]])
-      .map(arg => arg.evalNum({min: 1n}));
+      .map(arg => this.cast(arg.eval(), types.N, {min: 1n}));
     let [a, b, c, d] = [1n, 0n, 0n, 1n];
     let [x, y] = [val, mod];
     for(;;) {
@@ -594,7 +594,7 @@ R.register('modinv', {
 R.register('abs', {
   reqSource: true,
   eval() {
-    const inp = this.src.evalNum();
+    const inp = this.cast(this.src.eval(), types.N);
     return new Imm(inp >= 0n ? inp : -inp);
   },
   help: {
@@ -609,7 +609,7 @@ R.register('abs', {
 R.register(['sign', 'sgn'], {
   reqSource: true,
   eval() {
-    const inp = this.src.evalNum();
+    const inp = this.cast(this.src.eval(), types.N);
     return new Imm(inp > 0n ? 1 : inp < 0n ? -1 : 0);
   },
   help: {
@@ -625,7 +625,7 @@ R.register(['odd', 'isodd'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const val = this.src.evalNum();
+    const val = this.cast(this.src.eval(), types.N);
     return new Imm((val & 1n) === 1n);
   },
   help: {
@@ -645,7 +645,7 @@ R.register(['even', 'iseven'], {
   reqSource: true,
   numArg: 0,
   eval() {
-    const val = this.src.evalNum();
+    const val = this.cast(this.src.eval(), types.N);
     return new Imm((val & 1n) === 0n);
   },
   help: {
@@ -664,7 +664,7 @@ R.register('and', {
   reqSource: false,
   minArg: 2,
   eval() {
-    return new Imm(this.args.map(arg => arg.evalImm(types.B)).reduce((a, b) => a && b));
+    return new Imm(this.args.map(arg => this.cast(arg.eval(), types.B)).reduce((a, b) => a && b));
   },
   bodyForm: Node.operatorForm('&'),
   help: {
@@ -682,7 +682,7 @@ R.register('or', {
   reqSource: false,
   minArg: 2,
   eval() {
-    return new Imm(this.args.map(arg => arg.evalImm(types.B)).reduce((a, b) => a || b));
+    return new Imm(this.args.map(arg => this.cast(arg.eval(), types.B)).reduce((a, b) => a || b));
   },
   bodyForm: Node.operatorForm('|'),
   help: {
@@ -700,7 +700,7 @@ R.register('not', {
   maxArg: 1,
   sourceOrArgs: 1,
   eval() {
-    const val = (this.args[0] || this.src).evalImm(types.B);
+    const val = this.cast((this.args[0] || this.src).eval(), types.B);
     return new Imm(!val);
   },
   help: {
@@ -723,10 +723,10 @@ R.register(['every', 'each', 'all'], {
     this.args[0]?.check(true);
   },
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     const cond = this.args[0];
     for(const value of src.read())
-      if(!(cond ? cond.applySrc(value) : value).evalImm('boolean'))
+      if(!this.cast((cond ? cond.applySrc(value) : value), types.B))
         return new Imm(false);
     return new Imm(true);
   },
@@ -752,10 +752,10 @@ R.register(['some', 'any'], {
     this.args[0]?.check(true);
   },
   eval() {
-    const src = this.src.evalStream({finite: true});
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
     const cond = this.args[0];
     for(const value of src.read())
-      if((cond ? cond.applySrc(value) : value).evalImm('boolean'))
+      if(this.cast((cond ? cond.applySrc(value) : value), types.B))
         return new Imm(true);
     return new Imm(false);
   },
@@ -778,7 +778,7 @@ function compareRecord(sign, func, help) {
     reqSource: false,
     minArg: 2,
     eval() {
-      const vals = this.args.map(arg => arg.evalNum());
+      const vals = this.args.map(arg => this.cast(arg.eval(), types.N));
       let res = true;
       for(let i = 1; i < vals.length; i++)
         res = res && func(vals[i-1], vals[i]);
@@ -825,9 +825,9 @@ R.register(['tobase', 'tbase', 'tb', 'str'], {
   reqSource: true,
   maxArg: 2,
   eval() {
-    let val = this.src.evalNum();
-    const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
-    const minl = this.args[1] ? Number(this.args[1].evalNum({min: 1n})) : 0;
+    let val = this.cast(this.src.eval(), types.N);
+    const base = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 2n, max: 36n}) : 10n;
+    const minl = this.args[1] ? Number(this.cast(this.args[1].eval(), types.N, {min: 1n})) : 0;
     const digit = c => c < 10 ? String.fromCharCode(c + 48) : String.fromCharCode(c + 97 - 10);
     let ret = val < 0 ? '-' : val > 0 ? '' : '0';
     if(val < 0)
@@ -862,8 +862,8 @@ R.register(['frombase', 'fbase', 'fb', 'num'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const str = this.src.evalImm('string');
-    const base = this.args[0] ? this.args[0].evalNum({min: 2n, max: 36n}) : 10n;
+    const str = this.cast(this.src.eval(), 'string');
+    const base = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
       throw new StreamError(`invalid input "${str}"`);
     const digit = c => {
@@ -899,9 +899,9 @@ R.register(['todigits', 'tdig'], {
   reqSource: true,
   maxArg: 2,
   eval() {
-    let val = this.src.evalNum({min: 0n});
-    const base = this.args[0] ? this.args[0].evalNum({min: 2n}) : 10n;
-    const minl = this.args[1] ? Number(this.args[1].evalNum({min: 1n})) : 0;
+    let val = this.cast(this.src.eval(), types.N, {min: 0n});
+    const base = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 2n}) : 10n;
+    const minl = this.args[1] ? Number(this.cast(this.args[1].eval(), types.N, {min: 1n})) : 0;
     const digits = [];
     while(val) {
       digits.push(val % base);
@@ -931,11 +931,11 @@ R.register(['fromdigits', 'fdig'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream({finite: true});
-    const base = this.args[0] ? this.args[0].evalNum({min: 2n}) : 10n;
+    const src = this.cast0(this.src.eval(), types.stream, {finite: true});
+    const base = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 2n}) : 10n;
     let val = 0n;
     for(const r of src.read()) {
-      const digit = r.evalNum({min: 0n, max: base - 1n});
+      const digit = this.cast(r, types.N, {min: 0n, max: base - 1n});
       val = val * base + digit;
     }
     return new Imm(val);
@@ -1000,7 +1000,7 @@ R.register('isprime', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const val = this.src.evalNum();
+    const val = this.cast(this.src.eval(), types.N);
     if(val <= 1n)
       return new Imm(false);
     for(const p of primes()) {
@@ -1028,7 +1028,7 @@ R.register('factor', {
   reqSource: true,
   numArg: 0,
   eval() {
-    let val = this.src.evalNum({min: 1n});
+    let val = this.cast(this.src.eval(), types.N, {min: 1n});
     const ret = [];
     for(const p of primes()) {
       if(val === 1n)
@@ -1055,7 +1055,7 @@ R.register('divisors', {
   reqSource: true,
   numArg: 0,
   eval() {
-    let val = this.src.evalNum({min: 1n});
+    let val = this.cast(this.src.eval(), types.N, {min: 1n});
     const fact = new Map();
     for(const p of primes()) {
       let pow = 0;
@@ -1207,14 +1207,14 @@ R.register(['random', 'rnd', 'sample'], {
   eval() {
     if(this.args.length === 2) {
       /*** 2-arg: min, max ***/
-      const min = this.args[0].evalNum();
-      const max = this.args[1].evalNum();
+      const min = this.cast(this.args[0].eval(), types.N);
+      const max = this.cast(this.args[1].eval(), types.N);
       return new Imm(rnd1(this.meta._seed, min, max));
     } else if(this.args.length === 3) {
       /*** 3-arg: min, max, count ***/
-      const min = this.args[0].evalNum();
-      const max = this.args[1].evalNum();
-      const count = this.args[2].evalNum({min: 1n});
+      const min = this.cast(this.args[0].eval(), types.N);
+      const max = this.cast(this.args[1].eval(), types.N);
+      const count = this.cast(this.args[2].eval(), types.N, {min: 1n});
       const gen = rnds(this.meta._seed, min, max);
       return new Stream(this,
         function*() {
@@ -1224,7 +1224,7 @@ R.register(['random', 'rnd', 'sample'], {
         count
       );
     } else {
-      const src = this.src.evalStream({finite: true});
+      const src = this.cast0(this.src.eval(), types.stream, {finite: true});
       let sLen;
       if(typeof src.length === 'bigint')
         sLen = src.length;
@@ -1243,7 +1243,7 @@ R.register(['random', 'rnd', 'sample'], {
         return stm.next().value.eval();
       } else {
         /*** 1-arg: source + count ***/
-        const count = this.args[0].evalNum({min: 1n});
+        const count = this.cast(this.args[0].eval(), types.N, {min: 1n});
         if(sLen < MAXMEM) {
           // Memoize
           const data = [...src.read()];
@@ -1304,8 +1304,8 @@ R.register(['rndstream', 'rnds'], {
   eval() {
     if(this.args.length === 2) {
       /*** 2-arg: min, max ***/
-      const min = this.args[0].evalNum();
-      const max = this.args[1].evalNum();
+      const min = this.cast(this.args[0].eval(), types.N);
+      const max = this.cast(this.args[1].eval(), types.N);
       const gen = rnds(this.meta._seed, min, max);
       return new Stream(this,
         function*() {
@@ -1316,7 +1316,7 @@ R.register(['rndstream', 'rnds'], {
       );
     } else {
       /*** 0-arg: source */
-      const src = this.src.evalStream({finite: true});
+      const src = this.cast0(this.src.eval(), types.stream, {finite: true});
       let sLen;
       if(typeof src.length === 'bigint')
         sLen = src.length;
@@ -1377,9 +1377,9 @@ R.register(['divmod', 'quotrem'], {
   minArg: 1,
   maxArg: 2,
   eval() {
-    const inp = this.src.evalNum();
-    const mod = this.args[0].evalNum({min: 1n});
-    const base = this.args[1] ? this.args[1].evalNum() : 0n;
+    const inp = this.cast(this.src.eval(), types.N);
+    const mod = this.cast(this.args[0].eval(), types.N, {min: 1n});
+    const base = this.args[1] ? this.cast(this.args[1].eval(), types.N) : 0n;
     let rem = (inp - base) % mod;
     rem = (rem >= 0n ? rem : rem + mod) + base;
     const div = (inp - rem) / mod;
@@ -1403,8 +1403,8 @@ R.register(['mantexp', 'manexp'], {
   reqSource: true,
   numArg: 1,
   eval() {
-    const inp = this.src.evalNum({min: 1n});
-    const base = this.args[0].evalNum({min: 1n});
+    const inp = this.cast(this.src.eval(), types.N, {min: 1n});
+    const base = this.cast(this.args[0].eval(), types.N, {min: 1n});
     let exp = 0n, rem = inp;
     while(rem % base === 0n) {
       rem /= base;
@@ -1426,8 +1426,8 @@ R.register('dlog', {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const inp = this.src.evalNum({min: 0n});
-    const base = this.args[0]?.evalNum({min: 2n}) || 10n;
+    const inp = this.cast(this.src.eval(), types.N, {min: 0n});
+    const base = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 2n}) : 10n;
     for(let x = inp, exp = 0; ; x /= base, exp++)
       if(x === 0n)
         return new Imm(exp);
@@ -1460,7 +1460,7 @@ R.register('sqrt', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const inp = this.src.evalNum({min: 0n});
+    const inp = this.cast(this.src.eval(), types.N, {min: 0n});
     return new Imm(sqrt(inp));
   },
   help: {
@@ -1477,7 +1477,7 @@ R.register('sqrem', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const inp = this.src.evalNum({min: 0n});
+    const inp = this.cast(this.src.eval(), types.N, {min: 0n});
     const sqr = sqrt(inp);
     return Stream.fromArray([new Imm(sqr), new Imm(inp - sqr * sqr)]);
   },
@@ -1496,7 +1496,7 @@ R.register('trirem', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const inp = this.src.evalNum({min: 0n});
+    const inp = this.cast(this.src.eval(), types.N, {min: 0n});
     const row = (sqrt(1n + 8n * inp) - 1n) / 2n;
     return Stream.fromArray([new Imm(row), new Imm(inp - row * (row + 1n) / 2n)]);
   },

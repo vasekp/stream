@@ -17,7 +17,7 @@ function fact(n) {
 R.register(['factorial', 'fact', 'fac'], {
   reqSource: true,
   eval() {
-    const inp = this.src.evalNum({min: 0n});
+    const inp = this.cast(this.src.eval(), types.N, {min: 0n});
     return new Imm(fact(inp));
   },
   help: {
@@ -41,7 +41,7 @@ function dfact(n) {
 R.register(['dfactorial', 'dfact', 'dfac'], {
   reqSource: true,
   eval() {
-    const inp = this.src.evalNum({min: -1n});
+    const inp = this.cast(this.src.eval(), types.N, {min: -1n});
     return new Imm(dfact(inp));
   },
   help: {
@@ -79,11 +79,11 @@ R.register('binom', {
   maxArg: 2,
   eval() {
     if(this.args.length === 2) {
-      const n = this.args[0].evalNum({min: 0n});
-      const k = this.args[1].evalNum({min: 0n});
+      const n = this.cast(this.args[0].eval(), types.N, {min: 0n});
+      const k = this.cast(this.args[1].eval(), types.N, {min: 0n});
       return new Imm(binom(n, k));
     } else {
-      const n = this.args[0].evalNum({min: 0n});
+      const n = this.cast(this.args[0].eval(), types.N, {min: 0n});
       return new Stream(this,
         function*() {
           for(const r of binomRow(n))
@@ -135,7 +135,7 @@ function comb(ks, r = false) {
 R.register('comb', {
   minArg: 1,
   eval() {
-    const ks = this.args.map(arg => arg.evalNum({min: 0n}));
+    const ks = this.args.map(arg => this.cast(arg.eval(), types.N, {min: 0n}));
     return new Imm(comb(ks));
   },
   help: {
@@ -152,7 +152,7 @@ R.register('comb', {
 R.register('rcomb', {
   minArg: 1,
   eval() {
-    const ks = this.args.map(arg => arg.evalNum({min: 0n}));
+    const ks = this.args.map(arg => this.cast(arg.eval(), types.N, {min: 0n}));
     return new Imm(comb(ks, true));
   },
   help: {
@@ -174,11 +174,11 @@ R.register('tuples', {
   eval() {
     const args0 = this.args.length === 1
       ? Array.from(
-          {length: Number(this.args[0].evalNum({min: 1n}))},
+          {length: Number(this.cast(this.args[0].eval(), types.N, {min: 1n}))},
           _ => this.src
         ).reverse()
       : this.args.slice().reverse();
-    const args = args0.map(arg => arg.evalStream());
+    const args = args0.map(arg => this.cast0(arg.eval(), types.stream));
     const lens = args.map(s => s.length);
     const length = lens.some(len => len === undefined) ? undefined
       : lens.some(len => len === INF) ? INF
@@ -428,11 +428,11 @@ R.register(['perm', 'perms', 'permute'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     if(this.args[0]) {
       // concrete permutation
-      const arr = [...this.args[0].evalStream({finite: true}).read()]
-        .map(arg => Number(arg.evalNum({min: 1n}) - 1n));
+      const arr = [...this.cast0(this.args[0].eval(), types.stream, {finite: true}).read()]
+        .map(arg => Number(this.cast(arg, types.N, {min: 1n})) - 1);
       return new Stream(this,
         function*() {
           const vals = [];
@@ -516,7 +516,7 @@ R.register('iperm', {
   reqSource: true,
   numArg: 0,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const vals = [];
     const helperSrc = function*() {
       for(const r of src.read()) {
@@ -558,7 +558,7 @@ R.register('iperm', {
 R.register('#permute', {
   reqSource: true,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     const meta = this.meta;
     return new Stream(this,
       function*() {
@@ -591,7 +591,7 @@ R.register('#permute', {
 R.register(['subsets', 'ss', 'choose'], {
   reqSource: true,
   eval() {
-    const src = this.src.evalStream();
+    const src = this.cast0(this.src.eval(), types.stream);
     if(!this.args[0]) {
       const length = src.length === undefined ? undefined
         : src.length === INF ? INF
@@ -623,7 +623,7 @@ R.register(['subsets', 'ss', 'choose'], {
         length
       );
     } else {
-      const sizes = this.args.map(arg => arg.evalNum({min: 0n}));
+      const sizes = this.args.map(arg => this.cast(arg.eval(), types.N, {min: 0n}));
       const patt = sizes.flatMap((sz, ix) => Array.from({length: Number(sz)}, _ => ix));
       const out = sizes.length;
       const total = BigInt(patt.length);
