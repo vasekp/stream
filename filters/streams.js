@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Imm, Block, Stream, INF, types, debug, compareStreams} from '../base.js';
+import {Node, Imm, Block, Stream, INF, types, debug} from '../base.js';
 import {ord} from './string.js';
 import R from '../register.js';
 import {catg} from '../help.js';
@@ -45,7 +45,7 @@ R.register(['range', 'ran', 'rng', 'r'], {
       : [1n, this.cast(this.args[0].eval(), types.N)];
     const step = this.args[2] ? this.cast(this.args[2].eval(), types.N) : 1n;
     if(typeof min !== typeof max)
-      throw new StreamError(`min ${Imm.format(min)}, max ${Imm.format(max)} of different types`);
+      throw new StreamError(`min ${Imm.format(min)}, max ${Imm.format(max)} of different types`, this);
     if(typeof min === 'bigint') {
       const length = step === 0n ? INF
         : (x => x >= 0n ? x : 0n)((max - min) / step + 1n);
@@ -65,8 +65,8 @@ R.register(['range', 'ran', 'rng', 'r'], {
         length
       );
     } else {
-      const minCP = BigInt(ord(min));
-      const maxCP = BigInt(ord(max));
+      const minCP = BigInt(ord(min, this));
+      const maxCP = BigInt(ord(max, this));
       const length = step === 0n ? INF
         : (x => x >= 0n ? x : 0n)((maxCP - minCP) / step + 1n);
       return new Stream(this,
@@ -171,7 +171,7 @@ R.register('first', {
       if(val)
         return val;
       else
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
     }
   },
   help: {
@@ -228,7 +228,7 @@ R.register('last', {
         stm.skip(src.length - 1n);
         return stm.next().value;
       } else
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
     }
   },
   help: {
@@ -278,7 +278,7 @@ R.register(['take', 'takedrop', 'td'], {
       return new Stream(this,
         _ => takedrop(src, ins[0].adapt(r => this.cast(r, types.N, {min: 0n}))));
     else
-      throw new StreamError('required list of values or a single stream');
+      throw new StreamError('required list of values or a single stream', this);
   },
   help: {
     en: ['Takes n1 elements, drops n2, etc.',
@@ -311,7 +311,7 @@ R.register(['drop', 'droptake', 'dt'], {
         })(this))
       );
     else
-      throw new StreamError('required list of values or a single stream');
+      throw new StreamError('required list of values or a single stream', this);
   },
   help: {
     en: ['Drops n1 elements, takes n2, etc.',
@@ -528,7 +528,7 @@ R.register(['group', 'g'], {
         length
       );
     } else
-      throw new StreamError('required list of values or a single stream');
+      throw new StreamError('required list of values or a single stream', this);
   },
   help: {
     en: [
@@ -845,7 +845,7 @@ R.register('reduce', {
     for(const next of src.read())
       curr = curr ? body.applyArgsAuto([curr, next]) : next;
     if(!curr)
-      throw new StreamError('empty stream');
+      throw new StreamError('empty stream', this);
     return curr;
   },
   help: {
@@ -1074,7 +1074,7 @@ R.register(['groupby', 'gby'], {
           const curr = body.applySrc(value);
           if(prev === null)
             prev = curr;
-          else if(!compareStreams(prev, curr)) {
+          else if(!this.compareStreams(prev, curr)) {
             yield Stream.fromArray(arr);
             arr.splice(0);
             prev = curr;
@@ -1155,7 +1155,7 @@ R.register('splitat', {
         let ctr = 0n;
         const arr = [];
         for(const val of src.read()) {
-          if(compareStreams(val, div)) {
+          if(this.compareStreams(val, div)) {
             yield Stream.fromArray(arr);
             arr.splice(0);
             lastDiv = ix;
@@ -1260,7 +1260,7 @@ R.register(['ddup', 'drep', 'dd'], {
       function*() {
         let prev;
         for(const curr of src.read()) {
-          if(!prev || !compareStreams(curr, prev))
+          if(!prev || !this.compareStreams(curr, prev))
             yield curr;
           prev = curr;
         }
@@ -1283,12 +1283,12 @@ R.register('fixed', {
     const src = this.cast0(this.src.eval(), types.stream);
     let prev;
     for(const curr of src.read()) {
-      if(prev && compareStreams(curr, prev))
+      if(prev && this.compareStreams(curr, prev))
         return curr;
       prev = curr;
     }
     // not found
-    throw new StreamError('no repeated element found');
+    throw new StreamError('no repeated element found', this);
   },
   help: {
     en: ['Scans the input stream for a direct repetition. Returns this repeated element.'],
@@ -1309,7 +1309,7 @@ R.register('index', {
       let i = 0;
       for(const val of src.read()) {
         i++;
-        if(compareStreams(val, ref))
+        if(this.compareStreams(val, ref))
           return new Imm(i);
       }
       // not found
@@ -1346,7 +1346,7 @@ R.register(['indexes', 'indices'], {
           let i = 0;
           for(const r of src.read()) {
             i++;
-            if(compareStreams(r, ref))
+            if(this.compareStreams(r, ref))
               yield new Imm(i);
           }
         }
@@ -1390,7 +1390,7 @@ R.register('includes', {
     const sArr = this.cast0(this.src.eval(), types.stream);
     const ref = this.args[0];
     for(const r of sArr.read())
-      if(compareStreams(r, ref))
+      if(this.compareStreams(r, ref))
         return new Imm(true);
     // not found
     return new Imm(false);
@@ -1413,7 +1413,7 @@ R.register('element', {
     const ref = this.src;
     const sArr = this.cast0(this.args[0].eval(), types.stream, );
     for(const r of sArr.read())
-      if(compareStreams(r, ref))
+      if(this.compareStreams(r, ref))
         return new Imm(true);
     // not found
     return new Imm(false);
@@ -1437,7 +1437,7 @@ R.register('count', {
     const ref = this.args[0];
     let count = 0;
     for(const r of src.read()) {
-      if(compareStreams(r, ref))
+      if(this.compareStreams(r, ref))
         count++;
     }
     return new Imm(count);
@@ -1465,7 +1465,7 @@ R.register(['counts', 'tally', 'freq'], {
     const cnts = vals.map(_ => 0n);
     A: for(const r of src.read()) {
       for(const ix of vals.keys())
-        if(compareStreams(r, vals[ix])) {
+        if(this.compareStreams(r, vals[ix])) {
           cnts[ix]++;
           continue A;
         }
@@ -1501,7 +1501,7 @@ R.register('uniq', {
       function*() {
         A: for(const r of src.read()) {
           for(const s of set)
-            if(compareStreams(r, s))
+            if(this.compareStreams(r, s))
               continue A;
           // else
           set.add(r);
@@ -1533,7 +1533,7 @@ R.register('rle', {
           return;
         let count = 1;
         for(const curr of stm) {
-          if(compareStreams(curr, prev))
+          if(this.compareStreams(curr, prev))
             count++;
           else {
             yield Stream.fromArray([prev, new Imm(count)]);
@@ -1568,7 +1568,7 @@ R.register(['unrle', 'unfreq', 'untally'], {
           const count = this.cast(tmp.next().value, types.N, {min: 0n});
           const test = tmp.next().done;
           if(!test || !elm || count === undefined)
-            throw new StreamError(`${r.toString}: not in RLE format`);
+            throw new StreamError(`${r.toString}: not in RLE format`, this);
           for(let i = 0n; i < count; i++)
             yield elm;
         }
@@ -1609,7 +1609,7 @@ R.register('with', {
         else if(arg.ident === 'assign')
           return arg;
         else
-          throw new StreamError(`expected assignment, found ${arg.desc()}`);
+          throw new StreamError(`expected assignment, found ${arg.desc()}`, this);
       } else
         return arg;
     });
@@ -1661,26 +1661,26 @@ R.register(['subs', 'subst', 'replace', 'repl'], {
       const key = sTemp.next().value;
       const val = sTemp.next().value;
       if(!key || !val || !(sTemp.next().done))
-        throw new StreamError('substitutions not in the format [[a,b], ...]');
-      if([...map.keys()].some(k => compareStreams(k, key)))
-        throw new StreamError(`duplicate key ${key.toString()}`);
+        throw new StreamError('substitutions not in the format [[a,b], ...]', this);
+      if([...map.keys()].some(k => this.compareStreams(k, key)))
+        throw new StreamError(`duplicate key ${key.toString()}`, this);
       map.set(key, val);
     }
     return new Stream(this,
       _ => {
         const stm = src.read();
         return [
-          (function*() {
+          (function*(self) {
             A: for(const r of stm) {
               for(const [key, val] of map)
-                if(compareStreams(r, key)) {
+                if(self.compareStreams(r, key)) {
                   yield val;
                   continue A;
                 }
               // else
               yield r;
             }
-          })(),
+          })(this),
           c => stm.skip(c)
         ];
       },
@@ -1716,25 +1716,25 @@ R.register(['allequal', 'alleq', 'same', 'allsame'], {
         const curr = body.applySrc(r);
         if(prev === null)
           prev = curr;
-        else if(!compareStreams(prev, curr))
+        else if(!this.compareStreams(prev, curr))
           return new Imm(false);
       }
       if(prev !== null)
         return new Imm(true);
       else
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
     } else {
       let prev = null;
       for(const r of src.read()) {
         if(prev === null)
           prev = r;
-        else if(!compareStreams(prev, r))
+        else if(!this.compareStreams(prev, r))
           return new Imm(false);
       }
       if(prev !== null)
         return new Imm(true);
       else
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
     }
   },
   help: {

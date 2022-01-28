@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Imm, Stream, INF, MAXMEM, types, debug, compareStreams} from '../base.js';
+import {Node, Imm, Stream, INF, MAXMEM, types, debug} from '../base.js';
 import watchdog from '../watchdog.js';
 import R from '../register.js';
 import {catg} from '../help.js';
@@ -440,9 +440,9 @@ R.register(['perm', 'perms', 'permute'], {
           for(let i = 0; i < arr.length; i++) {
             vals.push(stm.next().value);
             if(!vals[i])
-              throw new StreamError(`requested part ${i+1} beyond end`);
+              throw new StreamError(`requested part ${i+1} beyond end`, this);
             if(!arr.includes(i))
-              throw new StreamError('malformed argument');
+              throw new StreamError('malformed argument', this);
           }
           for(const ix of arr)
             yield vals[ix];
@@ -453,10 +453,11 @@ R.register(['perm', 'perms', 'permute'], {
     } else {
       // all permutations
       const vals = [];
+      const self = this;
       const helperSrc = function*() {
         A: for(const r of src.read()) {
           for(const ix of vals.keys())
-            if(compareStreams(r, vals[ix])) {
+            if(self.compareStreams(r, vals[ix])) {
               yield ix;
               continue A;
             }

@@ -24,15 +24,19 @@ class Register extends EventTarget {
     // by now, aliases is set correctly
     if(!obj.aliases)
       obj.aliases = aliases;
-    if(mainReg.includes(ident))
-      throw new StreamError(`trying to overwrite base symbol ${ident}`);
-    else
-      this.map.set(ident, obj);
+    if(mainReg.includes(ident)) {
+      if(this === mainReg)
+        throw new Error(`symbol ${ident} defined twice`);
+      else
+        return false;
+    }
+    this.map.set(ident, obj);
     if(this !== mainReg && obj.body) {
       const e = new Event('register'); // Node.js does not have CustomEvent
       e.detail = {key: ident, value: obj.body.toString()};
       this.dispatchEvent(e);
     }
+    return true;
   }
 
   get(ident) {

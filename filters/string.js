@@ -3,10 +3,10 @@ import {Node, Imm, Block, Stream, INF, types} from '../base.js';
 import R from '../register.js';
 import {catg} from '../help.js';
 
-export function ord(c) {
+export function ord(c, blame) {
   const cp = c.codePointAt(0);
   if(c !== String.fromCodePoint(cp))
-    throw new StreamError(`expected single character, got "${c}"`);
+    throw new StreamError(`expected single character, got "${c}"`, blame);
   return cp;
 }
 
@@ -15,7 +15,7 @@ export function isSingleChar(c) {
 }
 
 // Expects abc in lowercase!
-function* splitABC(str, abc, err = false) {
+function* splitABC(str, abc, blame) {
   let ix = 0;
   const strl = str.toLowerCase();
   while(ix < str.length) {
@@ -34,8 +34,8 @@ function* splitABC(str, abc, err = false) {
       yield [str.substring(ix, ix + bestLen), bestIx];
       ix += bestLen;
     } else {
-      if(err)
-        throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`);
+      if(blame)
+        throw new StreamError(`no match for "...${str.substring(ix)}" in alphabet`, blame);
       const ch = String.fromCodePoint(str.codePointAt(ix));
       yield [ch, -1];
       ix += ch.length;
@@ -142,11 +142,11 @@ R.register('ord', {
       const abc = this.args[0].evalAlphabet(true);
       const ix = abc.indexOf(c.toLowerCase());
       if(ix < 0)
-        throw new StreamError(`character "${c}" not in alphabet`);
+        throw new StreamError(`character "${c}" not in alphabet`, this);
       else
         return new Imm(ix + 1);
     } else
-      return new Imm(ord(c));
+      return new Imm(ord(c, this));
   },
   help: {
     en: ['Returns the ordinal number of a character.',
@@ -170,7 +170,7 @@ R.register('chr', {
       const ix = this.cast(this.src.eval(), types.N, {min: 1n});
       const abc = this.args[0].evalAlphabet();
       if(ix > abc.length)
-        throw new StreamError(`index ${ix} beyond end`);
+        throw new StreamError(`index ${ix} beyond end`, this);
       else
         return new Imm(abc[Number(ix) - 1]);
     } else {
@@ -224,7 +224,7 @@ R.register('ords', {
     const abc = this.args[0].evalAlphabet(true);
     return new Stream(this,
       function*() {
-        for(const [_, ix] of splitABC(str, abc, true))
+        for(const [_, ix] of splitABC(str, abc, this))
           yield new Imm(ix + 1);
       }
     );
@@ -600,7 +600,7 @@ R.register('tr', {
       const fArr = [...splitABC(from, abc)].map(([ch, _]) => ch);
       const tArr = [...splitABC(to, abc)].map(([ch, _]) => ch);
       if(fArr.length !== tArr.length)
-        throw new StreamError('pattern and replacement strings of different lengths');
+        throw new StreamError('pattern and replacement strings of different lengths', this);
       let ret = '';
       for(const [ch, _] of splitABC(str, abc)) {
         const ix = fArr.indexOf(ch);
@@ -609,7 +609,7 @@ R.register('tr', {
       return new Imm(ret);
     } else {
       if(from.length !== to.length)
-        throw new StreamError('pattern and replacement strings of different lengths');
+        throw new StreamError('pattern and replacement strings of different lengths', this);
       const strl = str.toLowerCase();
       const lowerIter = strl[Symbol.iterator]();
       let ret = '';

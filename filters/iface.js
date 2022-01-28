@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Imm, Block, Stream, types, debug, compareStreams} from '../base.js';
+import {Node, Imm, Block, Stream, types, debug} from '../base.js';
 import R from '../register.js';
 import parse from '../parser.js';
 import {catg} from '../help.js';
@@ -9,7 +9,7 @@ R.register('clear', {
   minArg: 1,
   prepare(scope) {
     if(!scope.partial && scope.referrer !== this)
-      throw new StreamError('cannot appear here');
+      throw new StreamError('cannot appear here', this);
     return this.prepareBase(scope, {}, null, {_register: scope.register});
   },
   eval() {
@@ -77,7 +77,7 @@ R.register('save', {
   minArg: 1,
   prepare(scope) {
     if(!scope.partial && scope.referrer !== this)
-      throw new StreamError('cannot appear here');
+      throw new StreamError('cannot appear here', this);
     const args = this.args.map(arg => {
       this.cast0(arg, [types.symbol, types.expr]);
       if(arg.type === types.symbol)
@@ -85,7 +85,7 @@ R.register('save', {
       else if(arg.token.value === '=')
         return arg.toAssign();
       else
-        throw new StreamError(`expected assignment, found ${arg.desc()}`);
+        throw new StreamError(`expected assignment, found ${arg.desc()}`, this);
     });
     return this
       .modify({args})
@@ -133,7 +133,7 @@ R.register(['restore', 'revert'], {
   minArg: 1,
   prepare(scope) {
     if(!scope.partial && scope.referrer !== this)
-      throw new StreamError('cannot appear here');
+      throw new StreamError('cannot appear here', this);
     return this.prepareBase(scope, {}, null, {_register: scope.register});
   },
   eval() {

@@ -1,5 +1,5 @@
 import {StreamError} from '../errors.js';
-import {Node, Imm, Stream, types, compareStreams, INF, MAXMEM} from '../base.js';
+import {Node, Imm, Stream, types, INF, MAXMEM} from '../base.js';
 import R from '../register.js';
 import {catg} from '../help.js';
 
@@ -72,7 +72,7 @@ R.register('#id', {
       return this;
   },
   eval() {
-    throw new StreamError('out of scope');
+    throw new StreamError('out of scope', this);
   },
   bodyForm() {
     return '#';
@@ -164,71 +164,6 @@ R.register('zip', {
   }
 });
 
-function* part(src, gen) {
-  const mem = [];
-  const stMem = src.read();
-  let stSkip = null;
-  let read = 0n;
-  let sLen = src.length;
-  for(const ix of gen) {
-    if(ix === 0n)
-      throw new StreamError(`requested part 0`);
-    else if(ix < 0n) {
-      //src.checkFinite();
-      const nix = -ix;
-      if(sLen === undefined) {
-        stSkip = src.read();
-        read = 0n;
-        const temp = [];
-        for(const v of stSkip) {
-          temp.push(v);
-          if(temp.length > sLen)
-            temp.shift();
-          read++;
-        }
-        if(read < nix)
-          throw new StreamError(`requested part ${ix} beyond end`);
-        sLen = read;
-        yield temp[read - nix];
-      } else if(sLen < MAXMEM) {
-        if(nix > sLen)
-          throw new StreamError(`requested part ${ix} beyond end`);
-        for(let i = mem.length; i <= sLen - nix; i++)
-          mem.push(stMem.next().value);
-        yield mem[sLen - nix];
-      } else {
-        if(!stSkip || sLen - nix <= read) {
-          stSkip = src.read();
-          read = 0n;
-        }
-        stSkip.skip(sLen - nix - read - 1n);
-        yield stSkip.next().value;
-        read = sLen - nix;
-      }
-    } else if(ix < MAXMEM) {
-      if(ix > mem.length)
-        for(let i = mem.length; i < ix; i++) {
-          const next = stMem.next().value;
-          if(!next)
-            throw new StreamError(`requested part ${ix} beyond end`);
-          mem.push(next);
-        }
-      yield mem[Number(ix) - 1];
-    } else {
-      if(!stSkip || ix <= read) {
-        stSkip = src.read();
-        read = 0n;
-      }
-      stSkip.skip(ix - read - 1n);
-      const next = stSkip.next().value;
-      if(!next)
-        throw new StreamError(`requested part ${ix} beyond end`);
-      yield next;
-      read = ix;
-    }
-  }
-}
-
 R.register('part', {
   reqSource: true,
   eval() {
@@ -244,7 +179,7 @@ R.register('part', {
           if(r)
             return r;
           else
-            throw new StreamError(`requested part ${ix} beyond end`);
+            throw new StreamError(`requested part ${ix} beyond end`, this);
         } else if(ix < 0n) {
           this.cast0(src, types.stream, {finite: true});
           const nix = -ix;
@@ -260,32 +195,96 @@ R.register('part', {
             if(mem.length == nix)
               return mem[0];
             else
-              throw new StreamError(`requested part ${ix} beyond end`);
+              throw new StreamError(`requested part ${ix} beyond end`, this);
           } else {
             if(src.length >= nix) {
               stm.skip(src.length - nix);
               return stm.next().value;
             } else
-              throw new StreamError(`requested part ${ix} beyond end`);
+              throw new StreamError(`requested part ${ix} beyond end`, this);
           }
         } else
-          throw new StreamError(`requested part 0`);
+          throw new StreamError(`requested part 0`, this);
       } else
-        return Stream.fromArray([...part(src, args.map(arg => this.cast(arg, types.N)))]);
+        return Stream.fromArray([...this._impl(src, args.map(arg => this.cast(arg, types.N)))]);
     } else if(args.length === 1) {
       const sParts = args[0];
       return new Stream(this,
         _ => {
           const rParts = sParts.adapt(val => this.cast(val, types.N));
           return [
-            part(src, rParts),
+            this._impl(src, rParts),
             c => rParts.skip(c)
           ];
         },
         sParts.length
       );
     } else
-      throw new StreamError('required list of values or a single stream');
+      throw new StreamError('required list of values or a single stream', this);
+  },
+  *_impl(src, gen) {
+    const mem = [];
+    const stMem = src.read();
+    let stSkip = null;
+    let read = 0n;
+    let sLen = src.length;
+    for(const ix of gen) {
+      if(ix === 0n)
+        throw new StreamError(`requested part 0`, this);
+      else if(ix < 0n) {
+        this.cast0(src, types.stream, {finite: true});
+        const nix = -ix;
+        if(sLen === undefined) {
+          stSkip = src.read();
+          read = 0n;
+          const temp = [];
+          for(const v of stSkip) {
+            temp.push(v);
+            if(temp.length > sLen)
+              temp.shift();
+            read++;
+          }
+          if(read < nix)
+            throw new StreamError(`requested part ${ix} beyond end`, this);
+          sLen = read;
+          yield temp[read - nix];
+        } else if(sLen < MAXMEM) {
+          if(nix > sLen)
+            throw new StreamError(`requested part ${ix} beyond end`, this);
+          for(let i = mem.length; i <= sLen - nix; i++)
+            mem.push(stMem.next().value);
+          yield mem[sLen - nix];
+        } else {
+          if(!stSkip || sLen - nix <= read) {
+            stSkip = src.read();
+            read = 0n;
+          }
+          stSkip.skip(sLen - nix - read - 1n);
+          yield stSkip.next().value;
+          read = sLen - nix;
+        }
+      } else if(ix < MAXMEM) {
+        if(ix > mem.length)
+          for(let i = mem.length; i < ix; i++) {
+            const next = stMem.next().value;
+            if(!next)
+              throw new StreamError(`requested part ${ix} beyond end`, this);
+            mem.push(next);
+          }
+        yield mem[Number(ix) - 1];
+      } else {
+        if(!stSkip || ix <= read) {
+          stSkip = src.read();
+          read = 0n;
+        }
+        stSkip.skip(ix - read - 1n);
+        const next = stSkip.next().value;
+        if(!next)
+          throw new StreamError(`requested part ${ix} beyond end`, this);
+        yield next;
+        read = ix;
+      }
+    }
   },
   inputForm() {
     if(this.src) {
@@ -327,7 +326,7 @@ R.register('#in', {
       return this;
   },
   eval() {
-    throw new StreamError('out of scope');
+    throw new StreamError('out of scope', this);
   },
   bodyForm() {
     if(this.args[0])
@@ -396,7 +395,7 @@ R.register('equal', {
   reqSource: false,
   minArg: 2,
   eval() {
-    return new Imm(compareStreams(...this.args.map(arg => arg.eval())));
+    return new Imm(this.compareStreams(...this.args.map(arg => arg.eval())));
   },
   bodyForm() {
     if(this.args.length > 1)
@@ -426,7 +425,7 @@ R.register('ineq', {
   reqSource: false,
   numArg: 2,
   eval() {
-    return new Imm(!compareStreams(...this.args.map(arg => arg.eval())));
+    return new Imm(!this.compareStreams(...this.args.map(arg => arg.eval())));
   },
   bodyForm() {
     if(this.args.length > 1)
@@ -448,7 +447,7 @@ R.register('assign', {
   minArg: 2,
   prepare(scope) {
     if(!scope.partial && scope.referrer !== this)
-      throw new StreamError('cannot appear here');
+      throw new StreamError('cannot appear here', this);
     return this.prepareBase(scope, {},
       (arg, ix, arr) => {
         if(ix === arr.length - 1) // body
@@ -467,7 +466,8 @@ R.register('assign', {
       throw new Error('register not set');
     const ret = [];
     for(const ident of idents) {
-      reg.register(ident, {body});
+      if(!reg.register(ident, {body}))
+        throw new StreamError(`cannot overwrite symbol "${ident}"`, this);
       ret.push(new Imm(ident));
     }
     return Stream.fromArray(ret);
@@ -515,13 +515,13 @@ R.register('#history', {
         const ix = this.cast(this.args[0].eval(), types.N, {min: 1n});
         const ret = scope.history.at(Number(ix));
         if(!ret)
-          throw new StreamError(`history element ${ix} not found`);
+          throw new StreamError(`history element ${ix} not found`, this);
         else
           return ret.prepare(scope);
       } else {
         const ret = scope.history.last();
         if(!ret)
-          throw new StreamError(`history is empty`);
+          throw new StreamError(`history is empty`, this);
         else
           return ret.prepare(scope);
       }

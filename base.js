@@ -121,7 +121,7 @@ export class Node {
           this.src, this.args, this.meta).prepare(scope);
     } // !scope.register OR record not found
     if(!scope.partial || scope.expand)
-      throw new StreamError(`symbol "${this.ident}" undefined`);
+      throw new StreamError(`symbol "${this.ident}" undefined`, this);
     else
       return this;
   }
@@ -200,7 +200,7 @@ export class Node {
       this._cacheL = this._cache.map(c => c.toLowerCase());
     }
     if(!this._cache.length)
-      throw new StreamError('empty alphabet');
+      throw new StreamError('empty alphabet', this);
     return lcase ? this._cache : this._cacheL;
   }
 
@@ -247,7 +247,7 @@ export class Node {
 
   applyArgs(args) {
     if(this.args.length)
-      throw new StreamError(`already has arguments`);
+      throw new StreamError(`already has arguments`, this);
     return this.modify({args}).prepare({}).eval();
   }
 
@@ -303,6 +303,31 @@ export class Node {
 
   *writeout_gen() {
     throw new Error('Node.prototype.writeout_gen()');
+  }
+
+  compareStreams(...args) {
+    if(args.every(arg => arg.isImm)) {
+      const vals = args.map(arg => arg.value);
+      return vals.every(val => val === vals[0]);
+    } else if(args.some(arg => arg.isImm))
+      return false;
+    // else
+    /* all args confirmed streams now */
+    const lens = args.map(arg => arg.length).filter(arg => arg !== undefined);
+    if(lens.length > 1 && lens.some(l => l !== lens[0]))
+      return false;
+    if(lens.some(l => l === INF))
+      throw new StreamError('can\'t determine equality', this);
+    const streams = args.map(arg => arg.read());
+    for(;;) {
+      const rs = streams.map(stm => stm.next());
+      if(rs.every(r => r.done))
+        return true;
+      else if(rs.some(r => r.done))
+        return false;
+      if(!this.compareStreams(...rs.map(r => r.value)))
+        return false;
+    }
   }
 }
 
@@ -506,30 +531,5 @@ export class Stream extends Node {
         throw e;
     }
     yield ']';
-  }
-}
-
-export function compareStreams(...args) {
-  if(args.every(arg => arg.isImm)) {
-    const vals = args.map(arg => arg.value);
-    return vals.every(val => val === vals[0]);
-  } else if(args.some(arg => arg.isImm))
-    return false;
-  // else
-  /* all args confirmed streams now */
-  const lens = args.map(arg => arg.length).filter(arg => arg !== undefined);
-  if(lens.length > 1 && lens.some(l => l !== lens[0]))
-    return false;
-  if(lens.some(l => l === INF))
-    throw new StreamError('can\'t determine equality');
-  const streams = args.map(arg => arg.read());
-  for(;;) {
-    const rs = streams.map(stm => stm.next());
-    if(rs.every(r => r.done))
-      return true;
-    else if(rs.some(r => r.done))
-      return false;
-    if(!compareStreams(...rs.map(r => r.value)))
-      return false;
   }
 }

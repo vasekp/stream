@@ -58,7 +58,7 @@ R.register(['plus', 'add'], {
   sourceOrArgs: 2,
   eval: mathOp((a, b) => {
       if(typeof a !== typeof b)
-        throw new StreamError(`${Imm.format(a)} and ${Imm.format(b)} have different types`);
+        throw new StreamError(`${Imm.format(a)} and ${Imm.format(b)} have different types`, this);
       else
         return a + b;
     }, [types.N, types.S]),
@@ -139,7 +139,7 @@ R.register(['divide', 'div'], {
   sourceOrArgs: 2,
   eval: mathOp((a, b) => {
     if(b === 0n)
-      throw new StreamError('division by zero');
+      throw new StreamError('division by zero', this);
     else
       return a / b;
   }),
@@ -199,7 +199,7 @@ R.register(['min', 'max'], {
         }
       }
       if(res === null)
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
       else
         return res;
     } else {
@@ -211,7 +211,7 @@ R.register(['min', 'max'], {
           best = curr;
       }
       if(best === null)
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
       return best;
     }
   },
@@ -249,7 +249,7 @@ function reduceOp(func, numOpts) {
         res = res === null ? curr : func(res, curr);
       }
       if(res === null)
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
       return new Imm(res);
     }
   };
@@ -517,7 +517,7 @@ R.register('clamp', {
     const min = this.cast(this.args[0].eval(), types.N);
     const max = this.cast(this.args[1].eval(), types.N);
     if(max < min)
-      throw new StreamError(`maximum ${max} smaller than minimum ${min}`);
+      throw new StreamError(`maximum ${max} smaller than minimum ${min}`, this);
     const res = inp < min ? min : inp > max ? max : inp;
     return new Imm(res);
   },
@@ -571,7 +571,7 @@ R.register('modinv', {
         c %= mod;
         return new Imm(c >= 0n ? c : c + mod);
       } else if(y === 0n)
-        throw new StreamError(`${val} and ${mod} are not coprime`);
+        throw new StreamError(`${val} and ${mod} are not coprime`, this);
       let [q, r] = [x / y, x % y]; // Working with BigInt, no need for floor
       [a, b] = [a - q*c, b - q*d];
       [a, b, c, d, x, y] = [c, d, a, b, y, r];
@@ -865,13 +865,13 @@ R.register(['frombase', 'fbase', 'fb', 'num'], {
     const str = this.cast(this.src.eval(), 'string');
     const base = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
-      throw new StreamError(`invalid input "${str}"`);
+      throw new StreamError(`invalid input "${str}"`, this);
     const digit = c => {
       const d = c >= '0' && c <= '9' ? c.charCodeAt('0') - 48
         : c >= 'a' && c <= 'z' ? c.charCodeAt('a') - 97 + 10
         : c.charCodeAt('a') - 65 + 10;
       if(d >= base)
-        throw new StreamError(`invalid digit "${c}" for base ${base}`);
+        throw new StreamError(`invalid digit "${c}" for base ${base}`, this);
       else
         return d;
     };
@@ -1184,8 +1184,6 @@ R.register('pi', {
 });
 
 function* rnds(seed, min, max) {
-  if(max < min)
-    throw new StreamError(`maximum ${max} less than minimum ${min}`);
   if(seed === undefined)
     throw new Error('RNG unitialized');
   const rng = new RNG(seed);
@@ -1209,12 +1207,16 @@ R.register(['random', 'rnd', 'sample'], {
       /*** 2-arg: min, max ***/
       const min = this.cast(this.args[0].eval(), types.N);
       const max = this.cast(this.args[1].eval(), types.N);
+      if(max < min)
+        throw new StreamError(`maximum ${max} less than minimum ${min}`, this);
       return new Imm(rnd1(this.meta._seed, min, max));
     } else if(this.args.length === 3) {
       /*** 3-arg: min, max, count ***/
       const min = this.cast(this.args[0].eval(), types.N);
       const max = this.cast(this.args[1].eval(), types.N);
       const count = this.cast(this.args[2].eval(), types.N, {min: 1n});
+      if(max < min)
+        throw new StreamError(`maximum ${max} less than minimum ${min}`, this);
       const gen = rnds(this.meta._seed, min, max);
       return new Stream(this,
         function*() {
@@ -1234,7 +1236,7 @@ R.register(['random', 'rnd', 'sample'], {
           sLen++;
       }
       if(sLen === 0n)
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
       const gen = rnds(this.meta._seed, 1n, sLen);
       if(!this.args[0]) {
         /*** 0-arg: one sample from source ***/
@@ -1306,6 +1308,8 @@ R.register(['rndstream', 'rnds'], {
       /*** 2-arg: min, max ***/
       const min = this.cast(this.args[0].eval(), types.N);
       const max = this.cast(this.args[1].eval(), types.N);
+      if(max < min)
+        throw new StreamError(`maximum ${max} less than minimum ${min}`, this);
       const gen = rnds(this.meta._seed, min, max);
       return new Stream(this,
         function*() {
@@ -1326,7 +1330,7 @@ R.register(['rndstream', 'rnds'], {
           sLen++;
       }
       if(sLen === 0n)
-        throw new StreamError('empty stream');
+        throw new StreamError('empty stream', this);
       const gen = rnds(this.meta._seed, 1n, sLen);
       if(sLen < MAXMEM) {
         // Memoize
