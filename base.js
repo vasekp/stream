@@ -429,6 +429,7 @@ export class Stream extends Node {
     this.type = types.stream;
     this.readFun = readFun;
     this.length = length;
+    this.eval = _ => this;
   }
 
   static fromArray(arr) {
