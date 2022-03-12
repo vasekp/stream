@@ -5,8 +5,10 @@
 <h2>Basic objects</h2>
 <p>The following object types are recognized by <em>Stream</em>:</p>
 <ul>
-  <li><em>Numbers</em> – integer numbers. The language imposes to intrinsic limit on magnitude. Numbers are input in base ten.<br/>
-    <span class="example">Examples:</span> <i-pre>3</i-pre>, <i-pre>-1</i-pre>, <i-pre>100000000000000000</i-pre>.</li>
+  <li><em>Numbers</em> – integer numbers. The language imposes to intrinsic limit on magnitude.<br/>
+    <span class="example">Examples:</span> <i-pre>3</i-pre>, <i-pre>-1</i-pre>, <i-pre>100000000000000000</i-pre>.
+    <p class="info">The form <i-pre>base:value</i-pre> interprets <i-pre>value</i-pre> as a number in base <i-pre>base</i-pre>.</p>
+    <span class="example">Examples:</span> <i-pre>2:110110</i-pre>, <i-pre>16:1af</i-pre>.</li>
   <li><em>Strings</em> – textual strings, including single characters. Strings are input in double quotes. The occurrences of the character <i-pre>"</i-pre> within a string must be preceded by a backslash (<i-pre>\</i-pre>). A backslash itself must appear as <i-pre>\\</i-pre>.<br/>
     <span class="example">Examples:</span> <i-pre class="skiplink">"string"</i-pre>, <i-pre>"x"</i-pre>, <i-pre class="skiplink">"this is how you include \" and \\."</i-pre>.</li>
   <li><em>Booleans</em> – <i-pre>true</i-pre> or <i-pre>false</i-pre>.</li>
