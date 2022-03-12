@@ -253,7 +253,7 @@ class Stack {
 }
 
 function parse0(iter, open, close, array) {
-  const ss = Enum.fromArray(['base', 'sym', 'term', 'oper']);
+  const ss = Enum.fromArray(['base', 'sym', 'term', 'oper', 'numBase']);
   let state = ss.base;
   let term = null;
   let ret = [];
@@ -284,6 +284,19 @@ function parse0(iter, open, close, array) {
             term = new Node(s.value, s);
             state = ss.sym;
           }
+        } else if(state === ss.numBase) {
+          const base = term.value;
+          const str = s.value.toLowerCase();
+          const digit = c => {
+            const d = c >= '0' && c <= '9' ? c.charCodeAt(0) - 48 : c.charCodeAt(0) - 97 + 10;
+            if(d >= base)
+              throw new ParseError(`invalid digit "${c}" for base ${base}`, s);
+            else
+              return d;
+          };
+          const val = [...str].map(digit).reduce((v, d) => v * base + BigInt(d), 0n);
+          term = new Imm(val, {composed: true});
+          state = ss.term;
         } else
           throw new ParseError(`"${s.value}" can't appear here`, s);
         break;
@@ -368,7 +381,14 @@ function parse0(iter, open, close, array) {
             return term;
         }
       case tc.oper:
-        if(state === ss.sym || state === ss.term)
+        if(state === ss.term && term.type === 'number' && s.value === ':') {
+          if(term.meta?.composed)
+            throw new ParseError(`"${s.value}" can't appear here`, s);
+          if(term.value < 2n || term.value > 36n)
+            throw new ParseError(`invalid numeric base`, s);
+          state = ss.numBase;
+          break;
+        } else if(state === ss.sym || state === ss.term)
           stack.addOper(s, term);
         else if(state === ss.base && s.value === '-')
           // Unary minus

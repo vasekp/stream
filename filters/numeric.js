@@ -864,14 +864,13 @@ R.register(['frombase', 'fbase', 'fb', 'num'], {
   reqSource: true,
   maxArg: 1,
   eval() {
-    const str = this.cast(this.src.eval(), 'string');
+    let str = this.cast(this.src.eval(), 'string');
     const base = this.args[0] ? this.cast(this.args[0].eval(), types.N, {min: 2n, max: 36n}) : 10n;
     if(!/^-?[0-9a-zA-Z]+$/.test(str))
       throw new StreamError(`invalid input "${str}"`, this);
+    str = str.toLowerCase();
     const digit = c => {
-      const d = c >= '0' && c <= '9' ? c.charCodeAt('0') - 48
-        : c >= 'a' && c <= 'z' ? c.charCodeAt('a') - 97 + 10
-        : c.charCodeAt('a') - 65 + 10;
+      const d = c >= '0' && c <= '9' ? c.charCodeAt(0) - 48 : c.charCodeAt(0) - 97 + 10;
       if(d >= base)
         throw new StreamError(`invalid digit "${c}" for base ${base}`, this);
       else
