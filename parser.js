@@ -3,7 +3,7 @@ import {ParseError} from './errors.js';
 import Enum from './enum.js';
 
 const cc = Enum.fromArray(['digit', 'alpha']);
-const tc = Enum.fromArray(['ident', 'number', 'string', 'space', 'open', 'close', 'oper', 'spec']);
+const tc = Enum.fromArray(['alnum', 'string', 'space', 'open', 'close', 'oper', 'spec']);
 
 const priority = Enum.fromObj({
   ':': 10,
@@ -89,8 +89,7 @@ function tokcls(c) {
 }
 
 function* tokenize(str) {
-  const ss = Enum.fromArray(['base', 'ident', 'number', 'string', 'stresc',
-    'spec', 'specd', 'comp']);
+  const ss = Enum.fromArray(['base', 'alnum', 'string', 'stresc', 'spec', 'specd', 'comp']);
   let state = ss.base;
   let accum = '';
   let read = 0;
@@ -115,10 +114,7 @@ function* tokenize(str) {
     }
     /*** other accumulators ***/
     let cls = charcls(c);
-    if(state === ss.number && cls === cc.digit) {
-      accum += c;
-      continue;
-    } else if(state === ss.ident && (cls === cc.digit || cls === cc.alpha)) {
+    if(state === ss.alnum && (cls === cc.digit || cls === cc.alpha)) {
       accum += c;
       continue;
     } else if(state === ss.spec && (cls === '#' || cls === '$')) {
@@ -138,10 +134,8 @@ function* tokenize(str) {
     if(c === ';')
       break;
     /*** accumulation did not happen: dispatch the result ***/
-    if(state === ss.ident)
-      yield {value: accum, cls: tc.ident, pos: accumStart};
-    else if(state === ss.number)
-      yield {value: accum, cls: tc.number, pos: accumStart};
+    if(state === ss.alnum)
+      yield {value: accum, cls: tc.alnum, pos: accumStart};
     else if(state === ss.spec || state === ss.specd)
       yield {value: accum, cls: tc.spec, pos: accumStart};
     else if(state === ss.comp)
@@ -149,12 +143,8 @@ function* tokenize(str) {
     /*** now handle the new character ***/
     switch(cls) {
       case cc.digit:
-        state = ss.number;
-        accum = c;
-        accumStart = read - 1;
-        break;
       case cc.alpha:
-        state = ss.ident;
+        state = ss.alnum;
         accum = c;
         accumStart = read - 1;
         break;
@@ -183,11 +173,8 @@ function* tokenize(str) {
   }
   /*** end of input ***/
   switch(state) {
-    case ss.ident:
-      yield {value: accum, cls: tc.ident, pos: accumStart};
-      break;
-    case ss.number:
-      yield {value: accum, cls: tc.number, pos: accumStart};
+    case ss.alnum:
+      yield {value: accum, cls: tc.alnum, pos: accumStart};
       break;
     case ss.spec:
     case ss.specd:
@@ -278,17 +265,19 @@ function parse0(iter, open, close, array) {
     switch(s.cls) {
       case tc.space:
         continue;
-      case tc.number:
       case tc.string:
         if(state === ss.base || state === ss.oper)
-          term = new Imm(s.cls === tc.number ? BigInt(s.value) : s.value);
+          term = new Imm(s.value);
         else
           throw new ParseError(`"${s.value}" can't appear here`, s);
         state = ss.term;
         break;
-      case tc.ident:
+      case tc.alnum:
         if(state === ss.base || state === ss.oper) {
-          if(s.value === 'true' || s.value === 'false') {
+          if(/^[0-9]*$/.test(s.value)) {
+            term = new Imm(BigInt(s.value));
+            state = ss.term;
+          } else if(s.value === 'true' || s.value === 'false') {
             term = new Imm(s.value === 'true');
             state = ss.term;
           } else {
