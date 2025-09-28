@@ -24,7 +24,7 @@
 <p>Some filters also produce a data stream without requiring a source. <span class="example">Examples:</span> <i-pre>abc</i-pre>, <i-pre>range(1,10)</i-pre>.</p>
 <p>The period between a filter and its source can also be replaced by a semicolon: <i-pre class="skiplink">source:filter</i-pre>, in which it becomes a short for <i-pre class="skiplink">source.<i-pre>foreach</i-pre>(filter)</i-pre>.
 The <i-pre class="skiplink">filter</i-pre> is then applied sequentially on each of elements of <i-pre class="skiplink">source</i-pre> (which needs to be a stream).<br/>
-<span class="example">Example:</span> <i-pre>["xyz","","abcde"]:length = ["xyz".length,"".length","abcde".length] = [3,0,5]</i-pre>.</p>
+<span class="example">Example:</span> <i-pre>["xyz","","abcde"]:length = ["xyz".length,"".length,"abcde".length] = [3,0,5]</i-pre>.</p>
 <p>Finally, an <em>at-sign</em> followed by a stream or several streams in parentheses applies the filter on the left on objects produced by the stream(s) on the right, used as arguments. This is a short form for <i-pre class="skiplink">filter.<i-pre>over</i-pre>(arguments)</i-pre>.<br/>
 <span class="example">Examples:</span> <i-pre>range@[1,2,3] = [range(1),range(2),range(3)] = [[1],[1,2],[1,2,3]]</i-pre>, <i-pre>equal@([1,5,3],[1,2,3]) = [equal(1,1),equal(5,2),equal(3,3)] = [true,false,true]</i-pre>.</p>
 
