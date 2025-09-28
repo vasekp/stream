@@ -23,7 +23,7 @@
 <p>Kromě vstupu mohou některé filtry mít ještě argumenty. Ty se zapisují v závorkách a oddělují čárkou. <span class="example">Příklad:</span> <i-pre>range(1,10)</i-pre>.</p>
 <p>Některé fitry produkují data i bez vstupu. <span class="example">Příklady:</span> <i-pre>abc</i-pre>, <i-pre>range(1,10)</i-pre>.</p>
 <p>Tečka mezi filtem a jeho zdrojem může také být nahrazena <em>dvojtečkou</em>: <i-pre class="skiplink">zdroj:filtr</i-pre>, potom slouží jako zkratka pro <i-pre>zdroj.foreach(filtr)</i-pre>. <i-pre>filtr</i-pre> se pak aplikuje po řadě na všechny prvky proudu <i-pre>zdroj</i-pre>.<br/>
-<span class="example">Příklad:</span> <i-pre>["xyz","","abcde"]:length = ["xyz".length,"".length","abcde".length] = [3,0,5]</i-pre>.</p>
+<span class="example">Příklad:</span> <i-pre>["xyz","","abcde"]:length = ["xyz".length,"".length,"abcde".length] = [3,0,5]</i-pre>.</p>
 <p>Poslední možností je <em>zavináč</em>. Je následován předpisem proudu nebo několika proudů v závorkách a filtr před zavináčem se pak používá na hodnoty získané z proudů napravo, které do něj vstupují jako argumenty. Toto je zkrácený zápis pro <i-pre>filtr.over(argumenty)</i-pre>.<br/>
 <span class="example">Příklady:</span> <i-pre>range@[1,2,3] = [range(1),range(2),range(3)] = [[1],[1,2],[1,2,3]]</i-pre>, <i-pre>equal@([1,5,3],[1,2,3]) = [equal(1,1),equal(5,2),equal(3,3)] = [true,false,true]</i-pre>.</p>
 
